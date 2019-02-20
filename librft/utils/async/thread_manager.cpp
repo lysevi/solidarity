@@ -1,8 +1,8 @@
-#include <libyaaf/utils/async/thread_manager.h>
-#include <libyaaf/utils/exception.h>
-#include <libyaaf/utils/utils.h>
+#include <librft/utils/async/thread_manager.h>
+#include <librft/utils/exception.h>
+#include <librft/utils/utils.h>
 
-using namespace yaaf::utils::async;
+using namespace rft::utils::async;
 
 thread_manager::thread_manager(const thread_manager::params_t &params) : _params(params) {
   for (const auto &kv : _params.pools) {

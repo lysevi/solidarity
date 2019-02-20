@@ -21,10 +21,10 @@ SET(SRC ${GLOB_HDRS} ${GLOB_SRC}
 
 
 add_library(rft ${SRC})
-TARGET_LINK_LIBRARIES(rft ${YAAF_PRIVATE_LIBRARIES})
-target_link_directories(rft PUBLIC ${YAAF_LIBRARY_DIR})
-target_include_directories(rft PUBLIC ${YAAF_INCLUDE_DIR})
-cotire(yrft)
+TARGET_LINK_LIBRARIES(rft ${rft_PRIVATE_LIBRARIES})
+target_link_directories(rft PUBLIC ${rft_LIBRARY_DIR})
+target_include_directories(rft PUBLIC ${rft_INCLUDE_DIR})
+cotire(rft)
 
 SET(RFT_LIBRARIES rft ${RFT_PRIVATE_LIBRARIES} CACHE STRING "rft libs")
 

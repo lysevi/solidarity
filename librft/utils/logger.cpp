@@ -1,12 +1,12 @@
-#include <libyaaf/utils/logger.h>
-#include <libyaaf/utils/utils.h>
+#include <librft/utils/logger.h>
+#include <librft/utils/utils.h>
 #include <iostream>
 
-using namespace yaaf::utils::logging;
-using namespace yaaf::utils::async;
+using namespace rft::utils::logging;
+using namespace rft::utils::async;
 
 std::shared_ptr<logger_manager> logger_manager::_instance = nullptr;
-yaaf::utils::async::locker logger_manager::_locker;
+rft::utils::async::locker logger_manager::_locker;
 
 verbose logger_manager::verbose = verbose::debug;
 

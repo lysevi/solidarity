@@ -1,10 +1,10 @@
 #pragma once
 
-#include <libyaaf/exports.h>
-#include <libyaaf/utils/async/locker.h>
-#include <libyaaf/utils/utils.h>
+#include <librft/exports.h>
+#include <librft/utils/async/locker.h>
+#include <librft/utils/utils.h>
 
-namespace yaaf {
+namespace rft {
 namespace utils {
 namespace async {
 
@@ -92,4 +92,4 @@ using task_wrapper_ptr = std::shared_ptr<task_wrapper>;
                                  __LINE__, pr)
 } // namespace async
 } // namespace utils
-} // namespace yaaf
+} // namespace rft

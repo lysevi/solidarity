@@ -1,10 +1,10 @@
 #include <librft/utils/async/thread_manager.h>
 #include <benchmark/benchmark.h>
 
-using namespace yaaf;
-using namespace yaaf::utils::async;
+using namespace rft;
+using namespace rft::utils::async;
 
-using namespace yaaf::utils::async;
+using namespace rft::utils::async;
 
 const thread_kind_t tk = 1;
 const size_t threads_count = 2;

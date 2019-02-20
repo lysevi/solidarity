@@ -4,7 +4,7 @@
 #include <mutex> //for lock_guard
 #include <thread>
 
-namespace yaaf {
+namespace rft {
 namespace utils {
 namespace async {
 // using Locker=std::mutex;
@@ -31,7 +31,7 @@ public:
   void unlock() noexcept { locked.clear(std::memory_order_release); }
 };
 
-using Locker_ptr = std::shared_ptr<yaaf::utils::async::locker>;
+using Locker_ptr = std::shared_ptr<rft::utils::async::locker>;
 } // namespace async
 } // namespace utils
-} // namespace yaaf
+} // namespace rft

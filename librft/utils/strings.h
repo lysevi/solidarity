@@ -1,11 +1,11 @@
 #pragma once
 
-#include <libyaaf/exports.h>
+#include <librft/exports.h>
 #include <list>
 #include <string>
 #include <vector>
 
-namespace yaaf {
+namespace rft {
 namespace utils {
 namespace strings {
 
@@ -50,4 +50,4 @@ template <class... Args> std::string args_to_string(Args &&... args) noexcept {
 }
 } // namespace strings
 } // namespace utils
-} // namespace yaaf
+} // namespace rft

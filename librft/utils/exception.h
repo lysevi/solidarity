@@ -1,6 +1,6 @@
 #pragma once
-#include <libyaaf/utils/logger.h>
-#include <libyaaf/utils/strings.h>
+#include <librft/utils/logger.h>
+#include <librft/utils/strings.h>
 #include <stdexcept>
 #include <string>
 
@@ -12,21 +12,21 @@
 #define BT_BUF_SIZE 512
 #endif
 
-#define CODE_POS (yaaf::utils::codepos(__FILE__, __LINE__, __FUNCTION__))
+#define CODE_POS (rft::utils::codepos(__FILE__, __LINE__, __FUNCTION__))
 
-#define MAKE_EXCEPTION(msg) yaaf::utils::exception::create_and_log(CODE_POS, msg)
+#define MAKE_EXCEPTION(msg) rft::utils::exception::create_and_log(CODE_POS, msg)
 // macros, because need CODE_POS
 
 #ifdef DEBUG
 #define THROW_EXCEPTION(...)                                                             \
-  throw yaaf::utils::exception::create_and_log(CODE_POS, __VA_ARGS__);                          \
+  throw rft::utils::exception::create_and_log(CODE_POS, __VA_ARGS__);                          \
   //std::exit(1);
 #else
 #define THROW_EXCEPTION(...)                                                             \
-  throw yaaf::utils::exception::create_and_log(CODE_POS, __VA_ARGS__);
+  throw rft::utils::exception::create_and_log(CODE_POS, __VA_ARGS__);
 #endif
 
-namespace yaaf {
+namespace rft {
 namespace utils {
 
 struct codepos {
@@ -97,4 +97,4 @@ private:
   std::string _msg;
 };
 } // namespace utils
-} // namespace yaaf
+} // namespace rft

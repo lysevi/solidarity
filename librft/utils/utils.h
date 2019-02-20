@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libyaaf/utils/exception.h>
+#include <librft/utils/exception.h>
 #include <atomic>
 
 #define NOT_IMPLEMENTED THROW_EXCEPTION("Not implemented");
@@ -18,7 +18,7 @@
 
 #define UNUSED(x) (void)(x)
 
-namespace yaaf {
+namespace rft {
 namespace utils {
 
 inline void sleep_mls(long long a) {
@@ -43,4 +43,4 @@ struct elapsed_time {
 
 
 } // namespace utils
-} // namespace yaaf
+} // namespace rft

@@ -71,12 +71,5 @@ if(rft_ENABLE_BENCHMARKS)
    include_directories(extern/benchmark/include)
    set_target_properties(benchmark PROPERTIES FOLDER Extern)
    add_subdirectory (microbenchmarks)
-   
-   SET(CXXOPTS_BUILD_TESTS OFF)
-   SET(CXXOPTS_BUILD_EXAMPLES OFF)
-   add_subdirectory(extern/cxxopts)
-   include_directories(extern/cxxopts/include)
-
-   add_subdirectory(benchmarks)
 endif(rft_ENABLE_BENCHMARKS)
 

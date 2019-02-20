@@ -1,10 +1,10 @@
-#include <libyaaf/utils/async/thread_pool.h>
-#include <libyaaf/utils/logger.h>
+#include <librft/utils/async/thread_pool.h>
+#include <librft/utils/logger.h>
 #include <algorithm>
 
-using namespace yaaf::utils;
-using namespace yaaf::utils::logging;
-using namespace yaaf::utils::async;
+using namespace rft::utils;
+using namespace rft::utils::logging;
+using namespace rft::utils::async;
 
 threads_pool::threads_pool(const params_t &p) : _params(p) {
   ENSURE(_params.threads_count > 0);

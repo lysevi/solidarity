@@ -1,12 +1,12 @@
 #pragma once
 
-#include <libyaaf/exports.h>
-#include <libyaaf/utils/async/thread_pool.h>
-#include <libyaaf/utils/utils.h>
+#include <librft/exports.h>
+#include <librft/utils/async/thread_pool.h>
+#include <librft/utils/utils.h>
 #include <unordered_map>
 #include <shared_mutex>
 
-namespace yaaf {
+namespace rft {
 namespace utils {
 namespace async {
 
@@ -45,4 +45,4 @@ private:
 };
 } // namespace async
 } // namespace utils
-} // namespace yaaf
+} // namespace rft
