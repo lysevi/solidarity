@@ -2,11 +2,12 @@
 #include <librft/utils/async/thread_pool.h>
 
 #include <librft/utils/strings.h>
+#include <librft/utils/timer.h>
 #include <librft/utils/utils.h>
 
 #include "helpers.h"
-#include <catch.hpp>
 #include <array>
+#include <catch.hpp>
 #include <numeric>
 
 TEST_CASE("utils.split") {
@@ -138,15 +139,64 @@ TEST_CASE("utils.threads_manager") {
       }
       return CONTINUATION_STRATEGY::SINGLE;
     };
-    t_manager.post(tk1, wrap_task_with_priority(infinite_worker, rft::utils::async::TASK_PRIORITY::WORKER));
+    t_manager.post(tk1, wrap_task_with_priority(
+                            infinite_worker, rft::utils::async::TASK_PRIORITY::WORKER));
     auto at_while_res = t_manager.post(tk1, wrap_task(at_while));
     for (size_t i = 0; i < tasks_count; ++i) {
       t_manager.post(tk1, wrap_task(at1));
       t_manager.post(tk2, wrap_task(at2));
     }
-    // EXPECT_GT(ThreadManager::instance()->active_works(), size_t(0));
     at_while_res->wait();
     EXPECT_EQ(called, int(10));
     t_manager.flush();
+  }
+}
+
+TEST_CASE("utils.property") {
+  class test_struct {
+    PROPERTY(int, ivalue);
+    PROPERTY(double, dvalue);
+    PROPERTY(std::string, svalue);
+  };
+
+  test_struct p;
+  p.set_dvalue(3.14).set_ivalue(3).set_svalue("string");
+  EXPECT_EQ(p.dvalue(), 3.14);
+  EXPECT_EQ(p.ivalue(), 3);
+  EXPECT_EQ(p.svalue(), "string");
+}
+
+TEST_CASE("utils.timer(cyclic)") {
+  volatile size_t calls = 0;
+  auto f = [&]() { calls++; };
+  rft::utils::timer_t t(std::chrono::milliseconds(100), f);
+  t.start();
+
+  while (calls < 3) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+  t.stop();
+  calls = 0;
+  t.start();
+  while (calls < 2) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+}
+
+TEST_CASE("utils.timer(single)") {
+  volatile size_t calls = 0;
+  auto f = [&]() { calls++; };
+  rft::utils::timer_t t(std::chrono::milliseconds(100), f, false);
+  t.start();
+
+  while (calls == 0) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+  EXPECT_FALSE(t.is_started());
+  calls = 0;
+
+  t.restart();
+  while (calls == 0) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 }
