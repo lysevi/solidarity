@@ -9,5 +9,5 @@ TARGET_LINK_DIRECTORIES(microbenchmarks PUBLIC ${solidarity_LIBRARY_DIR})
 target_include_directories(microbenchmarks PUBLIC ${solidarity_INCLUDE_DIR})
 
 set_target_properties(microbenchmarks PROPERTIES FOLDER Benchmarks)
-add_test(microbenchmarks ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/microbenchmarks) 
+add_test(NAME microbenchmarks COMMAND microbenchmarks) 
 cotire(microbenchmarks)

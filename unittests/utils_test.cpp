@@ -173,13 +173,13 @@ TEST_CASE("utils.timer(cyclic)") {
   t.start();
 
   while (calls < 3) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+     rft::utils::sleep_mls(100);
   }
   t.stop();
   calls = 0;
   t.start();
   while (calls < 2) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    rft::utils::sleep_mls(100);
   }
 }
 
@@ -190,13 +190,13 @@ TEST_CASE("utils.timer(single)") {
   t.start();
 
   while (calls == 0) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    rft::utils::sleep_mls(100);
   }
   EXPECT_FALSE(t.is_started());
   calls = 0;
 
   t.restart();
   while (calls == 0) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    rft::utils::sleep_mls(100);
   }
 }

@@ -1,5 +1,5 @@
 #include <librft/utils/timer.h>
-
+#include <librft/utils/utils.h>
 using namespace rft::utils;
 
 void timer_t::start() {
@@ -24,7 +24,7 @@ void timer_t::_worker() {
   auto start_time = std::chrono::system_clock::now();
   auto end_time = start_time + _duration;
   while (!_stoped) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    sleep_mls(100);
     auto cur_time = std::chrono::system_clock::now();
     if (cur_time > end_time) {
       _callback();

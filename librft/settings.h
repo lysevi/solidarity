@@ -7,6 +7,6 @@
 namespace rft {
 class node_settings {
   PROPERTY(std::string, name);
-  PROPERTY(std::chrono::milliseconds, period);
+  PROPERTY(std::chrono::milliseconds, election_timeout);
 };
 }; // namespace rft

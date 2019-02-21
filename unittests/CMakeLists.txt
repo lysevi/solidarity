@@ -8,6 +8,6 @@ TARGET_LINK_LIBRARIES(solidarity_unittests ${solidarity_LIBRARIES})
 TARGET_LINK_DIRECTORIES(solidarity_unittests PUBLIC ${solidarity_LIBRARY_DIR})
 target_include_directories(solidarity_unittests PUBLIC ${solidarity_INCLUDE_DIR})
 
-add_test(solidarity_unittests ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/unittests) 
+add_test(NAME solidarity_unittests COMMAND solidarity_unittests) 
 set_target_properties(solidarity_unittests PROPERTIES FOLDER Tests)
 cotire(solidarity_unittests)
