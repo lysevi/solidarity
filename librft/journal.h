@@ -14,6 +14,16 @@ namespace logdb {
 using index_t = uint64_t;
 
 struct reccord_info {
+  reccord_info() {
+    round = std::numeric_limits<round_t>::min();
+    lsn = std::numeric_limits<logdb::index_t>::max();
+  }
+
+  bool is_empty() const {
+    return round == std::numeric_limits<round_t>::min() &&
+           lsn == std::numeric_limits<logdb::index_t>::max();
+  }
+
   round_t round;
   logdb::index_t lsn;
 };

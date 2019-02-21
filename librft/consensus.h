@@ -19,16 +19,27 @@ public:
                    const logdb::journal_ptr &jrn);
   CONSENSUS_STATE state() const { return _state; }
   round_t round() const { return _round; }
-  EXPORT void on_timer();
+  EXPORT void on_heartbeat();
+  EXPORT void recv(const cluster_node &from, const append_entries &e);
+
+  cluster_node get_leader() const { return _leader_term; }
+
+protected:
+  append_entries make_append_entries() const;
 
 private:
   node_settings _settings;
+  cluster_node _self_addr;
   cluster_ptr _cluster;
   logdb::journal_ptr _jrn;
-  round_t _round{0};
+
   CONSENSUS_STATE _state{CONSENSUS_STATE::FOLLOWER};
 
-  clock_t::time_point heartbeat_time;
+  uint64_t _start_time;
+
+  round_t _round{0};
+  clock_t::time_point _heartbeat_time;
+  cluster_node _leader_term;
 };
 
 }; // namespace rft

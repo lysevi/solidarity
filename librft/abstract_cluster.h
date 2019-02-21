@@ -9,6 +9,7 @@ namespace rft {
 class cluster_node {
   PROPERTY(std::string, name);
 
+  bool operator!=(const cluster_node &other) const { return !(*this == other); }
   bool operator==(const cluster_node &other) const { return _name == other._name; }
   bool operator<(const cluster_node &other) const { return _name < other._name; }
 };
@@ -20,6 +21,9 @@ enum class entries_kind_t { VOTE };
 
 struct append_entries {
   round_t round;
+  uint64_t starttime; /// sender uptime
+  cluster_node leader_term;
+
   logdb::reccord_info current;
   logdb::reccord_info prev;
   logdb::reccord_info commited;
@@ -27,7 +31,9 @@ struct append_entries {
 
 class abstract_cluster {
 public:
-  virtual void send_to(cluster_node &from, cluster_node &to, const append_entries &m) = 0;
+  virtual void send_to(const cluster_node &from, const cluster_node &to,
+                       const append_entries &m) = 0;
+  virtual void send_all(const cluster_node &from, const append_entries &m) = 0;
   /// total nodes count
   virtual size_t size() = 0;
 };
