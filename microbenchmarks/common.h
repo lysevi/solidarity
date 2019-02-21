@@ -1,5 +1,6 @@
 #pragma once
 #include <librft/utils/logger.h>
+
 namespace microbenchmark_common {
 class BenchmarkLogger : public rft::utils::logging::abstract_logger {
 public:
