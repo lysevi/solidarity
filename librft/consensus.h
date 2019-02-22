@@ -6,9 +6,17 @@
 #include <librft/settings.h>
 #include <chrono>
 #include <memory>
+#include <random>
 #include <string>
 
 namespace rft {
+namespace inner {
+std::mt19937 make_seeded_engine() {
+  std::random_device r;
+  std::seed_seq seed{r(), r(), r(), r(), r(), r(), r(), r()};
+  return std::mt19937(seed);
+}
+} // namespace inner
 
 using clock_t = std::chrono::high_resolution_clock;
 
@@ -43,6 +51,9 @@ protected:
   bool is_heartbeat_missed() const;
 
 private:
+  std::mt19937 _rnd_eng = inner::make_seeded_engine();
+  std::chrono::milliseconds _next_heartbeat_interval;
+
   node_settings _settings;
   cluster_node _self_addr;
   cluster_ptr _cluster;
@@ -53,8 +64,9 @@ private:
   uint64_t _start_time;
 
   round_t _round{0};
-  clock_t::time_point _heartbeat_time;
+  clock_t::time_point _last_heartbeat_time;
   cluster_node _leader_term;
+  std::atomic_size_t _election_to_me;
 };
 
 }; // namespace rft

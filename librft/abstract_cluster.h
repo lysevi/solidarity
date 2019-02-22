@@ -27,6 +27,11 @@ using term_t = uint64_t;
 enum class entries_kind_t { VOTE };
 
 struct append_entries {
+
+  bool is_vote() const {
+    return current.is_empty() && prev.is_empty() && commited.is_empty();
+  }
+
   round_t round;
   uint64_t starttime; /// sender uptime
   cluster_node leader_term;

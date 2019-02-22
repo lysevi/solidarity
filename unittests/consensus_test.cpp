@@ -27,14 +27,17 @@ struct mock_cluster : rft::abstract_cluster {
   std::map<rft::cluster_node, std::shared_ptr<rft::consensus>> _cluster;
 };
 
-TEST_CASE("consensus.election") {
-  auto settings_0 = rft::node_settings().set_name("_0").set_election_timeout(
-      std::chrono::milliseconds(500));
+TEST_CASE("consensus.add_nodes") {
+  std::vector<std::shared_ptr<rft::consensus>> all_nodes;
+  auto cluster = std::make_shared<mock_cluster>();
 
   /// SINGLE
-  auto cluster = std::make_shared<mock_cluster>();
+  auto settings_0 = rft::node_settings().set_name("_0").set_election_timeout(
+      std::chrono::milliseconds(3000));
+
   auto c_0 = std::make_shared<rft::consensus>(settings_0, cluster,
                                               rft::logdb::memory_journal::make_new());
+  all_nodes.push_back(c_0);
   cluster->_cluster[rft::cluster_node().set_name("_0")] = c_0;
   EXPECT_EQ(c_0->round(), rft::round_t(0));
   EXPECT_EQ(c_0->state(), rft::CONSENSUS_STATE::FOLLOWER);
@@ -47,12 +50,15 @@ TEST_CASE("consensus.election") {
 
   /// TWO NODES
   auto settings_1 = rft::node_settings().set_name("_1").set_election_timeout(
-      std::chrono::milliseconds(500));
+      std::chrono::milliseconds(3000));
   auto c_1 = std::make_shared<rft::consensus>(settings_1, cluster,
                                               rft::logdb::memory_journal::make_new());
+  all_nodes.push_back(c_1);
   cluster->_cluster[rft::cluster_node().set_name(settings_1.name())] = c_1;
 
-  c_1->on_heartbeat();
+  while (c_1->get_leader() != c_0->get_leader()) {
+    c_1->on_heartbeat();
+  }
   EXPECT_EQ(c_0->state(), rft::CONSENSUS_STATE::LEADER);
   EXPECT_EQ(c_1->state(), rft::CONSENSUS_STATE::FOLLOWER);
   EXPECT_EQ(c_0->round(), rft::round_t(1));
@@ -61,9 +67,10 @@ TEST_CASE("consensus.election") {
 
   /// THREE NODES
   auto settings_2 = rft::node_settings().set_name("_2").set_election_timeout(
-      std::chrono::milliseconds(500));
+      std::chrono::milliseconds(3000));
   auto c_2 = std::make_shared<rft::consensus>(settings_2, cluster,
                                               rft::logdb::memory_journal::make_new());
+  all_nodes.push_back(c_2);
   cluster->_cluster[rft::cluster_node().set_name(settings_2.name())] = c_2;
 
   while (c_2->get_leader().is_empty() || c_1->state() != rft::CONSENSUS_STATE::FOLLOWER) {
@@ -71,9 +78,50 @@ TEST_CASE("consensus.election") {
     c_1->on_heartbeat();
     c_2->on_heartbeat();
   }
+
   EXPECT_EQ(c_0->state(), rft::CONSENSUS_STATE::LEADER);
   EXPECT_EQ(c_1->state(), rft::CONSENSUS_STATE::FOLLOWER);
   EXPECT_EQ(c_0->round(), rft::round_t(1));
   EXPECT_EQ(c_1->round(), rft::round_t(1));
   EXPECT_EQ(c_1->get_leader(), c_0->get_leader());
+}
+
+TEST_CASE("consensus.election") {
+  std::vector<std::shared_ptr<rft::consensus>> all_nodes;
+  auto cluster = std::make_shared<mock_cluster>();
+
+  size_t nodes_count = 4;
+  SECTION("consensus.election.3") { nodes_count = 3; }
+  SECTION("consensus.election.4") { nodes_count = 4; }
+  SECTION("consensus.election.10") { nodes_count = 10; }
+  SECTION("consensus.election.100") { nodes_count = 100; }
+  
+
+  for (size_t i = 0; i < nodes_count; ++i) {
+    auto sett = rft::node_settings()
+                    .set_name("_" + std::to_string(i))
+                    .set_election_timeout(std::chrono::milliseconds(500));
+    auto cons = std::make_shared<rft::consensus>(sett, cluster,
+                                                 rft::logdb::memory_journal::make_new());
+    cluster->_cluster[rft::cluster_node().set_name(sett.name())] = cons;
+    all_nodes.push_back(cons);
+  }
+
+  while (true) {
+    std::map<rft::cluster_node, size_t> leaders;
+    for (auto v : all_nodes) {
+      if (v->get_leader().is_empty()) {
+        continue;
+      }
+      if (leaders.find(v->get_leader()) == leaders.end()) {
+        leaders[v->get_leader()] = 0;
+      }
+      leaders[v->get_leader()]++;
+    }
+    if (leaders.size() == 1) {
+      break;
+    }
+    std::for_each(all_nodes.begin(), all_nodes.end(),
+                  [](auto n) { return n->on_heartbeat(); });
+  }
 }
