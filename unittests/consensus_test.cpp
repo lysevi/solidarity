@@ -95,7 +95,6 @@ TEST_CASE("consensus.election") {
   SECTION("consensus.election.4") { nodes_count = 4; }
   SECTION("consensus.election.10") { nodes_count = 10; }
   SECTION("consensus.election.100") { nodes_count = 100; }
-  
 
   for (size_t i = 0; i < nodes_count; ++i) {
     auto sett = rft::node_settings()
@@ -123,5 +122,20 @@ TEST_CASE("consensus.election") {
     }
     std::for_each(all_nodes.begin(), all_nodes.end(),
                   [](auto n) { return n->on_heartbeat(); });
+  }
+  if (cluster->size() > 3) { // kill the king...
+    {
+      auto it =
+          std::find_if(cluster->_cluster.begin(), cluster->_cluster.end(), [](auto kv) {
+            return kv.second->state() == rft::CONSENSUS_STATE::LEADER;
+          });
+      cluster->_cluster.erase(it);
+    }
+    {
+      auto it = std::find_if(all_nodes.begin(), all_nodes.end(), [](auto v) {
+        return v->state() == rft::CONSENSUS_STATE::LEADER;
+      });
+      all_nodes.erase(it);
+    }
   }
 }

@@ -45,6 +45,7 @@ public:
   EXPORT void recv(const cluster_node &from, const append_entries &e);
 
   cluster_node get_leader() const { return _leader_term; }
+  cluster_node self_addr() const { return _self_addr; }
 
 protected:
   append_entries make_append_entries() const;
