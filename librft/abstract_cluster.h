@@ -9,10 +9,17 @@ namespace rft {
 class cluster_node {
   PROPERTY(std::string, name);
 
+public:
+  bool is_empty() const { return name().empty(); }
+  void clear() { _name = ""; }
   bool operator!=(const cluster_node &other) const { return !(*this == other); }
   bool operator==(const cluster_node &other) const { return _name == other._name; }
   bool operator<(const cluster_node &other) const { return _name < other._name; }
 };
+
+inline std::string to_string(const cluster_node &s) {
+  return std::string("node:://") + s.name();
+}
 
 // leader term
 using term_t = uint64_t;

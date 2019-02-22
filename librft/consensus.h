@@ -6,12 +6,26 @@
 #include <librft/settings.h>
 #include <chrono>
 #include <memory>
+#include <string>
 
 namespace rft {
 
 using clock_t = std::chrono::high_resolution_clock;
 
 enum class CONSENSUS_STATE { LEADER = 0, FOLLOWER = 1, CANDIDATE = 2 };
+
+inline std::string to_string(const rft::CONSENSUS_STATE s) {
+  switch (s) {
+  case rft::CONSENSUS_STATE::CANDIDATE:
+    return "CANDIDATE";
+  case rft::CONSENSUS_STATE::FOLLOWER:
+    return "FOLLOWER";
+  case rft::CONSENSUS_STATE::LEADER:
+    return "LEADER";
+  default:
+    return "!!! UNKNOW !!!";
+  }
+}
 
 class consensus {
 public:
@@ -26,6 +40,7 @@ public:
 
 protected:
   append_entries make_append_entries() const;
+  bool is_heartbeat_missed() const;
 
 private:
   node_settings _settings;
