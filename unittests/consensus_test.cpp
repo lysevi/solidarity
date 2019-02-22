@@ -93,8 +93,6 @@ TEST_CASE("consensus.election") {
   size_t nodes_count = 4;
   SECTION("consensus.election.3") { nodes_count = 3; }
   SECTION("consensus.election.4") { nodes_count = 4; }
-  SECTION("consensus.election.10") { nodes_count = 10; }
-  SECTION("consensus.election.100") { nodes_count = 100; }
 
   for (size_t i = 0; i < nodes_count; ++i) {
     auto sett = rft::node_settings()
@@ -105,37 +103,49 @@ TEST_CASE("consensus.election") {
     cluster->_cluster[rft::cluster_node().set_name(sett.name())] = cons;
     all_nodes.push_back(cons);
   }
+  rft::cluster_node last_leader;
+  while (cluster->size() > 3) {
 
-  while (true) {
-    std::map<rft::cluster_node, size_t> leaders;
-    for (auto v : all_nodes) {
-      if (v->get_leader().is_empty()) {
-        continue;
+    while (true) {
+      std::map<rft::cluster_node, size_t> leaders;
+      for (auto v : all_nodes) {
+        if (v->get_leader().is_empty()) {
+          continue;
+        }
+        if (leaders.find(v->get_leader()) == leaders.end()) {
+          leaders[v->get_leader()] = 0;
+        }
+        leaders[v->get_leader()]++; 
       }
-      if (leaders.find(v->get_leader()) == leaders.end()) {
-        leaders[v->get_leader()] = 0;
+      if (leaders.size() == 1) {
+        auto cur_leader = leaders.begin()->first;
+        if (last_leader.is_empty() || cur_leader != last_leader) { // new leader election
+          last_leader = cur_leader;
+          break;
+        }
       }
-      leaders[v->get_leader()]++;
-    }
-    if (leaders.size() == 1) {
-      break;
-    }
-    std::for_each(all_nodes.begin(), all_nodes.end(),
-                  [](auto n) { return n->on_heartbeat(); });
-  }
-  if (cluster->size() > 3) { // kill the king...
-    {
-      auto it =
-          std::find_if(cluster->_cluster.begin(), cluster->_cluster.end(), [](auto kv) {
-            return kv.second->state() == rft::CONSENSUS_STATE::LEADER;
-          });
-      cluster->_cluster.erase(it);
-    }
-    {
-      auto it = std::find_if(all_nodes.begin(), all_nodes.end(), [](auto v) {
-        return v->state() == rft::CONSENSUS_STATE::LEADER;
+      std::for_each(all_nodes.begin(), all_nodes.end(),
+                    [](auto n) { return n->on_heartbeat(); });
+      std::for_each(all_nodes.begin(), all_nodes.end(), [](auto n) {
+        rft::utils::logging::logger_info("?: ", n->self_addr(), ": -> ", n->get_leader());
       });
-      all_nodes.erase(it);
+    }
+
+    { // kill the king...
+      {
+        auto it =
+            std::find_if(cluster->_cluster.begin(), cluster->_cluster.end(), [](auto kv) {
+              return kv.second->state() == rft::CONSENSUS_STATE::LEADER;
+            });
+        cluster->_cluster.erase(it);
+      }
+      {
+        auto it = std::find_if(all_nodes.begin(), all_nodes.end(), [](auto v) {
+          return v->state() == rft::CONSENSUS_STATE::LEADER;
+        });
+        all_nodes.erase(it);
+      }
+      rft::utils::logging::logger_info("cluster size - ", cluster->size());
     }
   }
 }

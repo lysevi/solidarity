@@ -12,7 +12,7 @@ class cluster_node {
 public:
   bool is_empty() const { return name().empty(); }
   void clear() { _name = ""; }
-  bool operator!=(const cluster_node &other) const { return !(*this == other); }
+  bool operator!=(const cluster_node &other) const { return _name != other._name; }
   bool operator==(const cluster_node &other) const { return _name == other._name; }
   bool operator<(const cluster_node &other) const { return _name < other._name; }
 };

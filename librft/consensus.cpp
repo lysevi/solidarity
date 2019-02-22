@@ -204,7 +204,7 @@ void consensus::on_heartbeat() {
     }
   }
   auto total_mls = _settings.election_timeout().count();
-  std::uniform_int_distribution<> distr(uint64_t(total_mls / 2.0), total_mls);
+  std::uniform_int_distribution<uint64_t> distr(uint64_t(total_mls / 2.0), total_mls);
 
   _next_heartbeat_interval = std::chrono::milliseconds(distr(_rnd_eng));
   logger_info("node: ", _settings.name(), ": next heartbeat is ",
