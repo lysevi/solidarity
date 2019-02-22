@@ -42,14 +42,18 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
           _round = e.round;
           logger_info("node: ", _settings.name(), ": now have a leader - ", _leader_term);
         } else {
+          NOT_IMPLEMENTED;
+          if (_round < e.round) {
+          } else {
+          }
         }
-        _cluster->send_to(_self_addr, from, make_append_entries());
         break;
       }
       case CONSENSUS_STATE::LEADER: {
         // TODO if round != current
-        append_entries ae = make_append_entries();
-        _cluster->send_to(_self_addr, from, ae);
+        if (_round != e.round) {
+          NOT_IMPLEMENTED;
+        }
         break;
       }
       case CONSENSUS_STATE::CANDIDATE: {
@@ -61,20 +65,17 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
             _round = e.round;
             logger_info("node: ", _settings.name(), ": ", CONSENSUS_STATE::CANDIDATE,
                         " => ", _state);
-            auto ae = make_append_entries();
-            _cluster->send_to(_self_addr, from, ae);
           }
         } else {
           if (_round < e.round) {
             _state = CONSENSUS_STATE::FOLLOWER;
             _round = e.round;
           }
-          auto ae = make_append_entries();
-          _cluster->send_to(_self_addr, from, ae);
         }
         break;
       }
       }
+      _cluster->send_to(_self_addr, from, make_append_entries());
     } else {
       switch (_state) {
       case CONSENSUS_STATE::FOLLOWER: {
