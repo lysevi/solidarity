@@ -28,9 +28,7 @@ enum class entries_kind_t { VOTE };
 
 struct append_entries {
 
-  bool is_vote() const {
-    return current.is_empty() && prev.is_empty() && commited.is_empty();
-  }
+  bool is_vote;
 
   round_t round;
   uint64_t starttime; /// sender uptime
