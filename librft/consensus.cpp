@@ -31,114 +31,130 @@ bool consensus::is_heartbeat_missed() const {
   return r;
 }
 
+void consensus::change_state(const CONSENSUS_STATE s, const round_t r,
+                             const cluster_node &leader) {
+  logger_info("node: ", _settings.name(), ": change state {", _state, ", ", _round, ", ",
+              _leader_term, "} => {", s, ", ", r, ", ", leader, "}");
+  _state = s;
+  _round = r;
+  _leader_term = leader;
+}
+
+void consensus::change_state(const cluster_node &cn, const round_t r) {
+  logger_info("node: ", _settings.name(), ": change state {", _leader_term, ", ", _round,
+              "} => {", cn, ", ", r, "}");
+  _leader_term = cn;
+  _round = r;
+}
+
 void consensus::recv(const cluster_node &from, const append_entries &e) {
   if (e.is_vote) {
-
-    if (e.leader_term != _leader_term) {
-      switch (_state) {
-      case CONSENSUS_STATE::FOLLOWER: {
-        if (_leader_term.is_empty()) {
-          _last_heartbeat_time = clock_t::now();
-          _leader_term = e.leader_term;
-          _round = e.round;
-          logger_info("node: ", _settings.name(), ": now have a leader - ", _leader_term);
-
-          auto ae = make_append_entries();
-          ae.is_vote = true;
-          _cluster->send_to(_self_addr, from, ae);
-        } else {
-          if (_round < e.round) {
-            _round = e.round;
-            _leader_term = e.leader_term;
-          } else {
-          }
-          auto ae = make_append_entries();
-          ae.is_vote = true;
-          _cluster->send_to(_self_addr, from, ae);
-        }
-        break;
-      }
-      case CONSENSUS_STATE::LEADER: {
-        // TODO if round != current
-        if (_round < e.round) {
-          _leader_term = e.leader_term;
-          _round = e.round;
-          _state = CONSENSUS_STATE::FOLLOWER;
-        } else {
-          auto ae = make_append_entries();
-          ae.is_vote = true;
-          _cluster->send_to(_self_addr, from, ae);
-        }
-        break;
-      }
-      case CONSENSUS_STATE::CANDIDATE: {
-        if (_cluster->size() == size_t(2)) {
-          /// sender.uptime > self.uptime => sender is a leader
-          if (e.starttime < _start_time) {
-            _leader_term = e.leader_term;
-            _state = CONSENSUS_STATE::FOLLOWER;
-            _round = e.round;
-            logger_info("node: ", _settings.name(), ": ", CONSENSUS_STATE::CANDIDATE,
-                        " => ", _state);
-          }
-        } else {
-          if (_round < e.round) {
-            _state = CONSENSUS_STATE::FOLLOWER;
-            _round = e.round;
-          } else {
-            auto ae = make_append_entries();
-            ae.is_vote = true;
-            _cluster->send_to(_self_addr, from, ae);
-          }
-        }
-        break;
-      }
-      }
-
-    } else {
-      switch (_state) {
-      case CONSENSUS_STATE::FOLLOWER: {
-        _last_heartbeat_time = clock_t::now();
-        break;
-      }
-      case CONSENSUS_STATE::CANDIDATE: {
-        // TODO use map. node may send one message twice.
-        logger_info("node: ", _settings.name(), ": recv. vote from ", from);
-        _election_to_me.fetch_add(1);
-        auto quorum = (size_t(_cluster->size() / 2.0) + 1);
-        if (_election_to_me.load() >= quorum) {
-          _round++;
-          _state = CONSENSUS_STATE::LEADER;
-          logger_info("node: ", _settings.name(), ": quorum. i'am new leader with ",
-                      _election_to_me.load(), " voices");
-          _cluster->send_all(_self_addr, make_append_entries());
-        }
-        break;
-      }
-      }
-    }
+    on_vote(from, e);
   } else {
+    on_append_entries(from, e);
+  }
+}
+
+void consensus::on_vote(const cluster_node &from, const append_entries &e) {
+  if (e.leader_term != _leader_term) {
     switch (_state) {
     case CONSENSUS_STATE::FOLLOWER: {
-      _last_heartbeat_time = clock_t::now();
       if (_leader_term.is_empty()) {
-        _leader_term = e.leader_term;
-        _round = e.round;
+        _last_heartbeat_time = clock_t::now();
+        change_state(e.leader_term, e.round);
+        logger_info("node: ", _settings.name(), ": now have a leader - ", _leader_term);
+
+        auto ae = make_append_entries();
+        ae.is_vote = true;
+        _cluster->send_to(_self_addr, from, ae);
+      } else {
+        if (_round < e.round) {
+          change_state(e.leader_term, e.round);
+        } else {
+        }
+        auto ae = make_append_entries();
+        ae.is_vote = true;
+        _cluster->send_to(_self_addr, from, ae);
       }
       break;
     }
     case CONSENSUS_STATE::LEADER: {
+      // TODO if round != current
       if (_round < e.round) {
-        _state = CONSENSUS_STATE::FOLLOWER;
-        _round = e.round;
-        // TODO log replication
+        change_state(CONSENSUS_STATE::FOLLOWER, e.round, e.leader_term);
+      } else {
+        auto ae = make_append_entries();
+        ae.is_vote = true;
+        _cluster->send_to(_self_addr, from, ae);
       }
       break;
     }
     case CONSENSUS_STATE::CANDIDATE: {
+      if (_cluster->size() == size_t(2)) {
+        /// sender.uptime > self.uptime => sender is a leader
+        if (e.starttime < _start_time) {
+          change_state(CONSENSUS_STATE::FOLLOWER, e.round, e.leader_term);
+          logger_info("node: ", _settings.name(), ": ", CONSENSUS_STATE::CANDIDATE,
+                      " => ", _state);
+        }
+      } else {
+        if (_round < e.round) {
+          change_state(CONSENSUS_STATE::FOLLOWER, e.round, e.leader_term);
+        } else {
+          auto ae = make_append_entries();
+          ae.is_vote = true;
+          _cluster->send_to(_self_addr, from, ae);
+        }
+      }
       break;
     }
     }
+
+  } else {
+    switch (_state) {
+    case CONSENSUS_STATE::FOLLOWER: {
+      _last_heartbeat_time = clock_t::now();
+      break;
+    }
+    case CONSENSUS_STATE::CANDIDATE: {
+      // TODO use map. node may send one message twice.
+      logger_info("node: ", _settings.name(), ": recv. vote from ", from);
+      _election_to_me.fetch_add(1);
+      auto quorum = (size_t(_cluster->size() / 2.0) + 1);
+      if (_election_to_me.load() >= quorum) {
+        _round++;
+        _state = CONSENSUS_STATE::LEADER;
+        logger_info("node: ", _settings.name(), ": quorum. i'am new leader with ",
+                    _election_to_me.load(), " voices");
+        _cluster->send_all(_self_addr, make_append_entries());
+      }
+      break;
+    }
+    }
+  }
+}
+
+void consensus::on_append_entries(const cluster_node &from, const append_entries &e) {
+  switch (_state) {
+  case CONSENSUS_STATE::FOLLOWER: {
+    _last_heartbeat_time = clock_t::now();
+    if (_leader_term.is_empty()) {
+      _leader_term = e.leader_term;
+      _round = e.round;
+    }
+    break;
+  }
+  case CONSENSUS_STATE::LEADER: {
+    if (_round < e.round) {
+      _state = CONSENSUS_STATE::FOLLOWER;
+      _round = e.round;
+      // TODO log replication
+    }
+    break;
+  }
+  case CONSENSUS_STATE::CANDIDATE: {
+    break;
+  }
   }
 }
 

@@ -50,6 +50,12 @@ protected:
   append_entries make_append_entries() const;
   bool is_heartbeat_missed() const;
 
+  void on_vote(const cluster_node &from, const append_entries &e);
+  void on_append_entries(const cluster_node &from, const append_entries &e);
+
+  void change_state(const CONSENSUS_STATE s, const round_t r, const cluster_node &leader);
+  void change_state(const cluster_node &cn, const round_t r);
+
 private:
   std::mt19937 _rnd_eng = inner::make_seeded_engine();
   std::chrono::milliseconds _next_heartbeat_interval;
