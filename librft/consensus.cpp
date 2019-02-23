@@ -4,9 +4,18 @@
 using namespace rft;
 using namespace rft::utils::logging;
 
+namespace {
+inline std::mt19937 make_seeded_engine() {
+  std::random_device r;
+  std::seed_seq seed{r(), r(), r(), r(), r(), r(), r(), r()};
+  return std::mt19937(seed);
+}
+} // namespace
+
 consensus::consensus(const node_settings &ns, const cluster_ptr &cluster,
                      const logdb::journal_ptr &jrn)
-    : _settings(ns), _cluster(cluster), _jrn(jrn), _last_heartbeat_time() {
+    : _settings(ns), _cluster(cluster), _jrn(jrn), _last_heartbeat_time(),
+      _rnd_eng(make_seeded_engine()) {
 
   logger_info("node ", ns.name(),
               ": election_timeout(ms)=", ns.election_timeout().count());

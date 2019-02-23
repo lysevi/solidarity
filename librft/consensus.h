@@ -10,13 +10,6 @@
 #include <string>
 
 namespace rft {
-namespace inner {
-std::mt19937 make_seeded_engine() {
-  std::random_device r;
-  std::seed_seq seed{r(), r(), r(), r(), r(), r(), r(), r()};
-  return std::mt19937(seed);
-}
-} // namespace inner
 
 using clock_t = std::chrono::high_resolution_clock;
 
@@ -58,7 +51,7 @@ protected:
   void change_state(const cluster_node &cn, const round_t r);
 
 private:
-  std::mt19937 _rnd_eng = inner::make_seeded_engine();
+  std::mt19937 _rnd_eng;
   std::chrono::milliseconds _next_heartbeat_interval;
 
   node_settings _settings;
