@@ -30,7 +30,8 @@ inline std::string to_string(const rft::CONSENSUS_STATE s) {
 
 class consensus {
 public:
-  EXPORT consensus(const node_settings &ns, const cluster_ptr &cluster,
+  EXPORT consensus(const node_settings &ns,
+                   const std::shared_ptr<abstract_cluster> &cluster,
                    const logdb::journal_ptr &jrn);
   CONSENSUS_STATE state() const { return _state; }
   round_t round() const { return _round; }
@@ -56,7 +57,7 @@ private:
 
   node_settings _settings;
   cluster_node _self_addr;
-  cluster_ptr _cluster;
+  std::shared_ptr<abstract_cluster> _cluster;
   logdb::journal_ptr _jrn;
 
   CONSENSUS_STATE _state{CONSENSUS_STATE::FOLLOWER};

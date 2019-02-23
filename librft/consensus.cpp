@@ -12,7 +12,8 @@ inline std::mt19937 make_seeded_engine() {
 }
 } // namespace
 
-consensus::consensus(const node_settings &ns, const cluster_ptr &cluster,
+consensus::consensus(const node_settings &ns,
+                     const std::shared_ptr<abstract_cluster> &cluster,
                      const logdb::journal_ptr &jrn)
     : _settings(ns), _cluster(cluster), _jrn(jrn), _last_heartbeat_time(),
       _rnd_eng(make_seeded_engine()) {

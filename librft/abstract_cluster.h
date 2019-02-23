@@ -41,12 +41,11 @@ struct append_entries {
 
 class abstract_cluster {
 public:
+  virtual ~abstract_cluster() {}
   virtual void send_to(const cluster_node &from, const cluster_node &to,
                        const append_entries &m) = 0;
   virtual void send_all(const cluster_node &from, const append_entries &m) = 0;
   /// total nodes count
   virtual size_t size() = 0;
 };
-using cluster_ptr = std::shared_ptr<abstract_cluster>;
-
 }; // namespace rft
