@@ -3,7 +3,7 @@
 #include <catch.hpp>
 #include <condition_variable>
 #include <map>
-#include <mutex>
+#include <shared_mutex>
 #include <tuple>
 
 class mock_cluster : public rft::abstract_cluster {
@@ -37,12 +37,32 @@ public:
   }
 
   void add_new(const rft::cluster_node &addr, const std::shared_ptr<rft::consensus> &c) {
-    std::lock_guard<std::mutex> lg(_cluster_locker);
+    std::lock_guard<std::shared_mutex> lg(_cluster_locker);
     _cluster[addr] = c;
   }
 
+  std::vector<std::shared_ptr<rft::consensus>>
+  by_filter(std::function<bool(const std::shared_ptr<rft::consensus>)> pred) {
+    std::shared_lock<std::shared_mutex> lg(_cluster_locker);
+    std::vector<std::shared_ptr<rft::consensus>> result;
+    result.reserve(_cluster.size());
+    for (auto &kv : _cluster) {
+      if (pred(kv.second)) {
+        result.push_back(kv.second);
+      }
+    }
+    return result;
+  }
+
+  void apply(std::function<void(const std::shared_ptr<rft::consensus>)> f) {
+    std::shared_lock<std::shared_mutex> lg(_cluster_locker);
+    for (auto &kv : _cluster) {
+      f(kv.second);
+    }
+  }
+
   void erase_if(std::function<bool(const std::shared_ptr<rft::consensus>)> pred) {
-    std::lock_guard<std::mutex> lg(_cluster_locker);
+    std::lock_guard<std::shared_mutex> lg(_cluster_locker);
     auto it = std::find_if(_cluster.begin(), _cluster.end(),
                            [pred](auto kv) { return pred(kv.second); });
     if (it != _cluster.end()) {
@@ -57,7 +77,7 @@ public:
   }
 
   size_t size() override {
-    std::lock_guard<std::mutex> lg(_cluster_locker);
+    std::shared_lock<std::shared_mutex> lg(_cluster_locker);
     return _cluster.size();
   }
 
@@ -108,7 +128,7 @@ private:
   std::deque<std::tuple<rft::cluster_node, rft::cluster_node, rft::append_entries>>
       _tasks;
 
-  mutable std::mutex _cluster_locker;
+  mutable std::shared_mutex _cluster_locker;
   std::map<rft::cluster_node, std::shared_ptr<rft::consensus>> _cluster;
 };
 
@@ -117,7 +137,6 @@ bool is_leader_pred(const std::shared_ptr<rft::consensus> &v) {
 };
 
 TEST_CASE("consensus.add_nodes") {
-  std::vector<std::shared_ptr<rft::consensus>> all_nodes;
   auto cluster = std::make_shared<mock_cluster>();
 
   /// SINGLE
@@ -126,7 +145,6 @@ TEST_CASE("consensus.add_nodes") {
 
   auto c_0 = std::make_shared<rft::consensus>(settings_0, cluster,
                                               rft::logdb::memory_journal::make_new());
-  all_nodes.push_back(c_0);
   cluster->add_new(rft::cluster_node().set_name("_0"), c_0);
   EXPECT_EQ(c_0->round(), rft::round_t(0));
   EXPECT_EQ(c_0->state(), rft::CONSENSUS_STATE::FOLLOWER);
@@ -142,51 +160,41 @@ TEST_CASE("consensus.add_nodes") {
       std::chrono::milliseconds(3000));
   auto c_1 = std::make_shared<rft::consensus>(settings_1, cluster,
                                               rft::logdb::memory_journal::make_new());
-  all_nodes.push_back(c_1);
   cluster->add_new(rft::cluster_node().set_name(settings_1.name()), c_1);
 
-  while (true) {
-    auto leader_it = std::find_if(all_nodes.cbegin(), all_nodes.cend(), is_leader_pred);
-    if (leader_it != all_nodes.cend()) {
-      break;
-    }
+  while (c_1->get_leader().name() != c_0->self_addr().name()) {
     c_1->on_heartbeat();
     c_0->on_heartbeat();
   }
-  /*EXPECT_EQ(c_0->state(), rft::CONSENSUS_STATE::LEADER);
+  EXPECT_EQ(c_0->state(), rft::CONSENSUS_STATE::LEADER);
   EXPECT_EQ(c_1->state(), rft::CONSENSUS_STATE::FOLLOWER);
   EXPECT_EQ(c_0->round(), rft::round_t(1));
   EXPECT_EQ(c_1->round(), rft::round_t(1));
-  EXPECT_EQ(c_1->get_leader(), c_0->get_leader());*/
+  EXPECT_EQ(c_1->get_leader(), c_0->get_leader());
 
   /// THREE NODES
   auto settings_2 = rft::node_settings().set_name("_2").set_election_timeout(
       std::chrono::milliseconds(3000));
   auto c_2 = std::make_shared<rft::consensus>(settings_2, cluster,
                                               rft::logdb::memory_journal::make_new());
-  all_nodes.push_back(c_2);
   cluster->add_new(rft::cluster_node().set_name(settings_2.name()), c_2);
 
-  while (c_2->get_leader().is_empty() || c_1->state() != rft::CONSENSUS_STATE::FOLLOWER) {
-    auto leader_it = std::find_if(all_nodes.cbegin(), all_nodes.cend(), is_leader_pred);
-    if (leader_it != all_nodes.cend()) {
-      break;
-    }
+  while (c_1->get_leader().name() != c_0->self_addr().name() ||
+         c_2->get_leader().name() != c_0->self_addr().name()) {
     c_0->on_heartbeat();
     c_1->on_heartbeat();
     c_2->on_heartbeat();
   }
 
-  /*EXPECT_EQ(c_0->state(), rft::CONSENSUS_STATE::LEADER);
+  EXPECT_EQ(c_0->state(), rft::CONSENSUS_STATE::LEADER);
   EXPECT_EQ(c_1->state(), rft::CONSENSUS_STATE::FOLLOWER);
   EXPECT_EQ(c_0->round(), rft::round_t(1));
   EXPECT_EQ(c_1->round(), rft::round_t(1));
-  EXPECT_EQ(c_1->get_leader(), c_0->get_leader());*/
+  EXPECT_EQ(c_1->get_leader(), c_0->get_leader());
   cluster = nullptr;
 }
 
 TEST_CASE("consensus.election") {
-  std::vector<std::shared_ptr<rft::consensus>> all_nodes;
   auto cluster = std::make_shared<mock_cluster>();
 
   size_t nodes_count = 4;
@@ -201,39 +209,30 @@ TEST_CASE("consensus.election") {
     auto cons = std::make_shared<rft::consensus>(sett, cluster,
                                                  rft::logdb::memory_journal::make_new());
     cluster->add_new(rft::cluster_node().set_name(sett.name()), cons);
-    all_nodes.push_back(cons);
   }
   rft::cluster_node last_leader;
 
   while (cluster->size() > 3) {
 
     while (true) {
-      auto leader_it = std::find_if(all_nodes.cbegin(), all_nodes.cend(), is_leader_pred);
+      auto leaders = cluster->by_filter(is_leader_pred);
 
-      if (leader_it != all_nodes.cend()) {
-        auto cur_leader = (*leader_it)->self_addr();
+      if (leaders.size() == 1) {
+        auto cur_leader = leaders.at(0)->self_addr();
         if (last_leader.is_empty() || cur_leader != last_leader) { // new leader election
           last_leader = cur_leader;
           break;
         }
       }
-      std::for_each(all_nodes.begin(), all_nodes.end(),
-                    [](auto n) { return n->on_heartbeat(); });
-      std::for_each(all_nodes.begin(), all_nodes.end(), [](auto n) {
+      cluster->apply([](auto n) { return n->on_heartbeat(); });
+      cluster->apply([](auto n) {
         rft::utils::logging::logger_info("?: ", n->self_addr(), ": -> ", n->get_leader());
       });
     }
 
-    { // kill the king...
+    // kill the king...
 
-      cluster->erase_if(is_leader_pred);
-      {
-        auto it = std::find_if(all_nodes.begin(), all_nodes.end(), [](auto v) {
-          return v->state() == rft::CONSENSUS_STATE::LEADER;
-        });
-        all_nodes.erase(it);
-      }
-      rft::utils::logging::logger_info("cluster size - ", cluster->size());
-    }
+    cluster->erase_if(is_leader_pred);
+    rft::utils::logging::logger_info("cluster size - ", cluster->size());
   }
 }
