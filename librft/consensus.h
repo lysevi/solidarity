@@ -7,6 +7,7 @@
 #include <chrono>
 #include <memory>
 #include <random>
+#include <shared_mutex>
 #include <string>
 
 namespace rft {
@@ -38,11 +39,18 @@ public:
   EXPORT void on_heartbeat();
   EXPORT void recv(const cluster_node &from, const append_entries &e);
 
-  cluster_node get_leader() const { return _leader_term; }
-  cluster_node self_addr() const { return _self_addr; }
+  cluster_node get_leader() const {
+    std::shared_lock<std::shared_mutex> l(_locker);
+    return _leader_term;
+  }
+  cluster_node self_addr() const { 
+	  std::shared_lock<std::shared_mutex> l(_locker);
+	  return _self_addr; 
+  }
 
 protected:
   append_entries make_append_entries() const;
+  append_entries make_append_entries_unsafe() const;
   bool is_heartbeat_missed() const;
 
   void on_vote(const cluster_node &from, const append_entries &e);
@@ -52,6 +60,7 @@ protected:
   void change_state(const cluster_node &cn, const round_t r);
 
 private:
+  mutable std::shared_mutex _locker;
   std::mt19937 _rnd_eng;
   std::chrono::milliseconds _next_heartbeat_interval;
 

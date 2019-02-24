@@ -31,7 +31,9 @@ public:
   void send_all(const rft::cluster_node &from, const rft::append_entries &m) {
     std::unique_lock<std::mutex> lg(_tasks_locker);
     for (auto &kv : _cluster) {
-      _tasks.push_back(std::tie(from, kv.first, m));
+      if (kv.first != from) {
+        _tasks.push_back(std::tie(from, kv.first, m));
+      }
     }
     _cond.notify_all();
   }
@@ -168,8 +170,7 @@ TEST_CASE("consensus.add_nodes") {
   }
   EXPECT_EQ(c_0->state(), rft::CONSENSUS_STATE::LEADER);
   EXPECT_EQ(c_1->state(), rft::CONSENSUS_STATE::FOLLOWER);
-  EXPECT_EQ(c_0->round(), rft::round_t(1));
-  EXPECT_EQ(c_1->round(), rft::round_t(1));
+  EXPECT_EQ(c_0->round(), c_1->round());
   EXPECT_EQ(c_1->get_leader(), c_0->get_leader());
 
   /// THREE NODES
@@ -188,8 +189,8 @@ TEST_CASE("consensus.add_nodes") {
 
   EXPECT_EQ(c_0->state(), rft::CONSENSUS_STATE::LEADER);
   EXPECT_EQ(c_1->state(), rft::CONSENSUS_STATE::FOLLOWER);
-  EXPECT_EQ(c_0->round(), rft::round_t(1));
-  EXPECT_EQ(c_1->round(), rft::round_t(1));
+  EXPECT_EQ(c_0->round(), c_1->round());
+  EXPECT_EQ(c_2->round(), c_1->round());
   EXPECT_EQ(c_1->get_leader(), c_0->get_leader());
   cluster = nullptr;
 }
