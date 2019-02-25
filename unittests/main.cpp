@@ -1,5 +1,5 @@
 #define CATCH_CONFIG_RUNNER
-#include <librft/utils/logger.h>
+#include <libutils/logger.h>
 #include <catch.hpp>
 #include <chrono>
 #include <cstring>
@@ -9,7 +9,7 @@
 #include <list>
 #include <sstream>
 
-class UnitTestLogger : public rft::utils::logging::abstract_logger {
+class UnitTestLogger : public utils::logging::abstract_logger {
 public:
   static bool verbose;
   bool _write_to_file;
@@ -38,21 +38,21 @@ public:
   }
   ~UnitTestLogger() {}
 
-  void message(rft::utils::logging::message_kind kind, const std::string &msg) noexcept {
+  void message(utils::logging::message_kind kind, const std::string &msg) noexcept {
     std::lock_guard<std::mutex> lg(_locker);
 
     std::stringstream ss;
     switch (kind) {
-    case rft::utils::logging::message_kind::fatal:
+    case utils::logging::message_kind::fatal:
       ss << "[err] " << msg << std::endl;
       break;
-    case rft::utils::logging::message_kind::info:
+    case utils::logging::message_kind::info:
       ss << "[inf] " << msg << std::endl;
       break;
-    case rft::utils::logging::message_kind::warn:
+    case utils::logging::message_kind::warn:
       ss << "[wrn] " << msg << std::endl;
       break;
-    case rft::utils::logging::message_kind::message:
+    case utils::logging::message_kind::message:
       ss << "[dbg] " << msg << std::endl;
       break;
     }
@@ -63,7 +63,7 @@ public:
       _output->flush();
     }
 
-    if (kind == rft::utils::logging::message_kind::fatal) {
+    if (kind == utils::logging::message_kind::fatal) {
       std::cerr << ss.str();
     } else {
       if (verbose) {
@@ -93,19 +93,19 @@ struct LoggerControl : Catch::TestEventListenerBase {
 
   virtual void testCaseStarting(Catch::TestCaseInfo const &) override {
     _raw_ptr = new UnitTestLogger();
-    _logger = rft::utils::logging::abstract_logger_ptr{_raw_ptr};
-    rft::utils::logging::logger_manager::start(_logger);
+    _logger = utils::logging::abstract_logger_ptr{_raw_ptr};
+    utils::logging::logger_manager::start(_logger);
   }
 
   virtual void testCaseEnded(Catch::TestCaseStats const &testCaseStats) override {
     if (testCaseStats.testInfo.expectedToFail()) {
       _raw_ptr->dump_all();
     }
-    rft::utils::logging::logger_manager::stop();
+    utils::logging::logger_manager::stop();
     _logger = nullptr;
   }
   UnitTestLogger *_raw_ptr;
-  rft::utils::logging::abstract_logger_ptr _logger;
+  utils::logging::abstract_logger_ptr _logger;
 };
 
 CATCH_REGISTER_LISTENER(LoggerControl);

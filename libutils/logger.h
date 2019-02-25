@@ -1,15 +1,14 @@
 #pragma once
 
-#include <librft/exports.h>
-#include <librft/utils/async/locker.h>
-#include <librft/utils/strings.h>
+#include <libutils/async/locker.h>
+#include <libutils/strings.h>
+#include <libutils/utils_exports.h>
 #include <atomic>
 #include <cstdint>
 #include <memory>
 #include <mutex>
 #include <string>
 
-namespace rft {
 namespace utils {
 namespace logging {
 
@@ -60,24 +59,23 @@ private:
 };
 
 template <typename... T> void logger(T &&... args) noexcept {
-  rft::utils::logging::logger_manager::instance()->variadic_message(
-      rft::utils::logging::message_kind::message, args...);
+  utils::logging::logger_manager::instance()->variadic_message(
+      utils::logging::message_kind::message, args...);
 }
 
 template <typename... T> void logger_info(T &&... args) noexcept {
-  rft::utils::logging::logger_manager::instance()->variadic_message(
-      rft::utils::logging::message_kind::info, args...);
+  utils::logging::logger_manager::instance()->variadic_message(
+      utils::logging::message_kind::info, args...);
 }
 
 template <typename... T> void logger_warn(T &&... args) noexcept {
-  rft::utils::logging::logger_manager::instance()->variadic_message(
-      rft::utils::logging::message_kind::warn, args...);
+  utils::logging::logger_manager::instance()->variadic_message(
+      utils::logging::message_kind::warn, args...);
 }
 
 template <typename... T> void logger_fatal(T &&... args) noexcept {
-  rft::utils::logging::logger_manager::instance()->variadic_message(
-      rft::utils::logging::message_kind::fatal, args...);
+  utils::logging::logger_manager::instance()->variadic_message(
+      utils::logging::message_kind::fatal, args...);
 }
 } // namespace logging
 } // namespace utils
-} // namespace rft

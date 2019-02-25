@@ -1,8 +1,9 @@
 #include <librft/consensus.h>
-#include <librft/utils/logger.h>
+#include <libutils/logger.h>
+#include <sstream>
 
 using namespace rft;
-using namespace rft::utils::logging;
+using namespace utils::logging;
 
 namespace {
 inline std::mt19937 make_seeded_engine() {
@@ -297,7 +298,7 @@ void consensus::on_heartbeat() {
 
 void consensus::update_next_heartbeat_interval() {
   auto total_mls = _settings.election_timeout().count();
-  float k1 = 0.5, k2 = 2.0;
+  double k1 = 0.5, k2 = 2.0;
   if (_state == CONSENSUS_STATE::CANDIDATE) {
     k1 = 2.0;
     k2 = 3.0 * _election_round;

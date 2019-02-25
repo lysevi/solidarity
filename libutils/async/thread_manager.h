@@ -1,12 +1,11 @@
 #pragma once
 
-#include <librft/exports.h>
-#include <librft/utils/async/thread_pool.h>
-#include <librft/utils/utils.h>
+#include <libutils/utils_exports.h>
+#include <libutils/async/thread_pool.h>
+#include <libutils/utils.h>
 #include <unordered_map>
 #include <shared_mutex>
 
-namespace rft {
 namespace utils {
 namespace async {
 
@@ -45,4 +44,3 @@ private:
 };
 } // namespace async
 } // namespace utils
-} // namespace rft

@@ -13,7 +13,7 @@ public:
   }
 
   ~mock_cluster() {
-    rft::utils::logging::logger_info("~ mock_cluster ");
+    utils::logging::logger_info("~ mock_cluster ");
     while (_is_worker_active) {
       _stop_flag = true;
       _cond.notify_all();
@@ -69,7 +69,7 @@ public:
 
   void print_cluster() {
     apply([](auto n) {
-      rft::utils::logging::logger_info("?: ", n->self_addr(), "{", n->state(), ":",
+      utils::logging::logger_info("?: ", n->self_addr(), "{", n->state(), ":",
                                        n->round(), "}", " => ", n->get_leader());
     });
   }
@@ -83,7 +83,7 @@ public:
     } else {
       for (auto &v : _cluster) {
         if (pred(v.second)) {
-          rft::utils::logging::logger_info(1);
+          utils::logging::logger_info(1);
         }
       }
     }
@@ -127,7 +127,7 @@ protected:
       }
       _is_worker_active = false;
     } catch (std::exception &ex) {
-      rft::utils::logging::logger_fatal("mock_cluster: worker error:", ex.what());
+      utils::logging::logger_fatal("mock_cluster: worker error:", ex.what());
     }
   }
 
@@ -228,7 +228,7 @@ TEST_CASE("consensus.election") {
     while (true) {
       auto leaders = cluster->by_filter(is_leader_pred);
       if (leaders.size() > 1) {
-        rft::utils::logging::logger_fatal("consensus error!!!");
+        utils::logging::logger_fatal("consensus error!!!");
         EXPECT_FALSE(true);
         return;
       }
@@ -249,6 +249,6 @@ TEST_CASE("consensus.election") {
     // kill the king...
 
     cluster->erase_if(is_leader_pred);
-    rft::utils::logging::logger_info("cluster size - ", cluster->size());
+    utils::logging::logger_info("cluster size - ", cluster->size());
   }
 }

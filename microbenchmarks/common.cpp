@@ -3,8 +3,8 @@
 namespace microbenchmark_common {
 void replace_std_logger() {
   auto _raw_ptr = new BenchmarkLogger();
-  auto _logger = rft::utils::logging::abstract_logger_ptr{_raw_ptr};
+  auto _logger = utils::logging::abstract_logger_ptr{_raw_ptr};
 
-  rft::utils::logging::logger_manager::start(_logger);
+  utils::logging::logger_manager::start(_logger);
 }
 } // namespace microbenchmark_common

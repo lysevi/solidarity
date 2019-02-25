@@ -1,12 +1,12 @@
-#include <librft/utils/logger.h>
-#include <librft/utils/utils.h>
+#include <libutils/logger.h>
+#include <libutils/utils.h>
 #include <iostream>
 
-using namespace rft::utils::logging;
-using namespace rft::utils::async;
+using namespace utils::logging;
+using namespace utils::async;
 
 std::shared_ptr<logger_manager> logger_manager::_instance = nullptr;
-rft::utils::async::locker logger_manager::_locker;
+utils::async::locker logger_manager::_locker;
 
 verbose logger_manager::verbose = verbose::debug;
 

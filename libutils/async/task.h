@@ -1,10 +1,9 @@
 #pragma once
 
-#include <librft/exports.h>
-#include <librft/utils/async/locker.h>
-#include <librft/utils/utils.h>
+#include <libutils/async/locker.h>
+#include <libutils/utils.h>
+#include <libutils/utils_exports.h>
 
-namespace rft {
 namespace utils {
 namespace async {
 
@@ -92,4 +91,3 @@ using task_wrapper_ptr = std::shared_ptr<task_wrapper>;
                                  __LINE__, pr)
 } // namespace async
 } // namespace utils
-} // namespace rft

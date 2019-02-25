@@ -1,10 +1,8 @@
-#include <librft/utils/async/thread_manager.h>
+#include <libutils/async/thread_manager.h>
 #include <benchmark/benchmark.h>
 
-using namespace rft;
-using namespace rft::utils::async;
+using namespace utils::async;
 
-using namespace rft::utils::async;
 
 const thread_kind_t tk = 1;
 const size_t threads_count = 2;

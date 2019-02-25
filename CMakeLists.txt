@@ -58,6 +58,7 @@ SET(solidarity_LIBRARY_DIR)
 SET(solidarity_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_BINARY_DIR} )
 SET(solidarity_PRIVATE_LIBRARIES  ${CMAKE_THREAD_LIBS_INIT})	
 
+add_subdirectory(libutils)
 add_subdirectory(librft)
 
 if (solidarity_ENABLE_TESTS)

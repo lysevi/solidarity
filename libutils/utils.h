@@ -1,6 +1,6 @@
 #pragma once
 
-#include <librft/utils/exception.h>
+#include <libutils/exception.h>
 #include <atomic>
 
 #define NOT_IMPLEMENTED THROW_EXCEPTION("Not implemented");
@@ -31,7 +31,6 @@ public:                                                                         
     return *this;                                                                        \
   }
 
-namespace rft {
 namespace utils {
 
 inline void sleep_mls(long long a) {
@@ -55,4 +54,3 @@ struct elapsed_time {
 };
 
 } // namespace utils
-} // namespace rft

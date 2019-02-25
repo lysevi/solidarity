@@ -1,4 +1,4 @@
-#include <librft/utils/strings.h>
+#include <libutils/strings.h>
 #include <algorithm>
 #include <clocale>
 #include <ctype.h>
@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-std::vector<std::string> rft::utils::strings::tokens(const std::string &str) {
+std::vector<std::string> utils::strings::tokens(const std::string &str) {
   std::vector<std::string> tokens;
   std::istringstream iss(str);
   std::copy(std::istream_iterator<std::string>(iss), std::istream_iterator<std::string>(),
@@ -15,7 +15,7 @@ std::vector<std::string> rft::utils::strings::tokens(const std::string &str) {
   return tokens;
 }
 
-std::vector<std::string> rft::utils::strings::split(const std::string &text, char sep) {
+std::vector<std::string> utils::strings::split(const std::string &text, char sep) {
   std::vector<std::string> tokens;
   std::size_t start = 0, end = 0;
   while ((end = text.find(sep, start)) != std::string::npos) {
@@ -30,7 +30,7 @@ std::vector<std::string> rft::utils::strings::split(const std::string &text, cha
   return tokens;
 }
 
-std::string rft::utils::strings::to_upper(const std::string &text) {
+std::string utils::strings::to_upper(const std::string &text) {
   std::string converted = text;
 
   for (size_t i = 0; i < converted.size(); ++i) {
@@ -39,7 +39,7 @@ std::string rft::utils::strings::to_upper(const std::string &text) {
   return converted;
 }
 
-std::string rft::utils::strings::to_lower(const std::string &text) {
+std::string utils::strings::to_lower(const std::string &text) {
   std::string converted = text;
 
   for (size_t i = 0; i < converted.size(); ++i) {
@@ -48,10 +48,10 @@ std::string rft::utils::strings::to_lower(const std::string &text) {
   return converted;
 }
 
-std::string rft::utils::strings::inner::to_string(const char *_Val) {
+std::string utils::strings::inner::to_string(const char *_Val) {
   return std::string(_Val);
 }
 
-std::string rft::utils::strings::inner::to_string(const std::string &_Val) {
+std::string utils::strings::inner::to_string(const std::string &_Val) {
   return _Val;
 }

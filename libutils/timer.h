@@ -1,11 +1,10 @@
 #pragma once
 
-#include <librft/exports.h>
+#include <libutils/utils_exports.h>
 #include <chrono>
 #include <functional>
 #include <thread>
 
-namespace rft {
 namespace utils {
 class timer_t {
 public:
@@ -32,4 +31,3 @@ protected:
   volatile bool _stoped = true;
 };
 } // namespace utils
-} // namespace rft

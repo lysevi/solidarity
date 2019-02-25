@@ -1,11 +1,10 @@
 #pragma once
 
-#include <librft/exports.h>
+#include <libutils/utils_exports.h>
 #include <list>
 #include <string>
 #include <vector>
 
-namespace rft {
 namespace utils {
 namespace strings {
 
@@ -50,4 +49,3 @@ template <class... Args> std::string args_to_string(Args &&... args) noexcept {
 }
 } // namespace strings
 } // namespace utils
-} // namespace rft

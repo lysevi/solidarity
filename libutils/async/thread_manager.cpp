@@ -1,8 +1,8 @@
-#include <librft/utils/async/thread_manager.h>
-#include <librft/utils/exception.h>
-#include <librft/utils/utils.h>
+#include <libutils/async/thread_manager.h>
+#include <libutils/exception.h>
+#include <libutils/utils.h>
 
-using namespace rft::utils::async;
+using namespace utils::async;
 
 thread_manager::thread_manager(const thread_manager::params_t &params) : _params(params) {
   for (const auto &kv : _params.pools) {

@@ -1,15 +1,14 @@
 #pragma once
 
-#include <librft/exports.h>
-#include <librft/utils/async/locker.h>
-#include <librft/utils/async/task.h>
-#include <librft/utils/utils.h>
+#include <libutils/utils_exports.h>
+#include <libutils/async/locker.h>
+#include <libutils/async/task.h>
+#include <libutils/utils.h>
 
 #include <algorithm>
 #include <deque>
 #include <shared_mutex>
 
-namespace rft {
 namespace utils {
 namespace async {
 
@@ -57,4 +56,3 @@ protected:
 };
 } // namespace async
 } // namespace utils
-} // namespace rft

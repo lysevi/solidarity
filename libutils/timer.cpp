@@ -1,6 +1,6 @@
-#include <librft/utils/timer.h>
-#include <librft/utils/utils.h>
-using namespace rft::utils;
+#include <libutils/timer.h>
+#include <libutils/utils.h>
+using namespace utils;
 
 void timer_t::start() {
   if (!_started) {

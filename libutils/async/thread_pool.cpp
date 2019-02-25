@@ -1,10 +1,10 @@
-#include <librft/utils/async/thread_pool.h>
-#include <librft/utils/logger.h>
+#include <libutils/async/thread_pool.h>
+#include <libutils/logger.h>
 #include <algorithm>
 
-using namespace rft::utils;
-using namespace rft::utils::logging;
-using namespace rft::utils::async;
+using namespace utils;
+using namespace utils::logging;
+using namespace utils::async;
 
 threads_pool::threads_pool(const params_t &p) : _params(p) {
   ENSURE(_params.threads_count > 0);
