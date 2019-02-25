@@ -40,11 +40,11 @@ public:
   EXPORT void recv(const cluster_node &from, const append_entries &e);
 
   cluster_node get_leader() const {
-    std::shared_lock<std::shared_mutex> l(_locker);
+    std::lock_guard<std::mutex> l(_locker);
     return _leader_term;
   }
   cluster_node self_addr() const {
-    std::shared_lock<std::shared_mutex> l(_locker);
+    std::lock_guard<std::mutex> l(_locker);
     return _self_addr;
   }
 
@@ -59,8 +59,9 @@ protected:
   void change_state(const CONSENSUS_STATE s, const round_t r, const cluster_node &leader);
   void change_state(const cluster_node &cn, const round_t r);
 
+  void update_next_heartbeat_interval();
 private:
-  mutable std::shared_mutex _locker;
+  mutable std::mutex _locker;
   std::mt19937 _rnd_eng;
   std::chrono::milliseconds _next_heartbeat_interval;
 
@@ -76,10 +77,10 @@ private:
   round_t _round{0};
   clock_t::time_point _last_heartbeat_time;
   cluster_node _leader_term;
-  cluster_node _elect_to_term;
+  cluster_node _vote_for_term;
 
-  std::mutex _election_locker;
   std::set<rft::cluster_node> _election_to_me;
+  size_t _election_round=0;
 };
 
 }; // namespace rft

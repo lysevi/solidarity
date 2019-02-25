@@ -23,6 +23,8 @@ consensus::consensus(const node_settings &ns, abstract_cluster *cluster,
   _self_addr.set_name(_settings.name());
 
   _start_time = clock_t::now().time_since_epoch().count();
+  update_next_heartbeat_interval();
+  _last_heartbeat_time = clock_t::now();
 }
 
 append_entries consensus::make_append_entries_unsafe() const {
@@ -35,19 +37,23 @@ append_entries consensus::make_append_entries_unsafe() const {
 }
 
 append_entries consensus::make_append_entries() const {
-  std::shared_lock<std::shared_mutex> l(_locker);
   return make_append_entries_unsafe();
 }
 
 bool consensus::is_heartbeat_missed() const {
   auto now = clock_t::now();
-  auto r = (now - _last_heartbeat_time) > (_next_heartbeat_interval * 2);
-  return r;
+  auto diff =
+      std::chrono::duration_cast<std::chrono::milliseconds>(now - _last_heartbeat_time);
+  auto r = diff > _next_heartbeat_interval;
+  if (r) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void consensus::change_state(const CONSENSUS_STATE s, const round_t r,
                              const cluster_node &leader) {
-  std::lock_guard<std::shared_mutex> l(_locker);
   logger_info("node: ", _settings.name(), ": change state {", _state, ", ", _round, ", ",
               _leader_term, "} => {", s, ", ", r, ", ", leader, "}");
   _state = s;
@@ -56,7 +62,6 @@ void consensus::change_state(const CONSENSUS_STATE s, const round_t r,
 }
 
 void consensus::change_state(const cluster_node &cn, const round_t r) {
-  std::lock_guard<std::shared_mutex> l(_locker);
   logger_info("node: ", _settings.name(), ": change state {", _leader_term, ", ", _round,
               "} => {", cn, ", ", r, "}");
   _leader_term = cn;
@@ -72,10 +77,44 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
 }
 
 void consensus::on_vote(const cluster_node &from, const append_entries &e) {
-  if (e.leader_term != _leader_term) {
+  std::lock_guard<std::mutex> l(_locker);
+  if (_round > e.round) {
+    return;
+  }
+  if (e.leader_term != _self_addr &&
+      (e.leader_term != _leader_term || _leader_term.is_empty())) {
     switch (_state) {
     case CONSENSUS_STATE::FOLLOWER: {
-      if (_leader_term.is_empty()) {
+      if (_leader_term.is_empty() && _vote_for_term.is_empty()) {
+        _last_heartbeat_time = clock_t::now();
+        _vote_for_term = e.leader_term;
+        _round = e.round;
+        logger_info("node: ", _settings.name(), ": vote to - ", from);
+
+        auto ae = make_append_entries();
+        ae.leader_term = _vote_for_term;
+        ae.is_vote = true;
+        _cluster->send_to(_self_addr, from, ae);
+      }
+      if (!_vote_for_term.is_empty() && _leader_term.is_empty()) {
+        if (_vote_for_term == e.leader_term) {
+          _last_heartbeat_time = clock_t::now();
+        }
+        _round = e.round;
+        auto ae = make_append_entries();
+        ae.leader_term = _vote_for_term;
+        ae.is_vote = true;
+        _cluster->send_to(_self_addr, from, ae);
+      }
+
+      if (_vote_for_term.is_empty() && !_leader_term.is_empty()) {
+
+        auto ae = make_append_entries();
+        ae.is_vote = true;
+        _cluster->send_to(_self_addr, from, ae);
+      }
+
+      /*if (_leader_term.is_empty() && _vote_for_term.is_empty()) {
         _last_heartbeat_time = clock_t::now();
         change_state(e.leader_term, e.round);
         logger_info("node: ", _settings.name(), ": now have a leader - ", _leader_term);
@@ -91,13 +130,14 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
         auto ae = make_append_entries();
         ae.is_vote = true;
         _cluster->send_to(_self_addr, from, ae);
-      }
+      }*/
       break;
     }
     case CONSENSUS_STATE::LEADER: {
       // TODO if round != current
       if (_round < e.round) {
         change_state(CONSENSUS_STATE::FOLLOWER, e.round, e.leader_term);
+        // TODO log replication
       } else {
         auto ae = make_append_entries();
         ae.is_vote = true;
@@ -109,15 +149,27 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
       if (_cluster->size() == size_t(2)) {
         /// sender.uptime > self.uptime => sender is a leader
         if (e.starttime < _start_time) {
+          _last_heartbeat_time = clock_t::now();
+          _election_round = 0;
           change_state(CONSENSUS_STATE::FOLLOWER, e.round, e.leader_term);
           logger_info("node: ", _settings.name(), ": ", CONSENSUS_STATE::CANDIDATE,
                       " => ", _state);
         }
       } else {
-        if (_round < e.round) {
+        if (_round < e.round && from == e.leader_term) {
+          _election_round = 0;
+          _last_heartbeat_time = clock_t::now();
           change_state(CONSENSUS_STATE::FOLLOWER, e.round, e.leader_term);
+          _leader_term.clear();
+          _vote_for_term = e.leader_term;
+          _round = e.round;
+          auto ae = make_append_entries();
+          ae.leader_term = _vote_for_term;
+          ae.is_vote = true;
+          _cluster->send_to(_self_addr, from, ae);
         } else {
           auto ae = make_append_entries();
+          ae.leader_term = _self_addr;
           ae.is_vote = true;
           _cluster->send_to(_self_addr, from, ae);
         }
@@ -135,13 +187,14 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
     case CONSENSUS_STATE::CANDIDATE: {
       // TODO use map. node may send one message twice.
       logger_info("node: ", _settings.name(), ": recv. vote from ", from);
-      std::lock_guard<std::mutex> lg(_election_locker);
       _election_to_me.insert(from);
       auto quorum = (size_t(_cluster->size() / 2.0) + 1);
       if (_election_to_me.size() >= quorum) {
-        std::lock_guard<std::shared_mutex> l(_locker);
         _round++;
         _state = CONSENSUS_STATE::LEADER;
+        _election_round = 0;
+        _leader_term = _self_addr;
+        _vote_for_term.clear();
         std::stringstream ss;
         for (auto v : _election_to_me) {
           ss << v.name() << ", ";
@@ -157,18 +210,29 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
 }
 
 void consensus::on_append_entries(const cluster_node &from, const append_entries &e) {
+  std::lock_guard<std::mutex> l(_locker);
+  if (e.round < _round) {
+    return;
+  }
+  if (from != _leader_term) {
+    if (from == _vote_for_term || _leader_term.is_empty()) {
+      _leader_term = from;
+      _round = e.round;
+      _vote_for_term.clear();
+    }
+    // TODO send error to 'from';
+    return;
+  }
   switch (_state) {
   case CONSENSUS_STATE::FOLLOWER: {
-    std::lock_guard<std::shared_mutex> l(_locker);
     _last_heartbeat_time = clock_t::now();
-    if (_leader_term.is_empty()) {
+    /*if (_leader_term.is_empty()) {
       _leader_term = e.leader_term;
       _round = e.round;
-    }
+    }*/
     break;
   }
   case CONSENSUS_STATE::LEADER: {
-    std::lock_guard<std::shared_mutex> l(_locker);
     if (_round < e.round) {
       _state = CONSENSUS_STATE::FOLLOWER;
       _round = e.round;
@@ -178,9 +242,8 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
     break;
   }
   case CONSENSUS_STATE::CANDIDATE: {
-    std::lock_guard<std::mutex> lg(_election_locker);
-    std::lock_guard<std::shared_mutex> l(_locker);
     if (_round < e.round) {
+      _election_round = 0;
       _state = CONSENSUS_STATE::FOLLOWER;
       _round = e.round;
       _leader_term = e.leader_term;
@@ -192,36 +255,45 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
 }
 
 void consensus::on_heartbeat() {
-  std::lock_guard<std::mutex> lg(_election_locker);
-  std::lock_guard<std::shared_mutex> l(_locker);
+  std::lock_guard<std::mutex> l(_locker);
   logger_info("node: ", _settings.name(), ": heartbeat");
-  if (is_heartbeat_missed() && _state != CONSENSUS_STATE::LEADER) {
+  if (_state != CONSENSUS_STATE::LEADER && is_heartbeat_missed()) {
     _leader_term.clear();
     switch (_state) {
     case CONSENSUS_STATE::FOLLOWER: {
-      if (_cluster->size() == size_t(1)) {
-        _round++;
-        _leader_term = _self_addr;
-        _state = CONSENSUS_STATE::LEADER;
-        logger_info("node: ", _settings.name(), ": alone node. change state to ", _state);
+      if (_vote_for_term.is_empty()) {
+        if (_cluster->size() == size_t(1)) {
+          _round++;
+          _leader_term = _self_addr;
+          _state = CONSENSUS_STATE::LEADER;
+          logger_info("node: ", _settings.name(), ": alone node. change state to ",
+                      _state);
+        } else {
+          _state = CONSENSUS_STATE::CANDIDATE;
+          _round++;
+          _election_round = 1;
+          _election_to_me.insert(_self_addr);
+          logger_info("node: ", _settings.name(), ": change state to ", _state);
+          append_entries ae = make_append_entries_unsafe();
+          ae.leader_term = _self_addr;
+          ae.is_vote = true;
+          _cluster->send_all(_self_addr, ae);
+        }
       } else {
-        _state = CONSENSUS_STATE::CANDIDATE;
-        _round++;
-        _election_to_me.insert(_self_addr);
-        _leader_term = _self_addr;
-        logger_info("node: ", _settings.name(), ": change state to ", _state);
-        append_entries ae = make_append_entries_unsafe();
-        ae.is_vote = true;
-        _cluster->send_all(_self_addr, ae);
+        _vote_for_term.clear();
       }
       break;
     }
     case CONSENSUS_STATE::CANDIDATE:
       _round++;
+      if (_election_round < 5) {
+        _election_round++;
+      }
       _election_to_me.clear();
-      _leader_term = _self_addr;
-      logger_info("node: ", _settings.name(), ": change state to ", _state);
+      logger_info("node: ", _settings.name(), ": change state to ", _state,
+                  " election_round:", _election_round);
       auto ae = make_append_entries_unsafe();
+      ae.leader_term = _self_addr;
       ae.is_vote = true;
       _cluster->send_all(_self_addr, ae);
 
@@ -237,8 +309,22 @@ void consensus::on_heartbeat() {
     }
     }
   }
-  auto total_mls = _settings.election_timeout().count() * 2;
-  std::uniform_int_distribution<uint64_t> distr(uint64_t(total_mls * 0.5), total_mls);
+  update_next_heartbeat_interval();
+}
+
+void consensus::update_next_heartbeat_interval() {
+  auto total_mls = _settings.election_timeout().count();
+  float k1 = 0.5, k2 = 2.0;
+  if (_state == CONSENSUS_STATE::CANDIDATE) {
+    k1 = 2.0;
+    k2 = 3.0 * _election_round;
+  }
+  if (_state == CONSENSUS_STATE::LEADER) {
+    k1 = 0.5;
+    k2 = 1.5;
+  }
+  std::uniform_int_distribution<uint64_t> distr(uint64_t(total_mls * k1),
+                                                uint64_t(total_mls * k2));
 
   _next_heartbeat_interval = std::chrono::milliseconds(distr(_rnd_eng));
   logger_info("node: ", _settings.name(), ": next heartbeat is ",
