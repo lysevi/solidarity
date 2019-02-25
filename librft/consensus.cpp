@@ -12,8 +12,7 @@ inline std::mt19937 make_seeded_engine() {
 }
 } // namespace
 
-consensus::consensus(const node_settings &ns,
-                     const std::shared_ptr<abstract_cluster> &cluster,
+consensus::consensus(const node_settings &ns, abstract_cluster *cluster,
                      const logdb::journal_ptr &jrn)
     : _settings(ns), _cluster(cluster), _jrn(jrn), _last_heartbeat_time(),
       _rnd_eng(make_seeded_engine()) {
@@ -136,14 +135,19 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
     case CONSENSUS_STATE::CANDIDATE: {
       // TODO use map. node may send one message twice.
       logger_info("node: ", _settings.name(), ": recv. vote from ", from);
-      _election_to_me.fetch_add(1);
+      std::lock_guard<std::mutex> lg(_election_locker);
+      _election_to_me.insert(from);
       auto quorum = (size_t(_cluster->size() / 2.0) + 1);
-      if (_election_to_me.load() >= quorum) {
+      if (_election_to_me.size() >= quorum) {
         std::lock_guard<std::shared_mutex> l(_locker);
         _round++;
         _state = CONSENSUS_STATE::LEADER;
+        std::stringstream ss;
+        for (auto v : _election_to_me) {
+          ss << v.name() << ", ";
+        }
         logger_info("node: ", _settings.name(), ": quorum. i'am new leader with ",
-                    _election_to_me.load(), " voices");
+                    ss.str(), " voices");
         _cluster->send_all(_self_addr, make_append_entries_unsafe());
       }
       break;
@@ -174,12 +178,13 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
     break;
   }
   case CONSENSUS_STATE::CANDIDATE: {
+    std::lock_guard<std::mutex> lg(_election_locker);
     std::lock_guard<std::shared_mutex> l(_locker);
     if (_round < e.round) {
       _state = CONSENSUS_STATE::FOLLOWER;
       _round = e.round;
       _leader_term = e.leader_term;
-      _election_to_me.store(0);
+      _election_to_me.clear();
     }
     break;
   }
@@ -187,6 +192,7 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
 }
 
 void consensus::on_heartbeat() {
+  std::lock_guard<std::mutex> lg(_election_locker);
   std::lock_guard<std::shared_mutex> l(_locker);
   logger_info("node: ", _settings.name(), ": heartbeat");
   if (is_heartbeat_missed() && _state != CONSENSUS_STATE::LEADER) {
@@ -201,7 +207,7 @@ void consensus::on_heartbeat() {
       } else {
         _state = CONSENSUS_STATE::CANDIDATE;
         _round++;
-        _election_to_me.store(1);
+        _election_to_me.insert(_self_addr);
         _leader_term = _self_addr;
         logger_info("node: ", _settings.name(), ": change state to ", _state);
         append_entries ae = make_append_entries_unsafe();
@@ -212,9 +218,9 @@ void consensus::on_heartbeat() {
     }
     case CONSENSUS_STATE::CANDIDATE:
       _round++;
-      _election_to_me.store(0);
-      logger_info("node: ", _settings.name(), ": change state to ", _state,
-                  " leader is the ", _leader_term);
+      _election_to_me.clear();
+      _leader_term = _self_addr;
+      logger_info("node: ", _settings.name(), ": change state to ", _state);
       auto ae = make_append_entries_unsafe();
       ae.is_vote = true;
       _cluster->send_all(_self_addr, ae);
@@ -231,8 +237,8 @@ void consensus::on_heartbeat() {
     }
     }
   }
-  auto total_mls = _settings.election_timeout().count();
-  std::uniform_int_distribution<uint64_t> distr(uint64_t(total_mls / 2.0), total_mls);
+  auto total_mls = _settings.election_timeout().count() * 2;
+  std::uniform_int_distribution<uint64_t> distr(uint64_t(total_mls * 0.5), total_mls);
 
   _next_heartbeat_interval = std::chrono::milliseconds(distr(_rnd_eng));
   logger_info("node: ", _settings.name(), ": next heartbeat is ",

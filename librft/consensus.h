@@ -9,6 +9,7 @@
 #include <random>
 #include <shared_mutex>
 #include <string>
+#include <set>
 
 namespace rft {
 
@@ -31,8 +32,7 @@ inline std::string to_string(const rft::CONSENSUS_STATE s) {
 
 class consensus {
 public:
-  EXPORT consensus(const node_settings &ns,
-                   const std::shared_ptr<abstract_cluster> &cluster,
+  EXPORT consensus(const node_settings &ns, abstract_cluster *cluster,
                    const logdb::journal_ptr &jrn);
   CONSENSUS_STATE state() const { return _state; }
   round_t round() const { return _round; }
@@ -43,9 +43,9 @@ public:
     std::shared_lock<std::shared_mutex> l(_locker);
     return _leader_term;
   }
-  cluster_node self_addr() const { 
-	  std::shared_lock<std::shared_mutex> l(_locker);
-	  return _self_addr; 
+  cluster_node self_addr() const {
+    std::shared_lock<std::shared_mutex> l(_locker);
+    return _self_addr;
   }
 
 protected:
@@ -66,7 +66,7 @@ private:
 
   node_settings _settings;
   cluster_node _self_addr;
-  std::shared_ptr<abstract_cluster> _cluster;
+  abstract_cluster *_cluster;
   logdb::journal_ptr _jrn;
 
   CONSENSUS_STATE _state{CONSENSUS_STATE::FOLLOWER};
@@ -76,7 +76,10 @@ private:
   round_t _round{0};
   clock_t::time_point _last_heartbeat_time;
   cluster_node _leader_term;
-  std::atomic_size_t _election_to_me;
+  cluster_node _elect_to_term;
+
+  std::mutex _election_locker;
+  std::set<rft::cluster_node> _election_to_me;
 };
 
 }; // namespace rft

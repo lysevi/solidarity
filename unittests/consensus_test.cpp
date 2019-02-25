@@ -145,7 +145,7 @@ TEST_CASE("consensus.add_nodes") {
   auto settings_0 = rft::node_settings().set_name("_0").set_election_timeout(
       std::chrono::milliseconds(3000));
 
-  auto c_0 = std::make_shared<rft::consensus>(settings_0, cluster,
+  auto c_0 = std::make_shared<rft::consensus>(settings_0, cluster.get(),
                                               rft::logdb::memory_journal::make_new());
   cluster->add_new(rft::cluster_node().set_name("_0"), c_0);
   EXPECT_EQ(c_0->round(), rft::round_t(0));
@@ -160,7 +160,7 @@ TEST_CASE("consensus.add_nodes") {
   /// TWO NODES
   auto settings_1 = rft::node_settings().set_name("_1").set_election_timeout(
       std::chrono::milliseconds(3000));
-  auto c_1 = std::make_shared<rft::consensus>(settings_1, cluster,
+  auto c_1 = std::make_shared<rft::consensus>(settings_1, cluster.get(),
                                               rft::logdb::memory_journal::make_new());
   cluster->add_new(rft::cluster_node().set_name(settings_1.name()), c_1);
 
@@ -176,7 +176,7 @@ TEST_CASE("consensus.add_nodes") {
   /// THREE NODES
   auto settings_2 = rft::node_settings().set_name("_2").set_election_timeout(
       std::chrono::milliseconds(3000));
-  auto c_2 = std::make_shared<rft::consensus>(settings_2, cluster,
+  auto c_2 = std::make_shared<rft::consensus>(settings_2, cluster.get(),
                                               rft::logdb::memory_journal::make_new());
   cluster->add_new(rft::cluster_node().set_name(settings_2.name()), c_2);
 
@@ -191,7 +191,7 @@ TEST_CASE("consensus.add_nodes") {
   EXPECT_EQ(c_1->state(), rft::CONSENSUS_STATE::FOLLOWER);
   EXPECT_EQ(c_0->round(), c_1->round());
   EXPECT_EQ(c_2->round(), c_1->round());
-  EXPECT_EQ(c_1->get_leader(), c_0->get_leader());
+  EXPECT_EQ(c_1->get_leader().name(), c_0->get_leader().name());
   cluster = nullptr;
 }
 
@@ -200,14 +200,14 @@ TEST_CASE("consensus.election") {
 
   size_t nodes_count = 4;
   SECTION("consensus.election.3") { nodes_count = 3; }
-  SECTION("consensus.election.4") { nodes_count = 4; }
   SECTION("consensus.election.5") { nodes_count = 5; }
+  SECTION("consensus.election.10") { nodes_count = 10; }
 
   for (size_t i = 0; i < nodes_count; ++i) {
     auto sett = rft::node_settings()
                     .set_name("_" + std::to_string(i))
                     .set_election_timeout(std::chrono::milliseconds(500));
-    auto cons = std::make_shared<rft::consensus>(sett, cluster,
+    auto cons = std::make_shared<rft::consensus>(sett, cluster.get(),
                                                  rft::logdb::memory_journal::make_new());
     cluster->add_new(rft::cluster_node().set_name(sett.name()), cons);
   }
@@ -217,17 +217,25 @@ TEST_CASE("consensus.election") {
 
     while (true) {
       auto leaders = cluster->by_filter(is_leader_pred);
-
+      if (leaders.size() > 1) {
+        rft::utils::logging::logger_fatal("consensus error!!!");
+        EXPECT_FALSE(true);
+        return;
+      }
       if (leaders.size() == 1) {
-        auto cur_leader = leaders.at(0)->self_addr();
-        if (last_leader.is_empty() || cur_leader != last_leader) { // new leader election
+        auto cur_leader = leaders.front()->self_addr();
+        if (last_leader.is_empty()) {
+          break;
+        }
+        if (cur_leader != last_leader) { // new leader election
           last_leader = cur_leader;
           break;
         }
       }
       cluster->apply([](auto n) { return n->on_heartbeat(); });
       cluster->apply([](auto n) {
-        rft::utils::logging::logger_info("?: ", n->self_addr(), ": -> ", n->get_leader());
+        rft::utils::logging::logger_info("?: ", n->self_addr(), "{", n->state(), ":",
+                                         n->round(), "}", " => ", n->get_leader());
       });
     }
 

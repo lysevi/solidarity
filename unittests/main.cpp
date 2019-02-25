@@ -1,7 +1,10 @@
 #define CATCH_CONFIG_RUNNER
 #include <librft/utils/logger.h>
 #include <catch.hpp>
+#include <chrono>
 #include <cstring>
+#include <ctime>
+#include <fstream>
 #include <iostream>
 #include <list>
 #include <sstream>
@@ -9,7 +12,30 @@
 class UnitTestLogger : public rft::utils::logging::abstract_logger {
 public:
   static bool verbose;
-  UnitTestLogger() {}
+  bool _write_to_file;
+  std::unique_ptr<std::ofstream> _output;
+  UnitTestLogger(bool write_to_file = true) : _write_to_file(write_to_file) {
+    if (_write_to_file) {
+      auto cur_time = std::chrono::system_clock::now();
+      std::time_t tt = std::chrono::system_clock::to_time_t(cur_time);
+      tm *ptm = gmtime(&tt);
+
+      std::stringstream fname_ss;
+      fname_ss << "solidarity_unittests_";
+      char buf[1024];
+      std::fill(std::begin(buf), std::end(buf), '\0');
+      std::strftime(buf, 1024, "%F", ptm);
+      fname_ss << buf;
+      fname_ss << ".log";
+	  
+      auto logname = fname_ss.str();
+      if (verbose) {
+        std::cout << "See output in " << logname << std::endl;
+      }
+      _output = std::make_unique<std::ofstream>(logname, std::ofstream::app);
+      (*_output) << "Start programm"<<std::endl;
+    }
+  }
   ~UnitTestLogger() {}
 
   void message(rft::utils::logging::message_kind kind, const std::string &msg) noexcept {
@@ -29,6 +55,12 @@ public:
     case rft::utils::logging::message_kind::message:
       ss << "[dbg] " << msg << std::endl;
       break;
+    }
+
+    if (_write_to_file) {
+      (*_output) << ss.str();
+	  _output->flush();
+      _output->flush();
     }
 
     if (kind == rft::utils::logging::message_kind::fatal) {
