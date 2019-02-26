@@ -146,7 +146,7 @@ private:
 };
 
 bool is_leader_pred(const std::shared_ptr<rft::consensus> &v) {
-  return v->state() == rft::CONSENSUS_STATE::LEADER;
+  return v->state() == rft::ROUND_KIND::LEADER;
 };
 
 TEST_CASE("consensus.add_nodes") {
@@ -160,9 +160,9 @@ TEST_CASE("consensus.add_nodes") {
                                               rft::logdb::memory_journal::make_new());
   cluster->add_new(rft::cluster_node().set_name("_0"), c_0);
   EXPECT_EQ(c_0->round(), rft::round_t(0));
-  EXPECT_EQ(c_0->state(), rft::CONSENSUS_STATE::FOLLOWER);
+  EXPECT_EQ(c_0->state(), rft::ROUND_KIND::FOLLOWER);
 
-  while (c_0->state() != rft::CONSENSUS_STATE::LEADER) {
+  while (c_0->state() != rft::ROUND_KIND::LEADER) {
     c_0->on_heartbeat();
     cluster->print_cluster();
   }
@@ -179,8 +179,8 @@ TEST_CASE("consensus.add_nodes") {
     cluster->on_heartbeat();
     cluster->print_cluster();
   }
-  EXPECT_EQ(c_0->state(), rft::CONSENSUS_STATE::LEADER);
-  EXPECT_EQ(c_1->state(), rft::CONSENSUS_STATE::FOLLOWER);
+  EXPECT_EQ(c_0->state(), rft::ROUND_KIND::LEADER);
+  EXPECT_EQ(c_1->state(), rft::ROUND_KIND::FOLLOWER);
   EXPECT_EQ(c_0->round(), c_1->round());
   EXPECT_EQ(c_1->get_leader(), c_0->get_leader());
 
@@ -197,8 +197,8 @@ TEST_CASE("consensus.add_nodes") {
     cluster->print_cluster();
   }
 
-  EXPECT_EQ(c_0->state(), rft::CONSENSUS_STATE::LEADER);
-  EXPECT_EQ(c_1->state(), rft::CONSENSUS_STATE::FOLLOWER);
+  EXPECT_EQ(c_0->state(), rft::ROUND_KIND::LEADER);
+  EXPECT_EQ(c_1->state(), rft::ROUND_KIND::FOLLOWER);
   EXPECT_EQ(c_0->round(), c_1->round());
   EXPECT_EQ(c_2->round(), c_1->round());
   EXPECT_EQ(c_1->get_leader().name(), c_0->get_leader().name());
