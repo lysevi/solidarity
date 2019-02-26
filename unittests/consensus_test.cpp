@@ -7,6 +7,12 @@
 #include <tuple>
 
 class mock_cluster : public rft::abstract_cluster {
+  struct message_t {
+    rft::cluster_node from;
+    rft::cluster_node to;
+    rft::append_entries m;
+  };
+
 public:
   mock_cluster() {
     _worker_thread = std::thread([this]() { this->worker(); });
@@ -24,7 +30,7 @@ public:
   void send_to(const rft::cluster_node &from, const rft::cluster_node &to,
                const rft::append_entries &m) override {
     std::unique_lock<std::mutex> ul(_tasks_locker);
-    _tasks.push_back(std::tie(from, to, m));
+    _tasks.push_back({from, to, m});
     _cond.notify_all();
   }
 
@@ -32,7 +38,7 @@ public:
     std::unique_lock<std::mutex> lg(_tasks_locker);
     for (auto &kv : _cluster) {
       if (kv.first != from) {
-        _tasks.push_back(std::tie(from, kv.first, m));
+        _tasks.push_back({from, kv.first, m});
       }
     }
     _cond.notify_all();
@@ -100,8 +106,7 @@ protected:
     try {
 
       while (!_stop_flag) {
-        std::vector<std::tuple<rft::cluster_node, rft::cluster_node, rft::append_entries>>
-            local_copy;
+        std::vector<message_t> local_copy;
         {
           std::unique_lock<std::mutex> ul(_tasks_locker);
           _cond.wait(ul, [this] { return this->_stop_flag || !this->_tasks.empty(); });
@@ -115,11 +120,11 @@ protected:
           std::copy(_tasks.begin(), _tasks.end(), std::back_inserter(local_copy));
           _tasks.clear();
         }
-        for (auto v : local_copy) {
+        for (auto&&v : local_copy) {
           std::shared_lock<std::shared_mutex> lg(_cluster_locker);
-          auto it = _cluster.find(std::get<1>(v));
+          auto it = _cluster.find(v.to);
           if (it != _cluster.cend()) {
-            it->second->recv(std::get<0>(v), std::get<2>(v));
+            it->second->recv(v.from, v.m);
           } else {
             // throw std::logic_error("unknow sender");
           }
@@ -139,8 +144,7 @@ private:
   std::mutex _tasks_locker;
   std::condition_variable _cond;
   /// from, to, message
-  std::deque<std::tuple<rft::cluster_node, rft::cluster_node, rft::append_entries>>
-      _tasks;
+  std::deque<message_t> _tasks;
 
   mutable std::shared_mutex _cluster_locker;
   std::map<rft::cluster_node, std::shared_ptr<rft::consensus>> _cluster;
