@@ -3,11 +3,8 @@
 #include <libutils/async/locker.h>
 #include <libutils/strings.h>
 #include <libutils/utils_exports.h>
-#include <atomic>
-#include <cstdint>
 #include <memory>
-#include <mutex>
-#include <string>
+#include <utility>
 
 namespace utils {
 namespace logging {
@@ -18,6 +15,12 @@ class abstract_logger {
 public:
   virtual void message(message_kind kind, const std::string &msg) noexcept = 0;
   virtual ~abstract_logger() {}
+
+  template <typename... T>
+  void variadic_message(message_kind kind, T &&... args) noexcept {
+    auto str_message = utils::strings::args_to_string(args...);
+    this->message(kind, str_message);
+  }
 };
 
 using abstract_logger_ptr = std::shared_ptr<abstract_logger>;
@@ -43,12 +46,10 @@ public:
   EXPORT static void stop();
   EXPORT static logger_manager *instance() noexcept;
 
-  EXPORT void message(message_kind kind, const std::string &msg) noexcept;
-
   template <typename... T>
   void variadic_message(message_kind kind, T &&... args) noexcept {
-    auto str_message = utils::strings::args_to_string(args...);
-    this->message(kind, str_message);
+    std::lock_guard<utils::async::locker> lg(_msg_locker);
+    _logger->variadic_message(kind, std::forward<T>(args)...);
   }
 
 private:
