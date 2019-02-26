@@ -74,6 +74,7 @@ public:
   }
 
   void print_cluster() {
+    utils::logging::logger_info("----------------------------");
     apply([](auto n) {
       utils::logging::logger_info("?: ", n->self_addr(), "{", n->state(), ":", n->round(),
                                   "}", " => ", n->get_leader());
@@ -120,14 +121,20 @@ protected:
           std::copy(_tasks.begin(), _tasks.end(), std::back_inserter(local_copy));
           _tasks.clear();
         }
-        for (auto&&v : local_copy) {
-          std::shared_lock<std::shared_mutex> lg(_cluster_locker);
-          auto it = _cluster.find(v.to);
-          if (it != _cluster.cend()) {
-            it->second->recv(v.from, v.m);
-          } else {
-            // throw std::logic_error("unknow sender");
+        for (auto &&v : local_copy) {
+          std::shared_ptr<rft::consensus> target = nullptr;
+          {
+            std::shared_lock<std::shared_mutex> lg(_cluster_locker);
+            auto it = _cluster.find(v.to);
+
+            if (it == _cluster.cend()) {
+              continue;
+            } else {
+              target = it->second;
+            }
           }
+
+          target->recv(v.from, v.m);
         }
         local_copy.clear();
       }
@@ -223,7 +230,7 @@ TEST_CASE("consensus.election") {
   for (size_t i = 0; i < nodes_count; ++i) {
     auto sett = rft::node_settings()
                     .set_name("_" + std::to_string(i))
-                    .set_election_timeout(std::chrono::milliseconds(500));
+                    .set_election_timeout(std::chrono::milliseconds(300));
     auto cons = std::make_shared<rft::consensus>(sett, cluster.get(),
                                                  rft::logdb::memory_journal::make_new());
     cluster->add_new(rft::cluster_node().set_name(sett.name()), cons);

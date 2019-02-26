@@ -30,7 +30,7 @@ struct node_state_t {
   std::chrono::milliseconds next_heartbeat_interval;
   cluster_node leader;
   ROUND_KIND round_kind{ROUND_KIND::FOLLOWER};
-  size_t _election_round = 0;
+  size_t election_round = 0;
   std::set<cluster_node> _election_to_me;
 
   uint64_t start_time;

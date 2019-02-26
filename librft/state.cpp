@@ -51,7 +51,7 @@ node_state_t node_state_t::on_vote(const node_state_t &self,
     case ROUND_KIND::CANDIDATE: {
       if (result.round < e.round && from == e.leader) {
         result.change_state(ROUND_KIND::ELECTION, e.round, e.leader);
-        result._election_round = 0;
+        result.election_round = 0;
         result.last_heartbeat_time = clock_t::now();
       }
       break;
@@ -74,7 +74,7 @@ node_state_t node_state_t::on_vote(const node_state_t &self,
       if (result._election_to_me.size() >= quorum) {
         result.round_kind = ROUND_KIND::LEADER;
         result.round++;
-        result._election_round = 0;
+        result.election_round = 0;
         result.leader = self_addr;
       }
       break;
@@ -91,7 +91,8 @@ node_state_t node_state_t::on_append_entries(const node_state_t &self,
   switch (result.round_kind) {
   case ROUND_KIND::ELECTION: {
     if (from == result.leader) {
-      result.change_state(ROUND_KIND::ELECTION, e.round, from);
+      result.change_state(ROUND_KIND::FOLLOWER, e.round, from);
+	  result.leader=e.leader;
       result.last_heartbeat_time = clock_t::now();
     } else {
       // TODO send error to 'from';
@@ -117,7 +118,7 @@ node_state_t node_state_t::on_append_entries(const node_state_t &self,
   }
   case ROUND_KIND::CANDIDATE: {
     if (result.round < e.round) {
-      result._election_round = 0;
+      result.election_round = 0;
       result.round_kind = ROUND_KIND::FOLLOWER;
       result.round = e.round;
       result.leader = e.leader;
@@ -149,7 +150,7 @@ node_state_t node_state_t::on_heartbeat(const node_state_t &self,
         result.round_kind = ROUND_KIND::CANDIDATE;
         result.round++;
         result.leader = self_addr;
-        result._election_round = 1;
+        result.election_round = 1;
         result._election_to_me.insert(self_addr);
       }
       break;
@@ -157,21 +158,13 @@ node_state_t node_state_t::on_heartbeat(const node_state_t &self,
     case ROUND_KIND::CANDIDATE:
       result.leader = self_addr;
       result.round++;
-      if (result._election_round < 5) {
-        result._election_round++;
+      if (result.election_round < 5) {
+        result.election_round++;
       }
       result._election_to_me.clear();
       result._election_to_me.insert(self_addr);
       break;
     }
-
-  } else {
-    switch (result.round_kind) {
-    case ROUND_KIND::LEADER: {
-
-      break;
-    }
-    }
-  }
+  } 
   return result;
 }

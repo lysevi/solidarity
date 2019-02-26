@@ -75,25 +75,25 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
   if (!(old_s.round_kind == ROUND_KIND::LEADER &&
         ns.round_kind == ROUND_KIND::FOLLOWER)) { // if not LEADER => FOLLOWER
 
-    if (ns.round_kind != old_s.round_kind) {
-      if (old_s.round_kind == ROUND_KIND::CANDIDATE &&
-          ns.round_kind == ROUND_KIND::LEADER) { // if not CANDIDATE => LEADER
-        std::stringstream ss;
-        for (auto v : ns._election_to_me) {
-          ss << v.name() << ", ";
-        }
-        logger_info("node: ", _settings.name(), ": quorum. i'am new leader with ",
-                    ns._election_to_me.size(), " voices - ", ss.str());
-        ns._election_to_me.clear();
-        _cluster->send_all(_self_addr, make_append_entries_unsafe());
-        return;
-      } else {
-        auto ae = make_append_entries();
-        ae.is_vote = true;
-        _cluster->send_to(_self_addr, from, ae);
-        return;
+    if (old_s.round_kind == ROUND_KIND::CANDIDATE &&
+        ns.round_kind == ROUND_KIND::LEADER) { // if CANDIDATE => LEADER
+      std::stringstream ss;
+      for (auto v : ns._election_to_me) {
+        ss << v.name() << ", ";
       }
+      logger_info("node: ", _settings.name(), ": quorum. i'am new leader with ",
+                  ns._election_to_me.size(), " voices - ", ss.str());
+      ns._election_to_me.clear();
+      _cluster->send_all(_self_addr, make_append_entries_unsafe());
+      return;
     }
+
+    if (ns.round_kind != ROUND_KIND::CANDIDATE) { // CANDIDATE => CANDIDATE
+      auto ae = make_append_entries();
+      ae.is_vote = true;
+      _cluster->send_to(_self_addr, from, ae);
+    }
+    return;
   }
 }
 
@@ -103,30 +103,28 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
 
 void consensus::on_heartbeat() {
   std::lock_guard<std::mutex> l(_locker);
-  logger_info("node: ", _settings.name(), ": heartbeat");
-  auto old_s = _state;
-  auto ns = node_state_t::on_heartbeat(_state, _self_addr, _cluster->size());
-  _state = ns;
 
-  if (ns.round_kind == old_s.round_kind &&
-      (ns.round_kind == ROUND_KIND::LEADER || ns.round_kind == ROUND_KIND::CANDIDATE)) {
-    auto ae = make_append_entries_unsafe();
-    if (ns.round_kind == ROUND_KIND::CANDIDATE) {
-      logger_info("node: ", _settings.name(), ": {", _state.round_kind,
-                  "} election_round - ", _state._election_round);
-      ae.is_vote = true;
+  if (_state.round_kind != ROUND_KIND::LEADER && _state.is_heartbeat_missed()) {
+    logger_info("node: ", _settings.name(), ": heartbeat");
+    if (_state.round_kind == ROUND_KIND::ELECTION) {
+      logger_info(1);
     }
-    _cluster->send_all(_self_addr, ae);
-  } else {
-    logger_info("node: ", _settings.name(), ": change state to ", _state.round_kind);
-    if (ns.round_kind == ROUND_KIND::CANDIDATE &&
-        old_s.round_kind == ROUND_KIND::FOLLOWER) {
-      auto ae = make_append_entries_unsafe();
-      ae.is_vote = true;
-      _cluster->send_all(_self_addr, ae);
-    }
+    auto old_s = _state;
+    auto ns = node_state_t::on_heartbeat(_state, _self_addr, _cluster->size());
+    _state = ns;
+
+    logger_info("node: ", _settings.name(), ": {", _state.round_kind, "} => - ",
+                _state.leader);
   }
-
+  if (_state.round_kind == ROUND_KIND::CANDIDATE ||
+      _state.round_kind == ROUND_KIND::LEADER) {
+    if (_state.round_kind == ROUND_KIND::LEADER) {
+      logger_info("node: ", _settings.name(), ": heartbeat");
+    }
+    auto ae = make_append_entries_unsafe();
+    ae.is_vote = _state.round_kind == ROUND_KIND::CANDIDATE;
+    _cluster->send_all(_self_addr, ae);
+  }
   update_next_heartbeat_interval();
 }
 
@@ -135,7 +133,7 @@ void consensus::update_next_heartbeat_interval() {
   double k1 = 0.5, k2 = 2.0;
   if (_state.round_kind == ROUND_KIND::CANDIDATE) {
     k1 = 2.0;
-    k2 = 3.0 * _state._election_round;
+    k2 = 3.0 * _state.election_round;
   }
   if (_state.round_kind == ROUND_KIND::LEADER) {
     k1 = 0.5;
@@ -145,6 +143,6 @@ void consensus::update_next_heartbeat_interval() {
                                                 uint64_t(total_mls * k2));
 
   _state.next_heartbeat_interval = std::chrono::milliseconds(distr(_rnd_eng));
-  logger_info("node: ", _settings.name(), ": next heartbeat is ",
-              _state.next_heartbeat_interval.count());
+  /*logger_info("node: ", _settings.name(), ": next heartbeat is ",
+              _state.next_heartbeat_interval.count());*/
 }
