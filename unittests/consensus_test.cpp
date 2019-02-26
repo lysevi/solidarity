@@ -116,8 +116,9 @@ protected:
           _tasks.clear();
         }
         for (auto v : local_copy) {
+          std::shared_lock<std::shared_mutex> lg(_cluster_locker);
           auto it = _cluster.find(std::get<1>(v));
-          if (it != _cluster.end()) {
+          if (it != _cluster.cend()) {
             it->second->recv(std::get<0>(v), std::get<2>(v));
           } else {
             // throw std::logic_error("unknow sender");
