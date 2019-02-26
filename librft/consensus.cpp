@@ -86,9 +86,11 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
   if (e.leader != _nodestate.leader) {
     switch (_nodestate.round_kind) {
     case ROUND_KIND::ELECTION: {
-      _nodestate.last_heartbeat_time = clock_t::now();
-      _nodestate.leader = e.leader;
-      _nodestate.round = e.round;
+      if (_nodestate.leader.is_empty()) {
+        _nodestate.last_heartbeat_time = clock_t::now();
+        _nodestate.leader = e.leader;
+        _nodestate.round = e.round;
+      }
       logger_info("node: ", _settings.name(), ": vote to - ", from);
 
       auto ae = make_append_entries();
@@ -98,6 +100,8 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
     }
     case ROUND_KIND::FOLLOWER: {
       if (_nodestate.leader.is_empty()) {
+        _nodestate.round_kind = ROUND_KIND::ELECTION;
+        _nodestate.round = e.round;
         _nodestate.leader = e.leader;
       }
       auto ae = make_append_entries();
@@ -151,6 +155,7 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
     switch (_nodestate.round_kind) {
     case ROUND_KIND::ELECTION: {
       _nodestate.last_heartbeat_time = clock_t::now();
+      _nodestate.round = e.round;
       break;
     }
     case ROUND_KIND::FOLLOWER: {
@@ -159,7 +164,8 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
     }
     case ROUND_KIND::CANDIDATE: {
       // TODO use map. node may send one message twice.
-      logger_info("node: ", _settings.name(), ": recv. vote from ", from, ":", e.round);
+      logger_info("node: ", _settings.name(), ": recv. vote from ", from, ":", e.round,
+                  " round:", _nodestate.round);
       _nodestate._election_to_me.insert(from);
       auto quorum = (size_t(_cluster->size() / 2.0) + 1);
       if (_nodestate._election_to_me.size() >= quorum) {
@@ -173,7 +179,7 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
           ss << v.name() << ", ";
         }
         logger_info("node: ", _settings.name(), ": quorum. i'am new leader with ",
-                    ss.str(), " voices");
+                    _nodestate._election_to_me.size(), " voices - ", ss.str());
         _cluster->send_all(_self_addr, make_append_entries_unsafe());
       }
       break;
@@ -232,7 +238,6 @@ void consensus::on_heartbeat() {
     switch (_nodestate.round_kind) {
     case ROUND_KIND::ELECTION: {
       _nodestate.round_kind = ROUND_KIND::FOLLOWER;
-      _nodestate.round++;
       break;
     }
     case ROUND_KIND::FOLLOWER: {

@@ -69,8 +69,8 @@ public:
 
   void print_cluster() {
     apply([](auto n) {
-      utils::logging::logger_info("?: ", n->self_addr(), "{", n->state(), ":",
-                                       n->round(), "}", " => ", n->get_leader());
+      utils::logging::logger_info("?: ", n->self_addr(), "{", n->state(), ":", n->round(),
+                                  "}", " => ", n->get_leader());
     });
   }
 
@@ -119,9 +119,9 @@ protected:
           auto it = _cluster.find(std::get<1>(v));
           if (it != _cluster.end()) {
             it->second->recv(std::get<0>(v), std::get<2>(v));
-          } /* else {
-             throw std::logic_error("unknow sender");
-           }*/
+          } else {
+            // throw std::logic_error("unknow sender");
+          }
         }
         local_copy.clear();
       }
@@ -212,6 +212,8 @@ TEST_CASE("consensus.election") {
   SECTION("consensus.election.3") { nodes_count = 3; }
   SECTION("consensus.election.5") { nodes_count = 5; }
   SECTION("consensus.election.7") { nodes_count = 7; }
+  SECTION("consensus.election.10") { nodes_count = 10; }
+  SECTION("consensus.election.50") { nodes_count = 50; }
 
   for (size_t i = 0; i < nodes_count; ++i) {
     auto sett = rft::node_settings()
@@ -229,6 +231,7 @@ TEST_CASE("consensus.election") {
       auto leaders = cluster->by_filter(is_leader_pred);
       if (leaders.size() > 1) {
         utils::logging::logger_fatal("consensus error!!!");
+        cluster->print_cluster();
         EXPECT_FALSE(true);
         return;
       }
