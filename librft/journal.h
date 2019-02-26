@@ -2,12 +2,11 @@
 
 #include <librft/command.h>
 #include <librft/exports.h>
+#include <librft/types.h>
 #include <map>
 #include <memory>
 
 namespace rft {
-
-using round_t = uint64_t;
 
 namespace logdb {
 /// log sequence numbder;

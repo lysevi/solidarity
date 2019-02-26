@@ -22,7 +22,7 @@ consensus::consensus(const node_settings &ns, abstract_cluster *cluster,
 
   _self_addr.set_name(_settings.name());
 
-  _start_time = clock_t::now().time_since_epoch().count();
+  _nodestate.start_time = clock_t::now().time_since_epoch().count();
   update_next_heartbeat_interval();
   _nodestate.last_heartbeat_time = clock_t::now();
 }
@@ -30,7 +30,7 @@ consensus::consensus(const node_settings &ns, abstract_cluster *cluster,
 append_entries consensus::make_append_entries_unsafe() const {
   append_entries ae;
   ae.round = _nodestate.round;
-  ae.starttime = _start_time;
+  ae.starttime = _nodestate.start_time;
   ae.leader = _nodestate.leader;
   ae.is_vote = false;
   return ae;
@@ -121,36 +121,24 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
       break;
     }
     case ROUND_KIND::CANDIDATE: {
-      if (_cluster->size() == size_t(2)) {
-        /// sender.uptime > self.uptime => sender is a leader
-        if (e.starttime < _start_time) {
-          _nodestate.last_heartbeat_time = clock_t::now();
-          _nodestate._election_round = 0;
-          change_state(ROUND_KIND::FOLLOWER, e.round, e.leader);
-          logger_info("node: ", _settings.name(), ": ", ROUND_KIND::CANDIDATE, " => ",
-                      _nodestate.round_kind);
-        }
-      } else {
-        if (_nodestate.round < e.round && from == e.leader) {
-          change_state(ROUND_KIND::ELECTION, e.round, e.leader);
-          _nodestate._election_round = 0;
-          _nodestate.last_heartbeat_time = clock_t::now();
-          _nodestate.leader = e.leader;
-          _nodestate.round = e.round;
+      if (_nodestate.round < e.round && from == e.leader) {
+        change_state(ROUND_KIND::ELECTION, e.round, e.leader);
+        _nodestate._election_round = 0;
+        _nodestate.last_heartbeat_time = clock_t::now();
+        _nodestate.leader = e.leader;
+        _nodestate.round = e.round;
 
-          auto ae = make_append_entries();
-          ae.is_vote = true;
-          _cluster->send_to(_self_addr, from, ae);
-        } else {
-          auto ae = make_append_entries();
-          ae.is_vote = true;
-          _cluster->send_to(_self_addr, from, ae);
-        }
+        auto ae = make_append_entries();
+        ae.is_vote = true;
+        _cluster->send_to(_self_addr, from, ae);
+      } else {
+        auto ae = make_append_entries();
+        ae.is_vote = true;
+        _cluster->send_to(_self_addr, from, ae);
       }
       break;
     }
     }
-
   } else {
     switch (_nodestate.round_kind) {
     case ROUND_KIND::ELECTION: {

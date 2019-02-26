@@ -218,7 +218,7 @@ TEST_CASE("consensus.election") {
   SECTION("consensus.election.5") { nodes_count = 5; }
   SECTION("consensus.election.7") { nodes_count = 7; }
   SECTION("consensus.election.10") { nodes_count = 10; }
-  SECTION("consensus.election.50") { nodes_count = 50; }
+  SECTION("consensus.election.25") { nodes_count = 25; }
 
   for (size_t i = 0; i < nodes_count; ++i) {
     auto sett = rft::node_settings()
