@@ -7,15 +7,15 @@
 #include <chrono>
 #include <memory>
 #include <random>
+#include <set>
 #include <shared_mutex>
 #include <string>
-#include <set>
 
 namespace rft {
 
 using clock_t = std::chrono::high_resolution_clock;
 
-enum class CONSENSUS_STATE { LEADER = 0, FOLLOWER = 1, CANDIDATE = 2 };
+enum class CONSENSUS_STATE { LEADER = 0, FOLLOWER = 1, CANDIDATE = 2, ELECTION = 3 };
 
 inline std::string to_string(const rft::CONSENSUS_STATE s) {
   switch (s) {
@@ -25,6 +25,8 @@ inline std::string to_string(const rft::CONSENSUS_STATE s) {
     return "FOLLOWER";
   case rft::CONSENSUS_STATE::LEADER:
     return "LEADER";
+  case rft::CONSENSUS_STATE::ELECTION:
+    return "ELECTION";
   default:
     return "!!! UNKNOW !!!";
   }
@@ -60,6 +62,7 @@ protected:
   void change_state(const cluster_node &cn, const round_t r);
 
   void update_next_heartbeat_interval();
+
 private:
   mutable std::mutex _locker;
   std::mt19937 _rnd_eng;
@@ -77,10 +80,9 @@ private:
   round_t _round{0};
   clock_t::time_point _last_heartbeat_time;
   cluster_node _leader_term;
-  cluster_node _vote_for_term;
 
   std::set<rft::cluster_node> _election_to_me;
-  size_t _election_round=0;
+  size_t _election_round = 0;
 };
 
 }; // namespace rft

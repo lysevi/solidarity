@@ -85,34 +85,24 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
   if (e.leader_term != _self_addr &&
       (e.leader_term != _leader_term || _leader_term.is_empty())) {
     switch (_state) {
+    case CONSENSUS_STATE::ELECTION: {
+      _last_heartbeat_time = clock_t::now();
+      _leader_term = e.leader_term;
+      _round = e.round;
+      logger_info("node: ", _settings.name(), ": vote to - ", from);
+
+      auto ae = make_append_entries();
+      ae.is_vote = true;
+      _cluster->send_to(_self_addr, from, ae);
+      break;
+    }
     case CONSENSUS_STATE::FOLLOWER: {
-      if (_leader_term.is_empty() && _vote_for_term.is_empty()) {
-        _last_heartbeat_time = clock_t::now();
-        _vote_for_term = e.leader_term;
-        _round = e.round;
-        logger_info("node: ", _settings.name(), ": vote to - ", from);
-
-        auto ae = make_append_entries();
-        ae.leader_term = _vote_for_term;
-        ae.is_vote = true;
-        _cluster->send_to(_self_addr, from, ae);
+      if (_leader_term.is_empty()) {
+        _leader_term = e.leader_term;
       }
-      if (!_vote_for_term.is_empty() && _leader_term.is_empty()) {
-        if (_vote_for_term == e.leader_term) {
-          _last_heartbeat_time = clock_t::now();
-        }
-        _round = e.round;
-        auto ae = make_append_entries();
-        ae.leader_term = _vote_for_term;
-        ae.is_vote = true;
-        _cluster->send_to(_self_addr, from, ae);
-      }
-
-      if (_vote_for_term.is_empty() && !_leader_term.is_empty()) {
-        auto ae = make_append_entries();
-        ae.is_vote = true;
-        _cluster->send_to(_self_addr, from, ae);
-      }
+      auto ae = make_append_entries();
+      ae.is_vote = true;
+      _cluster->send_to(_self_addr, from, ae);
       break;
     }
     case CONSENSUS_STATE::LEADER: {
@@ -138,20 +128,17 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
         }
       } else {
         if (_round < e.round && from == e.leader_term) {
-          change_state(CONSENSUS_STATE::FOLLOWER, e.round, e.leader_term);
+          change_state(CONSENSUS_STATE::ELECTION, e.round, e.leader_term);
           _election_round = 0;
           _last_heartbeat_time = clock_t::now();
-          _leader_term.clear();
-          _vote_for_term = e.leader_term;
+          _leader_term = e.leader_term;
           _round = e.round;
 
           auto ae = make_append_entries();
-          ae.leader_term = _vote_for_term;
           ae.is_vote = true;
           _cluster->send_to(_self_addr, from, ae);
         } else {
           auto ae = make_append_entries();
-          ae.leader_term = _self_addr;
           ae.is_vote = true;
           _cluster->send_to(_self_addr, from, ae);
         }
@@ -162,8 +149,11 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
 
   } else {
     switch (_state) {
+    case CONSENSUS_STATE::ELECTION: {
+      _last_heartbeat_time = clock_t::now();
+      break;
+    }
     case CONSENSUS_STATE::FOLLOWER: {
-      _vote_for_term.clear();
       _last_heartbeat_time = clock_t::now();
       break;
     }
@@ -177,7 +167,6 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
         _round++;
         _election_round = 0;
         _leader_term = _self_addr;
-        _vote_for_term.clear();
 
         std::stringstream ss;
         for (auto v : _election_to_me) {
@@ -198,22 +187,23 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
   if (e.round < _round) {
     return;
   }
-  if (from != _leader_term) {
-    if (from == _vote_for_term || _leader_term.is_empty()) {
-      _leader_term = from;
-      _round = e.round;
-      _vote_for_term.clear();
-    }
-    // TODO send error to 'from';
-    return;
-  }
+
   switch (_state) {
+  case CONSENSUS_STATE::ELECTION: {
+    if (from == _leader_term) {
+      change_state(CONSENSUS_STATE::ELECTION, e.round, from);
+      _last_heartbeat_time = clock_t::now();
+    } else {
+      // TODO send error to 'from';
+    }
+    break;
+  }
   case CONSENSUS_STATE::FOLLOWER: {
-    _last_heartbeat_time = clock_t::now();
-    /*if (_leader_term.is_empty()) {
+    if (_leader_term.is_empty()) {
       _leader_term = e.leader_term;
       _round = e.round;
-    }*/
+      _last_heartbeat_time = clock_t::now();
+    }
     break;
   }
   case CONSENSUS_STATE::LEADER: {
@@ -244,27 +234,27 @@ void consensus::on_heartbeat() {
   if (_state != CONSENSUS_STATE::LEADER && is_heartbeat_missed()) {
     _leader_term.clear();
     switch (_state) {
+    case CONSENSUS_STATE::ELECTION: {
+      _leader_term.clear();
+      _state = CONSENSUS_STATE::FOLLOWER;
+      break;
+    }
     case CONSENSUS_STATE::FOLLOWER: {
-      if (_vote_for_term.is_empty()) {
-        if (_cluster->size() == size_t(1)) {
-          _round++;
-          _leader_term = _self_addr;
-          _state = CONSENSUS_STATE::LEADER;
-          logger_info("node: ", _settings.name(), ": alone node. change state to ",
-                      _state);
-        } else {
-          _state = CONSENSUS_STATE::CANDIDATE;
-          _round++;
-          _election_round = 1;
-          _election_to_me.insert(_self_addr);
-          logger_info("node: ", _settings.name(), ": change state to ", _state);
-          append_entries ae = make_append_entries_unsafe();
-          ae.leader_term = _self_addr;
-          ae.is_vote = true;
-          _cluster->send_all(_self_addr, ae);
-        }
+      if (_cluster->size() == size_t(1)) {
+        _round++;
+        _leader_term = _self_addr;
+        _state = CONSENSUS_STATE::LEADER;
+        logger_info("node: ", _settings.name(), ": alone node. change state to ", _state);
       } else {
-        _vote_for_term.clear();
+        _state = CONSENSUS_STATE::CANDIDATE;
+        _round++;
+        _election_round = 1;
+        _election_to_me.insert(_self_addr);
+        logger_info("node: ", _settings.name(), ": change state to ", _state);
+        append_entries ae = make_append_entries_unsafe();
+        ae.leader_term = _self_addr;
+        ae.is_vote = true;
+        _cluster->send_all(_self_addr, ae);
       }
       break;
     }
