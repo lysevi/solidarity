@@ -18,14 +18,14 @@ class consensus {
 public:
   EXPORT consensus(const node_settings &ns, abstract_cluster *cluster,
                    const logdb::journal_ptr &jrn);
-  ROUND_KIND state() const { return _nodestate.round_kind; }
-  round_t round() const { return _nodestate.round; }
+  ROUND_KIND state() const { return _state.round_kind; }
+  round_t round() const { return _state.round; }
   EXPORT void on_heartbeat();
   EXPORT void recv(const cluster_node &from, const append_entries &e);
 
   cluster_node get_leader() const {
     std::lock_guard<std::mutex> l(_locker);
-    return _nodestate.leader;
+    return _state.leader;
   }
   cluster_node self_addr() const {
     std::lock_guard<std::mutex> l(_locker);
@@ -35,7 +35,6 @@ public:
 protected:
   append_entries make_append_entries() const;
   append_entries make_append_entries_unsafe() const;
-  bool is_heartbeat_missed() const;
 
   void on_vote(const cluster_node &from, const append_entries &e);
   void on_append_entries(const cluster_node &from, const append_entries &e);
@@ -48,7 +47,6 @@ protected:
 private:
   mutable std::mutex _locker;
   std::mt19937 _rnd_eng;
-  std::chrono::milliseconds _next_heartbeat_interval;
 
   node_settings _settings;
   cluster_node _self_addr;
@@ -57,7 +55,7 @@ private:
 
   
 
-  node_state_t _nodestate;
+  node_state_t _state;
 };
 
 }; // namespace rft
