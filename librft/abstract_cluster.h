@@ -27,12 +27,14 @@ using term_t = uint64_t;
 enum class entries_kind_t { VOTE };
 
 struct append_entries {
-
+  /// on election;
   bool is_vote;
-
+  /// round number;
   round_t round;
-  uint64_t starttime; /// sender uptime
-  cluster_node leader_term;
+  /// sender start time;
+  uint64_t starttime;
+  /// leader;
+  cluster_node leader;
 
   logdb::reccord_info current;
   logdb::reccord_info prev;

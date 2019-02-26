@@ -43,7 +43,7 @@ public:
 
   cluster_node get_leader() const {
     std::lock_guard<std::mutex> l(_locker);
-    return _leader_term;
+    return _leader;
   }
   cluster_node self_addr() const {
     std::lock_guard<std::mutex> l(_locker);
@@ -79,7 +79,7 @@ private:
 
   round_t _round{0};
   clock_t::time_point _last_heartbeat_time;
-  cluster_node _leader_term;
+  cluster_node _leader;
 
   std::set<rft::cluster_node> _election_to_me;
   size_t _election_round = 0;
