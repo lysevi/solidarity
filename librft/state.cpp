@@ -15,7 +15,6 @@ std::string rft::to_string(const node_state_t &s) {
   return ss.str();
 }
 
-
 void node_state_t::change_state(const ROUND_KIND s, const round_t r,
                                 const cluster_node &leader_) {
   round_kind = s;
@@ -27,7 +26,6 @@ void node_state_t::change_state(const cluster_node &leader_, const round_t r) {
   round = r;
   leader = leader_;
 }
-
 
 changed_state_t node_state_t::on_vote(const node_state_t &self,
                                       const cluster_node &self_addr,
@@ -43,9 +41,8 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
         result.last_heartbeat_time = clock_t::now();
         result.leader = e.leader;
         result.round = e.round;
-        target = NOTIFY_TARGET::SENDER;
       }
-
+      target = NOTIFY_TARGET::SENDER;
       break;
     }
     case ROUND_KIND::FOLLOWER: {
@@ -59,13 +56,12 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
     }
     case ROUND_KIND::LEADER: {
       if (result.round < e.round) {
-        result.change_state(ROUND_KIND::FOLLOWER, e.round, e.leader);
+        result.change_state(ROUND_KIND::ELECTION, e.round, e.leader);
         result.last_heartbeat_time = clock_t::now();
-        target = NOTIFY_TARGET::NOBODY;
         // TODO log replication
-      } else {
-        target = NOTIFY_TARGET::SENDER;
       }
+      target = NOTIFY_TARGET::SENDER;
+
       break;
     }
     case ROUND_KIND::CANDIDATE: {
@@ -88,7 +84,7 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
     }
     case ROUND_KIND::FOLLOWER: {
       result.last_heartbeat_time = clock_t::now();
-      target = NOTIFY_TARGET::NOBODY;
+      target = NOTIFY_TARGET::SENDER;
       break;
     }
     case ROUND_KIND::CANDIDATE: {

@@ -161,6 +161,144 @@ bool is_leader_pred(const std::shared_ptr<rft::consensus> &v) {
   return v->state() == rft::ROUND_KIND::LEADER;
 };
 
+SCENARIO("raft.vote") {
+  rft::node_state_t self;
+  self.round = 0;
+  rft::cluster_node self_addr;
+  self_addr.set_name("self_addr");
+
+  rft::node_state_t from_s;
+  from_s.round = 1;
+  rft::cluster_node from_s_addr;
+  from_s_addr.set_name("from_s_addr");
+
+  GIVEN("leader != message.leader") {
+    rft::append_entries ae;
+    ae.leader.set_name(from_s_addr.name());
+    ae.round = from_s.round;
+    WHEN("self == ELECTION") {
+      self.round_kind = rft::ROUND_KIND::ELECTION;
+
+      WHEN("leader.is_empty") {
+        self.leader.clear();
+        auto c = rft::node_state_t::on_vote(self, self_addr, 2, from_s_addr, ae);
+        THEN("vote to sender") {
+          EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
+          EXPECT_EQ(c.new_state.round, from_s.round);
+          EXPECT_EQ(c.notify, rft::NOTIFY_TARGET::SENDER);
+        }
+      }
+    }
+    WHEN("self == FOLLOWER") {
+      self.round_kind = rft::ROUND_KIND::FOLLOWER;
+      WHEN("leader.is_empty") {
+        self.leader.clear();
+        auto c = rft::node_state_t::on_vote(self, self_addr, 2, from_s_addr, ae);
+        THEN("vote to sender") {
+          EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
+          EXPECT_EQ(c.new_state.round, from_s.round);
+          EXPECT_EQ(c.notify, rft::NOTIFY_TARGET::SENDER);
+        }
+      }
+      WHEN("!leader.is_empty") {
+        self.leader.set_name("leader name");
+        auto c = rft::node_state_t::on_vote(self, self_addr, 2, from_s_addr, ae);
+        THEN("vote to self.leader") {
+          EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
+          EXPECT_EQ(c.new_state.round, self.round);
+          EXPECT_EQ(c.notify, rft::NOTIFY_TARGET::SENDER);
+        }
+      }
+    }
+
+    WHEN("self == CANDIDATE") {
+      self.round_kind = rft::ROUND_KIND::CANDIDATE;
+      WHEN("message from newest round") {
+        self.leader.set_name(self_addr.name());
+        self.round = 0;
+        from_s.round = 1;
+        auto c = rft::node_state_t::on_vote(self, self_addr, 2, from_s_addr, ae);
+        THEN("vote to sender") {
+          EXPECT_EQ(c.new_state.round_kind, rft::ROUND_KIND::ELECTION);
+          EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
+          EXPECT_EQ(c.new_state.round, from_s.round);
+          EXPECT_EQ(c.new_state.election_round, size_t(0));
+          EXPECT_EQ(c.notify, rft::NOTIFY_TARGET::SENDER);
+        }
+      }
+      WHEN("message from same round") {
+        self.leader.set_name(self_addr.name());
+        self.round = 1;
+        from_s.round = 1;
+        auto c = rft::node_state_t::on_vote(self, self_addr, 2, from_s_addr, ae);
+        THEN("vote to self.leader") {
+          EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
+          EXPECT_EQ(c.new_state.round, self.round);
+          EXPECT_EQ(c.notify, rft::NOTIFY_TARGET::SENDER);
+        }
+      }
+    }
+  }
+
+  GIVEN("leader == message.leader") {
+    rft::append_entries ae;
+    ae.leader.set_name(from_s_addr.name());
+    ae.round = from_s.round + 1;
+
+    self.leader.set_name(from_s_addr.name());
+    WHEN("self == ELECTION") {
+      self.round_kind = rft::ROUND_KIND::ELECTION;
+      self.round = from_s.round;
+      auto c = rft::node_state_t::on_vote(self, self_addr, 2, from_s_addr, ae);
+      THEN("vote to self.leader") {
+        EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
+        EXPECT_EQ(c.new_state.round, ae.round);
+        EXPECT_EQ(c.notify, rft::NOTIFY_TARGET::SENDER);
+      }
+    }
+
+    WHEN("self == FOLLOWER") {
+      self.round_kind = rft::ROUND_KIND::FOLLOWER;
+      self.round = from_s.round;
+
+      auto c = rft::node_state_t::on_vote(self, self_addr, 2, from_s_addr, ae);
+      THEN("vote to self.leader") {
+        EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
+        EXPECT_EQ(c.new_state.round, self.round);
+        EXPECT_EQ(c.notify, rft::NOTIFY_TARGET::SENDER);
+      }
+    }
+
+    WHEN("self == CANDIDATE") {
+      self.round_kind = rft::ROUND_KIND::CANDIDATE;
+      self.election_round = 1;
+      ae.leader = self_addr;
+      self.leader = self_addr;
+      WHEN("quorum") {
+        self._election_to_me.insert(self_addr);
+        auto c = rft::node_state_t::on_vote(self, self_addr, 2, from_s_addr, ae);
+        THEN("make self a self.leader") {
+          EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
+          EXPECT_EQ(c.new_state.round, self.round + 1);
+          EXPECT_EQ(c.new_state.round_kind, rft::ROUND_KIND::LEADER);
+          EXPECT_EQ(c.notify, rft::NOTIFY_TARGET::ALL);
+        }
+      }
+
+      WHEN("not a quorum") {
+        self._election_to_me.clear();
+        auto c = rft::node_state_t::on_vote(self, self_addr, 2, from_s_addr, ae);
+        THEN("wait") {
+          EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
+          EXPECT_EQ(c.new_state.round, self.round);
+          EXPECT_EQ(c.new_state.round_kind, rft::ROUND_KIND::CANDIDATE);
+          EXPECT_EQ(c.notify, rft::NOTIFY_TARGET::NOBODY);
+        }
+      }
+    }
+  }
+}
+
 TEST_CASE("consensus.add_nodes") {
   auto cluster = std::make_shared<mock_cluster>();
 
