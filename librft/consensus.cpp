@@ -70,11 +70,12 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
 
 void consensus::on_vote(const cluster_node &from, const append_entries &e) {
   auto old_s = _state;
-  auto ns = node_state_t::on_vote(_state, _self_addr, _cluster->size(), from, e);
-  _state = ns;
-  if (!(old_s.round_kind == ROUND_KIND::LEADER &&
-        ns.round_kind == ROUND_KIND::FOLLOWER)) { // if not LEADER => FOLLOWER
+  changed_state_t change_state_v =
+      node_state_t::on_vote(_state, _self_addr, _cluster->size(), from, e);
 
+  node_state_t ns = change_state_v.new_state;
+  _state = ns;
+  if (_state.round_kind != old_s.round_kind) {
     if (old_s.round_kind == ROUND_KIND::CANDIDATE &&
         ns.round_kind == ROUND_KIND::LEADER) { // if CANDIDATE => LEADER
       std::stringstream ss;
@@ -83,18 +84,33 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
       }
       logger_info("node: ", _settings.name(), ": quorum. i'am new leader with ",
                   ns._election_to_me.size(), " voices - ", ss.str());
-      ns._election_to_me.clear();
-      _cluster->send_all(_self_addr, make_append_entries_unsafe());
-      return;
+      _state._election_to_me.clear();
+    } else {
+      logger_info("node: ", _settings.name(), ": change state ", old_s, " => ", _state);
     }
-
-    if (ns.round_kind != ROUND_KIND::CANDIDATE) { // CANDIDATE => CANDIDATE
-      auto ae = make_append_entries();
-      ae.is_vote = true;
-      _cluster->send_to(_self_addr, from, ae);
-    }
-    return;
   }
+  switch (change_state_v.notify) {
+  case NOTIFY_TARGET::ALL: {
+    auto ae = make_append_entries_unsafe();
+    ae.is_vote = true;
+    _cluster->send_all(_self_addr, ae);
+    break;
+  }
+  case NOTIFY_TARGET::SENDER: {
+    auto ae = make_append_entries_unsafe();
+    ae.is_vote = true;
+    _cluster->send_to(_self_addr, from, ae);
+    break;
+  }
+  case NOTIFY_TARGET::NOBODY: {
+    break;
+  }
+  default: {
+    NOT_IMPLEMENTED;
+    break;
+  }
+  }
+  return;
 }
 
 void consensus::on_append_entries(const cluster_node &from, const append_entries &e) {
@@ -116,6 +132,7 @@ void consensus::on_heartbeat() {
     logger_info("node: ", _settings.name(), ": {", _state.round_kind, "} => - ",
                 _state.leader);
   }
+
   if (_state.round_kind == ROUND_KIND::CANDIDATE ||
       _state.round_kind == ROUND_KIND::LEADER) {
     if (_state.round_kind == ROUND_KIND::LEADER) {
@@ -143,6 +160,6 @@ void consensus::update_next_heartbeat_interval() {
                                                 uint64_t(total_mls * k2));
 
   _state.next_heartbeat_interval = std::chrono::milliseconds(distr(_rnd_eng));
-  /*logger_info("node: ", _settings.name(), ": next heartbeat is ",
-              _state.next_heartbeat_interval.count());*/
+  logger_info("node: ", _settings.name(), ": next heartbeat is ",
+              _state.next_heartbeat_interval.count());
 }

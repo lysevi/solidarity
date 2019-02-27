@@ -4,6 +4,18 @@
 using namespace rft;
 using namespace utils::logging;
 
+std::string rft::to_string(const node_state_t &s) {
+  std::stringstream ss;
+  ss << "{ K:" << to_string(s.round_kind) << ", N:" << s.round
+     << ", L:" << to_string(s.leader);
+  if (s.round_kind == ROUND_KIND::CANDIDATE) {
+    ss << ", E:" << s.election_round;
+  }
+  ss << "}";
+  return ss.str();
+}
+
+
 void node_state_t::change_state(const ROUND_KIND s, const round_t r,
                                 const cluster_node &leader_) {
   round_kind = s;
@@ -16,11 +28,14 @@ void node_state_t::change_state(const cluster_node &leader_, const round_t r) {
   leader = leader_;
 }
 
-node_state_t node_state_t::on_vote(const node_state_t &self,
-                                   const cluster_node &self_addr,
-                                   const size_t cluster_size, const cluster_node &from,
-                                   const append_entries &e) {
+
+changed_state_t node_state_t::on_vote(const node_state_t &self,
+                                      const cluster_node &self_addr,
+                                      const size_t cluster_size, const cluster_node &from,
+                                      const append_entries &e) {
   node_state_t result = self;
+  NOTIFY_TARGET target = NOTIFY_TARGET::NOBODY;
+
   if (e.leader != result.leader) {
     switch (result.round_kind) {
     case ROUND_KIND::ELECTION: {
@@ -28,6 +43,7 @@ node_state_t node_state_t::on_vote(const node_state_t &self,
         result.last_heartbeat_time = clock_t::now();
         result.leader = e.leader;
         result.round = e.round;
+        target = NOTIFY_TARGET::SENDER;
       }
 
       break;
@@ -38,13 +54,17 @@ node_state_t node_state_t::on_vote(const node_state_t &self,
         result.round = e.round;
         result.leader = e.leader;
       }
+      target = NOTIFY_TARGET::SENDER;
       break;
     }
     case ROUND_KIND::LEADER: {
       if (result.round < e.round) {
-
         result.change_state(ROUND_KIND::FOLLOWER, e.round, e.leader);
+        result.last_heartbeat_time = clock_t::now();
+        target = NOTIFY_TARGET::NOBODY;
         // TODO log replication
+      } else {
+        target = NOTIFY_TARGET::SENDER;
       }
       break;
     }
@@ -54,6 +74,7 @@ node_state_t node_state_t::on_vote(const node_state_t &self,
         result.election_round = 0;
         result.last_heartbeat_time = clock_t::now();
       }
+      target = NOTIFY_TARGET::SENDER;
       break;
     }
     }
@@ -62,10 +83,12 @@ node_state_t node_state_t::on_vote(const node_state_t &self,
     case ROUND_KIND::ELECTION: {
       result.last_heartbeat_time = clock_t::now();
       result.round = e.round;
+      target = NOTIFY_TARGET::SENDER;
       break;
     }
     case ROUND_KIND::FOLLOWER: {
       result.last_heartbeat_time = clock_t::now();
+      target = NOTIFY_TARGET::NOBODY;
       break;
     }
     case ROUND_KIND::CANDIDATE: {
@@ -76,12 +99,15 @@ node_state_t node_state_t::on_vote(const node_state_t &self,
         result.round++;
         result.election_round = 0;
         result.leader = self_addr;
+        target = NOTIFY_TARGET::ALL;
+      } else {
+        target = NOTIFY_TARGET::NOBODY;
       }
       break;
     }
     }
   }
-  return result;
+  return changed_state_t{result, target};
 }
 
 node_state_t node_state_t::on_append_entries(const node_state_t &self,
@@ -92,7 +118,7 @@ node_state_t node_state_t::on_append_entries(const node_state_t &self,
   case ROUND_KIND::ELECTION: {
     if (from == result.leader) {
       result.change_state(ROUND_KIND::FOLLOWER, e.round, from);
-	  result.leader=e.leader;
+      result.leader = e.leader;
       result.last_heartbeat_time = clock_t::now();
     } else {
       // TODO send error to 'from';
@@ -165,6 +191,6 @@ node_state_t node_state_t::on_heartbeat(const node_state_t &self,
       result._election_to_me.insert(self_addr);
       break;
     }
-  } 
+  }
   return result;
 }

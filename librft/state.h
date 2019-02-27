@@ -1,6 +1,7 @@
 #pragma once
 
 #include <librft/abstract_cluster.h>
+#include <librft/exports.h>
 #include <librft/journal.h>
 #include <chrono>
 #include <string>
@@ -24,6 +25,8 @@ inline std::string to_string(const rft::ROUND_KIND s) {
   }
 }
 
+struct changed_state_t;
+
 struct node_state_t {
   round_t round{0};
   clock_t::time_point last_heartbeat_time;
@@ -34,6 +37,18 @@ struct node_state_t {
   std::set<cluster_node> _election_to_me;
 
   uint64_t start_time;
+
+  node_state_t &operator=(const node_state_t &o) {
+    round = o.round;
+    last_heartbeat_time = o.last_heartbeat_time;
+    next_heartbeat_interval = o.next_heartbeat_interval;
+    leader = o.leader;
+    round_kind = o.round_kind;
+    election_round = o.election_round;
+    _election_to_me = o._election_to_me;
+    start_time = o.start_time;
+    return *this;
+  }
 
   bool is_heartbeat_missed() const {
     auto now = clock_t::now();
@@ -50,23 +65,27 @@ struct node_state_t {
   void change_state(const ROUND_KIND s, const round_t r, const cluster_node &leader_);
   void change_state(const cluster_node &cn, const round_t r);
 
-  static node_state_t on_vote(const node_state_t &self, const cluster_node &self_addr,
-                              const size_t cluster_size, const cluster_node &from,
-                              const append_entries &e);
+  EXPORT static changed_state_t
+  on_vote(const node_state_t &self, const cluster_node &self_addr,
+          const size_t cluster_size, const cluster_node &from, const append_entries &e);
 
-  static node_state_t on_append_entries(const node_state_t &self,
-                                        const cluster_node &from,
-                                        const append_entries &e);
-  static node_state_t on_heartbeat(const node_state_t &self,
-                                   const cluster_node &self_addr,
-                                   const size_t cluster_size);
+  EXPORT static node_state_t on_append_entries(const node_state_t &self,
+                                               const cluster_node &from,
+                                               const append_entries &e);
+  EXPORT static node_state_t on_heartbeat(const node_state_t &self,
+                                          const cluster_node &self_addr,
+                                          const size_t cluster_size);
 };
 
-inline std::string to_string(const node_state_t &s) {
-  std::stringstream ss;
-  ss << "{" << to_string(s.round_kind) << ", " << s.round << ", " << to_string(s.leader)
-     << "|}";
-  return ss.str();
-}
+EXPORT std::string to_string(const node_state_t &s);
+
+enum class NOTIFY_TARGET { SENDER, ALL, NOBODY };
+
+struct changed_state_t {
+  node_state_t new_state;
+  NOTIFY_TARGET notify;
+};
+
+
 
 } // namespace rft
