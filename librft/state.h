@@ -3,27 +3,11 @@
 #include <librft/abstract_cluster.h>
 #include <librft/exports.h>
 #include <librft/journal.h>
+#include <librft/round_kind.h>
 #include <chrono>
 #include <string>
 
 namespace rft {
-
-enum class ROUND_KIND { LEADER = 0, FOLLOWER = 1, CANDIDATE = 2, ELECTION = 3 };
-
-inline std::string to_string(const rft::ROUND_KIND s) {
-  switch (s) {
-  case rft::ROUND_KIND::CANDIDATE:
-    return "CANDIDATE";
-  case rft::ROUND_KIND::FOLLOWER:
-    return "FOLLOWER";
-  case rft::ROUND_KIND::LEADER:
-    return "LEADER";
-  case rft::ROUND_KIND::ELECTION:
-    return "ELECTION";
-  default:
-    return "!!! UNKNOW !!!";
-  }
-}
 
 struct changed_state_t;
 
@@ -85,7 +69,5 @@ struct changed_state_t {
   node_state_t new_state;
   NOTIFY_TARGET notify;
 };
-
-
 
 } // namespace rft
