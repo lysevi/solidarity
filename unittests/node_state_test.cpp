@@ -168,11 +168,14 @@ SCENARIO("node_state.on_append_entries") {
   ae.leader = from_s_addr;
   ae.round = from_s.round;
 
+  rft::logdb::journal_ptr jrn{new rft::logdb::memory_journal()};
+
   WHEN("self == ELECTION") {
     self.round_kind = rft::ROUND_KIND::ELECTION;
     self.round = 0;
     WHEN("from==self.leader") {
-      auto new_state = rft::node_state_t::on_append_entries(self, from_s_addr, ae);
+      auto new_state =
+          rft::node_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
       THEN("follow to sender") {
         EXPECT_EQ(new_state.round_kind, rft::ROUND_KIND::FOLLOWER);
         EXPECT_EQ(new_state.leader.name(), from_s_addr.name());
@@ -181,7 +184,8 @@ SCENARIO("node_state.on_append_entries") {
     }
     WHEN("from==self.leader") {
       self.leader.set_name("other name");
-      auto new_state = rft::node_state_t::on_append_entries(self, from_s_addr, ae);
+      auto new_state =
+          rft::node_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
       THEN("do nothing") {
         EXPECT_EQ(new_state.round_kind, self.round_kind);
         EXPECT_EQ(new_state.leader.name(), self.leader.name());
@@ -195,7 +199,8 @@ SCENARIO("node_state.on_append_entries") {
     self.leader.clear();
     self.round = 0;
     WHEN("round!=self.leader") {
-      auto new_state = rft::node_state_t::on_append_entries(self, from_s_addr, ae);
+      auto new_state =
+          rft::node_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
       THEN("follow to sender") {
         EXPECT_EQ(new_state.round_kind, rft::ROUND_KIND::FOLLOWER);
         EXPECT_EQ(new_state.leader.name(), from_s_addr.name());
@@ -204,11 +209,36 @@ SCENARIO("node_state.on_append_entries") {
     }
     WHEN("from==self.leader") {
       self.leader.set_name("other name");
-      auto new_state = rft::node_state_t::on_append_entries(self, from_s_addr, ae);
+      auto new_state =
+          rft::node_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
       THEN("do nothing") {
         EXPECT_EQ(new_state.round_kind, self.round_kind);
         EXPECT_EQ(new_state.leader.name(), self.leader.name());
         EXPECT_EQ(new_state.round, self.round);
+      }
+    }
+  }
+
+  WHEN("self == FOLLOWER") {
+    self.round_kind = rft::ROUND_KIND::LEADER;
+    WHEN("round>self.round") {
+      self.round = 0;
+      auto new_state =
+          rft::node_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
+      THEN("follow to sender") {
+        EXPECT_EQ(new_state.round_kind, rft::ROUND_KIND::FOLLOWER);
+        EXPECT_EQ(new_state.leader.name(), from_s_addr.name());
+        EXPECT_EQ(new_state.round, from_s.round);
+      }
+    }
+    WHEN("sender.round>self.round") {
+      ae.commited.round++;
+      auto new_state =
+          rft::node_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
+      THEN("follow to sender") {
+        EXPECT_EQ(new_state.round_kind, rft::ROUND_KIND::FOLLOWER);
+        EXPECT_EQ(new_state.leader.name(), from_s_addr.name());
+        EXPECT_EQ(new_state.round, from_s.round);
       }
     }
   }
@@ -218,7 +248,8 @@ SCENARIO("node_state.on_append_entries") {
 
     WHEN("round!=self.leader") {
       self.round = 0;
-      auto new_state = rft::node_state_t::on_append_entries(self, from_s_addr, ae);
+      auto new_state =
+          rft::node_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
       THEN("follow to sender") {
         EXPECT_EQ(new_state.round_kind, rft::ROUND_KIND::FOLLOWER);
         EXPECT_EQ(new_state.leader.name(), from_s_addr.name());
@@ -226,7 +257,8 @@ SCENARIO("node_state.on_append_entries") {
       }
     }
     WHEN("from==self.leader") {
-      auto new_state = rft::node_state_t::on_append_entries(self, from_s_addr, ae);
+      auto new_state =
+          rft::node_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
       THEN("do nothing") {
         EXPECT_EQ(new_state.round_kind, self.round_kind);
         EXPECT_EQ(new_state.leader.name(), self.leader.name());

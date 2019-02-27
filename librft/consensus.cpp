@@ -119,7 +119,7 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
 }
 
 void consensus::on_append_entries(const cluster_node &from, const append_entries &e) {
-  _state = node_state_t::on_append_entries(_state, from, e);
+  _state = node_state_t::on_append_entries(_state, from, _jrn.get(), e);
 }
 
 void consensus::on_heartbeat() {

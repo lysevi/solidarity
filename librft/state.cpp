@@ -111,6 +111,7 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
 
 node_state_t node_state_t::on_append_entries(const node_state_t &self,
                                              const cluster_node &from,
+                                             const logdb::abstract_journal *jrn,
                                              const append_entries &e) {
   node_state_t result = self;
   switch (result.round_kind) {
@@ -133,7 +134,10 @@ node_state_t node_state_t::on_append_entries(const node_state_t &self,
     break;
   }
   case ROUND_KIND::LEADER: {
-    if (result.round < e.round) {
+    auto last_lst = jrn->commited_rec();
+    if (result.round < e.round || (e.commited.round > last_lst.round) ||
+        (e.commited.round != logdb::UNDEFINED_ROUND &&
+         last_lst.round == logdb::UNDEFINED_ROUND)) {
       result.round_kind = ROUND_KIND::FOLLOWER;
       result.round = e.round;
       result.leader = e.leader;
