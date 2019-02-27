@@ -219,7 +219,7 @@ SCENARIO("node_state.on_append_entries") {
     }
   }
 
-  WHEN("self == FOLLOWER") {
+  WHEN("self == LEADER") {
     self.round_kind = rft::ROUND_KIND::LEADER;
     WHEN("round>self.round") {
       self.round = 0;
