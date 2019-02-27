@@ -35,7 +35,9 @@ struct codepos {
   const char *_func;
 
   codepos(const char *file, int line, const char *function)
-      : _file(file), _line(line), _func(function) {}
+      : _file(file)
+      , _line(line)
+      , _func(function) {}
 
   std::string toString() const {
     auto ss = std::string(_file) + " line: " + std::to_string(_line) +
@@ -90,8 +92,10 @@ public:
 
 protected:
   exception() {}
-  exception(const char *&message) : _msg(std::string(message)) {}
-  exception(const std::string &message) : _msg(message) {}
+  exception(const char *&message)
+      : _msg(std::string(message)) {}
+  exception(const std::string &message)
+      : _msg(message) {}
 
 private:
   std::string _msg;

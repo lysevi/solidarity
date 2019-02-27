@@ -58,10 +58,13 @@ using task = std::function<CONTINUATION_STRATEGY(const thread_info &)>;
 
 class task_wrapper {
 public:
-  EXPORT task_wrapper(task &t, const std::string &_function, const std::string &file,
-                      int line);
-  EXPORT task_wrapper(task &t, const std::string &_function, const std::string &file,
-                      int line, TASK_PRIORITY p);
+  EXPORT
+  task_wrapper(task &t, const std::string &_function, const std::string &file, int line);
+  EXPORT task_wrapper(task &t,
+                      const std::string &_function,
+                      const std::string &file,
+                      int line,
+                      TASK_PRIORITY p);
   EXPORT CONTINUATION_STRATEGY apply(const thread_info &ti);
   EXPORT task_result_ptr result() const;
 

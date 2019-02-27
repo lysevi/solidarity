@@ -8,9 +8,12 @@
 namespace utils {
 class timer_t {
 public:
-  timer_t(const std::chrono::milliseconds &duration, std::function<void()> callback,
+  timer_t(const std::chrono::milliseconds &duration,
+          std::function<void()> callback,
           bool cyclic = true)
-      : _duration(duration), _callback(callback), _cyclic(cyclic){};
+      : _duration(duration)
+      , _callback(callback)
+      , _cyclic(cyclic){};
 
   ~timer_t() { stop(); }
 

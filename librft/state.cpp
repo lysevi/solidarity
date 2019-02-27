@@ -15,7 +15,8 @@ std::string rft::to_string(const node_state_t &s) {
   return ss.str();
 }
 
-void node_state_t::change_state(const ROUND_KIND s, const round_t r,
+void node_state_t::change_state(const ROUND_KIND s,
+                                const round_t r,
                                 const cluster_node &leader_) {
   round_kind = s;
   round = r;
@@ -29,7 +30,8 @@ void node_state_t::change_state(const cluster_node &leader_, const round_t r) {
 
 changed_state_t node_state_t::on_vote(const node_state_t &self,
                                       const cluster_node &self_addr,
-                                      const size_t cluster_size, const cluster_node &from,
+                                      const size_t cluster_size,
+                                      const cluster_node &from,
                                       const append_entries &e) {
   node_state_t result = self;
   NOTIFY_TARGET target = NOTIFY_TARGET::NOBODY;
@@ -43,7 +45,7 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
         result.round = e.round;
         target = NOTIFY_TARGET::SENDER;
       }
-      
+
       break;
     }
     case ROUND_KIND::FOLLOWER: {

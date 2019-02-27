@@ -49,9 +49,11 @@ struct node_state_t {
   void change_state(const ROUND_KIND s, const round_t r, const cluster_node &leader_);
   void change_state(const cluster_node &cn, const round_t r);
 
-  EXPORT static changed_state_t
-  on_vote(const node_state_t &self, const cluster_node &self_addr,
-          const size_t cluster_size, const cluster_node &from, const append_entries &e);
+  EXPORT static changed_state_t on_vote(const node_state_t &self,
+                                        const cluster_node &self_addr,
+                                        const size_t cluster_size,
+                                        const cluster_node &from,
+                                        const append_entries &e);
 
   EXPORT static node_state_t on_append_entries(const node_state_t &self,
                                                const cluster_node &from,

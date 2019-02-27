@@ -6,7 +6,8 @@ using namespace utils;
 using namespace utils::logging;
 using namespace utils::async;
 
-threads_pool::threads_pool(const params_t &p) : _params(p) {
+threads_pool::threads_pool(const params_t &p)
+    : _params(p) {
   ENSURE(_params.threads_count > 0);
   _stop_flag = false;
   _is_stoped = false;
@@ -36,7 +37,7 @@ void threads_pool::stop() {
     std::unique_lock<std::shared_mutex> lock(_queue_mutex);
     _stop_flag = true;
   }
-  for (std::thread &worker : _threads){
+  for (std::thread &worker : _threads) {
     _condition.notify_all();
     worker.join();
   }
@@ -48,10 +49,10 @@ void threads_pool::flush() {
     _condition.notify_one();
     std::unique_lock<std::shared_mutex> lock(_queue_mutex);
     if (!_in_queue.empty()) {
-      auto is_workers_only = std::all_of(_in_queue.begin(), _in_queue.end(),
-                                         [](const task_wrapper_ptr &t) {
-                                           return t->priority == TASK_PRIORITY::WORKER;
-                                         });
+      auto is_workers_only =
+          std::all_of(_in_queue.begin(), _in_queue.end(), [](const task_wrapper_ptr &t) {
+            return t->priority == TASK_PRIORITY::WORKER;
+          });
       if (!is_workers_only) {
         continue;
       }

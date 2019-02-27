@@ -19,7 +19,8 @@ public:
 
   ~mock_cluster();
 
-  void send_to(const rft::cluster_node &from, const rft::cluster_node &to,
+  void send_to(const rft::cluster_node &from,
+               const rft::cluster_node &to,
                const rft::append_entries &m);
 
   void send_all(const rft::cluster_node &from, const rft::append_entries &m);

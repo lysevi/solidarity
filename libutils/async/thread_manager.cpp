@@ -4,7 +4,8 @@
 
 using namespace utils::async;
 
-thread_manager::thread_manager(const thread_manager::params_t &params) : _params(params) {
+thread_manager::thread_manager(const thread_manager::params_t &params)
+    : _params(params) {
   for (const auto &kv : _params.pools) {
     ENSURE(_pools.find(kv.kind) == _pools.end());
     _pools[kv.kind] = std::make_shared<threads_pool>(kv);

@@ -27,7 +27,9 @@ void args_as_string(std::list<std::string> &s, size_t &sz, Head &&head) noexcept
 }
 
 template <class Head, class... Tail>
-void args_as_string(std::list<std::string> &s, size_t &sz, Head &&head,
+void args_as_string(std::list<std::string> &s,
+                    size_t &sz,
+                    Head &&head,
                     Tail &&... tail) noexcept {
   auto str = to_string(std::forward<Head>(head));
   sz += str.size();
@@ -36,7 +38,8 @@ void args_as_string(std::list<std::string> &s, size_t &sz, Head &&head,
 }
 } // namespace inner
 
-template <class... Args> std::string args_to_string(Args &&... args) noexcept {
+template <class... Args>
+std::string args_to_string(Args &&... args) noexcept {
   std::list<std::string> ss;
   size_t sz = 0;
   inner::args_as_string(ss, sz, std::forward<Args>(args)...);

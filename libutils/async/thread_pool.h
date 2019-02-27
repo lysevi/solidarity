@@ -1,9 +1,9 @@
 #pragma once
 
-#include <libutils/utils_exports.h>
 #include <libutils/async/locker.h>
 #include <libutils/async/task.h>
 #include <libutils/utils.h>
+#include <libutils/utils_exports.h>
 
 #include <algorithm>
 #include <deque>
@@ -50,7 +50,7 @@ protected:
   task_queue_t _in_queue;
   mutable std::shared_mutex _queue_mutex;
   std::condition_variable_any _condition;
-  std::atomic_bool _stop_flag;         // true - pool under stop.
+  std::atomic_bool _stop_flag;     // true - pool under stop.
   bool _is_stoped;                 // true - already stopped.
   std::atomic_size_t _task_runned; // count of runned tasks.
 };

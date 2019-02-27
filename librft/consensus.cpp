@@ -13,9 +13,13 @@ inline std::mt19937 make_seeded_engine() {
 }
 } // namespace
 
-consensus::consensus(const node_settings &ns, abstract_cluster *cluster,
+consensus::consensus(const node_settings &ns,
+                     abstract_cluster *cluster,
                      const logdb::journal_ptr &jrn)
-    : _settings(ns), _cluster(cluster), _jrn(jrn), _rnd_eng(make_seeded_engine()) {
+    : _settings(ns)
+    , _cluster(cluster)
+    , _jrn(jrn)
+    , _rnd_eng(make_seeded_engine()) {
 
   logger_info("node ", ns.name(),
               ": election_timeout(ms)=", ns.election_timeout().count());
@@ -40,7 +44,8 @@ append_entries consensus::make_append_entries() const {
   return make_append_entries_unsafe();
 }
 
-void consensus::change_state(const ROUND_KIND s, const round_t r,
+void consensus::change_state(const ROUND_KIND s,
+                             const round_t r,
                              const cluster_node &leader) {
   auto old_state = _state;
   _state.round_kind = s;

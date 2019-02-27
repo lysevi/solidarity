@@ -59,22 +59,26 @@ private:
   abstract_logger_ptr _logger;
 };
 
-template <typename... T> void logger(T &&... args) noexcept {
+template <typename... T>
+void logger(T &&... args) noexcept {
   utils::logging::logger_manager::instance()->variadic_message(
       utils::logging::message_kind::message, args...);
 }
 
-template <typename... T> void logger_info(T &&... args) noexcept {
+template <typename... T>
+void logger_info(T &&... args) noexcept {
   utils::logging::logger_manager::instance()->variadic_message(
       utils::logging::message_kind::info, args...);
 }
 
-template <typename... T> void logger_warn(T &&... args) noexcept {
+template <typename... T>
+void logger_warn(T &&... args) noexcept {
   utils::logging::logger_manager::instance()->variadic_message(
       utils::logging::message_kind::warn, args...);
 }
 
-template <typename... T> void logger_fatal(T &&... args) noexcept {
+template <typename... T>
+void logger_fatal(T &&... args) noexcept {
   utils::logging::logger_manager::instance()->variadic_message(
       utils::logging::message_kind::fatal, args...);
 }

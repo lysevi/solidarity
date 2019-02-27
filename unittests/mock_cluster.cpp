@@ -13,7 +13,8 @@ mock_cluster::~mock_cluster() {
   _worker_thread.join();
 }
 
-void mock_cluster::send_to(const rft::cluster_node &from, const rft::cluster_node &to,
+void mock_cluster::send_to(const rft::cluster_node &from,
+                           const rft::cluster_node &to,
                            const rft::append_entries &m) {
   std::unique_lock<std::mutex> ul(_tasks_locker);
   _tasks.push_back({from, to, m});

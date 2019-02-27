@@ -1,6 +1,5 @@
 #pragma once
 
-
 #include <librft/exports.h>
 #include <librft/journal.h>
 #include <librft/settings.h>
@@ -11,12 +10,12 @@
 #include <set>
 #include <shared_mutex>
 
-
 namespace rft {
 
 class consensus {
 public:
-  EXPORT consensus(const node_settings &ns, abstract_cluster *cluster,
+  EXPORT consensus(const node_settings &ns,
+                   abstract_cluster *cluster,
                    const logdb::journal_ptr &jrn);
   ROUND_KIND state() const { return _state.round_kind; }
   round_t round() const { return _state.round; }
@@ -52,8 +51,6 @@ private:
   cluster_node _self_addr;
   abstract_cluster *_cluster;
   logdb::journal_ptr _jrn;
-
-  
 
   node_state_t _state;
 };

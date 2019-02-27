@@ -38,7 +38,6 @@ logger_manager::logger_manager(abstract_logger_ptr &logger) {
   _logger = logger;
 }
 
-
 void console_logger::message(message_kind kind, const std::string &msg) noexcept {
   if (logger_manager::verbose == verbose::quiet) {
     return;
