@@ -34,7 +34,7 @@ struct node_state_t {
   cluster_node leader;
   ROUND_KIND round_kind{ROUND_KIND::FOLLOWER};
   size_t election_round = 0;
-  std::set<cluster_node> _election_to_me;
+  std::set<cluster_node> votes_to_me;
 
   uint64_t start_time;
 
@@ -45,7 +45,7 @@ struct node_state_t {
     leader = o.leader;
     round_kind = o.round_kind;
     election_round = o.election_round;
-    _election_to_me = o._election_to_me;
+    votes_to_me = o.votes_to_me;
     start_time = o.start_time;
     return *this;
   }

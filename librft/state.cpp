@@ -41,8 +41,9 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
         result.last_heartbeat_time = clock_t::now();
         result.leader = e.leader;
         result.round = e.round;
+        target = NOTIFY_TARGET::SENDER;
       }
-      target = NOTIFY_TARGET::SENDER;
+      
       break;
     }
     case ROUND_KIND::FOLLOWER: {
@@ -88,9 +89,9 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
       break;
     }
     case ROUND_KIND::CANDIDATE: {
-      result._election_to_me.insert(from);
+      result.votes_to_me.insert(from);
       auto quorum = (size_t(cluster_size / 2.0) + 1);
-      if (result._election_to_me.size() >= quorum) {
+      if (result.votes_to_me.size() >= quorum) {
         result.round_kind = ROUND_KIND::LEADER;
         result.round++;
         result.election_round = 0;
@@ -144,7 +145,7 @@ node_state_t node_state_t::on_append_entries(const node_state_t &self,
       result.round_kind = ROUND_KIND::FOLLOWER;
       result.round = e.round;
       result.leader = e.leader;
-      result._election_to_me.clear();
+      result.votes_to_me.clear();
     }
     break;
   }
@@ -173,7 +174,7 @@ node_state_t node_state_t::on_heartbeat(const node_state_t &self,
         result.round++;
         result.leader = self_addr;
         result.election_round = 1;
-        result._election_to_me.insert(self_addr);
+        result.votes_to_me.insert(self_addr);
       }
       break;
     }
@@ -183,8 +184,8 @@ node_state_t node_state_t::on_heartbeat(const node_state_t &self,
       if (result.election_round < 5) {
         result.election_round++;
       }
-      result._election_to_me.clear();
-      result._election_to_me.insert(self_addr);
+      result.votes_to_me.clear();
+      result.votes_to_me.insert(self_addr);
       break;
     }
   }
