@@ -53,10 +53,10 @@ public:
   EXPORT void put(const log_entry &e) override;
   EXPORT void commit(const reccord_info &i) override;
 
-  size_t size() const override { return _wal.size(); }
+  EXPORT size_t size() const override;
 
-  reccord_info prev_rec() const override { return _prev; }
-  reccord_info commited_rec() const override { return _commited; }
+  EXPORT reccord_info prev_rec() const override;
+  EXPORT reccord_info commited_rec() const override;
 
 protected:
   std::map<index_t, log_entry> _wal;

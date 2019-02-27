@@ -71,7 +71,8 @@ TEST_CASE("consensus.election") {
   SECTION("consensus.election.5") { nodes_count = 5; }
   SECTION("consensus.election.7") { nodes_count = 7; }
   SECTION("consensus.election.10") { nodes_count = 10; }
-#if  !defined(DEBUG)
+  SECTION("consensus.election.25") { nodes_count = 15; }
+#if !defined(DEBUG)
   SECTION("consensus.election.25") { nodes_count = 25; }
 #endif
   for (size_t i = 0; i < nodes_count; ++i) {
