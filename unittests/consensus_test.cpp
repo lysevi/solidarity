@@ -299,6 +299,92 @@ SCENARIO("raft.vote") {
   }
 }
 
+SCENARIO("raft.on_append_entries") {
+  rft::node_state_t self;
+  rft::node_state_t from_s;
+
+  rft::cluster_node self_addr;
+  rft::cluster_node from_s_addr;
+
+  from_s.round = 1;
+  from_s_addr.set_name("from_s_addr");
+
+  self.round = 1;
+  self_addr.set_name("self_addr");
+  self.leader = from_s_addr;
+
+  rft::append_entries ae;
+  ae.leader = from_s_addr;
+  ae.round = from_s.round;
+
+  WHEN("self == ELECTION") {
+    self.round_kind = rft::ROUND_KIND::ELECTION;
+    self.round = 0;
+    WHEN("from==self.leader") {
+      auto new_state = rft::node_state_t::on_append_entries(self, from_s_addr, ae);
+      THEN("follow to sender") {
+        EXPECT_EQ(new_state.round_kind, rft::ROUND_KIND::FOLLOWER);
+        EXPECT_EQ(new_state.leader.name(), from_s_addr.name());
+        EXPECT_EQ(new_state.round, from_s.round);
+      }
+    }
+    WHEN("from==self.leader") {
+      self.leader.set_name("other name");
+      auto new_state = rft::node_state_t::on_append_entries(self, from_s_addr, ae);
+      THEN("do nothing") {
+        EXPECT_EQ(new_state.round_kind, self.round_kind);
+        EXPECT_EQ(new_state.leader.name(), self.leader.name());
+        EXPECT_EQ(new_state.round, self.round);
+      }
+    }
+  }
+
+  WHEN("self == FOLLOWER") {
+    self.round_kind = rft::ROUND_KIND::FOLLOWER;
+    self.leader.clear();
+    self.round = 0;
+    WHEN("round!=self.leader") {
+      auto new_state = rft::node_state_t::on_append_entries(self, from_s_addr, ae);
+      THEN("follow to sender") {
+        EXPECT_EQ(new_state.round_kind, rft::ROUND_KIND::FOLLOWER);
+        EXPECT_EQ(new_state.leader.name(), from_s_addr.name());
+        EXPECT_EQ(new_state.round, from_s.round);
+      }
+    }
+    WHEN("from==self.leader") {
+      self.leader.set_name("other name");
+      auto new_state = rft::node_state_t::on_append_entries(self, from_s_addr, ae);
+      THEN("do nothing") {
+        EXPECT_EQ(new_state.round_kind, self.round_kind);
+        EXPECT_EQ(new_state.leader.name(), self.leader.name());
+        EXPECT_EQ(new_state.round, self.round);
+      }
+    }
+  }
+
+  WHEN("self == CANDIDATE") {
+    self.round_kind = rft::ROUND_KIND::CANDIDATE;
+    
+    WHEN("round!=self.leader") {
+      self.round = 0;
+      auto new_state = rft::node_state_t::on_append_entries(self, from_s_addr, ae);
+      THEN("follow to sender") {
+        EXPECT_EQ(new_state.round_kind, rft::ROUND_KIND::FOLLOWER);
+        EXPECT_EQ(new_state.leader.name(), from_s_addr.name());
+        EXPECT_EQ(new_state.round, from_s.round);
+      }
+    }
+    WHEN("from==self.leader") {
+      auto new_state = rft::node_state_t::on_append_entries(self, from_s_addr, ae);
+      THEN("do nothing") {
+        EXPECT_EQ(new_state.round_kind, self.round_kind);
+        EXPECT_EQ(new_state.leader.name(), self.leader.name());
+        EXPECT_EQ(new_state.round, self.round);
+      }
+    }
+  }
+}
+
 TEST_CASE("consensus.add_nodes") {
   auto cluster = std::make_shared<mock_cluster>();
 
