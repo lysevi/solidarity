@@ -20,8 +20,9 @@ std::vector<std::string> utils::strings::split(const std::string &text, char sep
   std::size_t start = 0, end = 0;
   while ((end = text.find(sep, start)) != std::string::npos) {
     std::string temp = text.substr(start, end - start);
-    if (temp != "")
+    if (temp != "") {
       tokens.push_back(temp);
+    }
     start = end + 1;
   }
   std::string temp = text.substr(start);
@@ -33,18 +34,17 @@ std::vector<std::string> utils::strings::split(const std::string &text, char sep
 std::string utils::strings::to_upper(const std::string &text) {
   std::string converted = text;
 
-  for (size_t i = 0; i < converted.size(); ++i) {
-    converted[i] = (char)toupper(converted[i]);
-  }
+  std::transform(std::begin(text), std::end(text), std::begin(converted),
+                 [](auto c) { return (char)toupper(c); });
+
   return converted;
 }
 
 std::string utils::strings::to_lower(const std::string &text) {
   std::string converted = text;
 
-  for (size_t i = 0; i < converted.size(); ++i) {
-    converted[i] = (char)tolower(converted[i]);
-  }
+  std::transform(std::begin(text), std::end(text), std::begin(converted),
+                 [](auto c) { return (char)tolower(c); });
   return converted;
 }
 
