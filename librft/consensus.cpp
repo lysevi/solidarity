@@ -1,5 +1,6 @@
 #include <librft/consensus.h>
 #include <libutils/logger.h>
+#include <libutils/utils.h>
 #include <sstream>
 
 using namespace rft;

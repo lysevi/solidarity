@@ -1,5 +1,5 @@
 #include "mock_cluster.h"
-
+#include <libutils/logger.h>
 mock_cluster::mock_cluster() {
   _worker_thread = std::thread([this]() { this->worker(); });
 }

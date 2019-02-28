@@ -1,7 +1,7 @@
 #pragma once
 
 #include <librft/journal.h>
-#include <libutils/utils.h>
+#include <libutils/property.h>
 #include <memory>
 
 namespace rft {

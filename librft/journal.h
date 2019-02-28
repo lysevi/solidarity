@@ -31,7 +31,7 @@ struct reccord_info {
 
 struct log_entry {
   round_t round;
-  command_ptr cmd;
+  command cmd;
 };
 
 class abstract_journal {
@@ -39,7 +39,7 @@ public:
   ~abstract_journal() {}
   virtual void put(const log_entry &e) = 0;
   virtual void commit(const reccord_info &i) = 0;
-  virtual log_entry get(const reccord_info&r)=0;
+  virtual log_entry get(const reccord_info &r) = 0;
   virtual size_t size() const = 0;
 
   virtual reccord_info prev_rec() const = 0;
@@ -48,13 +48,13 @@ public:
 
 using journal_ptr = std::shared_ptr<abstract_journal>;
 
-//TODO thread saffety
+// TODO thread saffety
 class memory_journal : public abstract_journal {
 public:
   EXPORT static std::shared_ptr<memory_journal> make_new();
   EXPORT void put(const log_entry &e) override;
   EXPORT void commit(const reccord_info &i) override;
-  EXPORT log_entry get(const reccord_info &r)override;
+  EXPORT log_entry get(const reccord_info &r) override;
   EXPORT size_t size() const override;
 
   EXPORT reccord_info prev_rec() const override;
