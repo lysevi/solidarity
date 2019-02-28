@@ -17,7 +17,7 @@ void mock_cluster::send_to(const rft::cluster_node &from,
                            const rft::cluster_node &to,
                            const rft::append_entries &m) {
   std::unique_lock<std::mutex> ul(_tasks_locker);
-  _tasks.push_back({from, to, m});
+  _tasks.emplace_back<mock_cluster::message_t>({from, to, m});
   _cond.notify_all();
 }
 
