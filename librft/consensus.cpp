@@ -32,34 +32,13 @@ consensus::consensus(const node_settings &ns,
   _state.last_heartbeat_time = clock_t::now();
 }
 
-append_entries consensus::make_append_entries_unsafe() const {
+append_entries consensus::make_append_entries() const {
   append_entries ae;
   ae.round = _state.round;
   ae.starttime = _state.start_time;
   ae.leader = _state.leader;
-  ae.is_vote = false;
+  ae.kind = entries_kind_t::APPEND;
   return ae;
-}
-
-append_entries consensus::make_append_entries() const {
-  return make_append_entries_unsafe();
-}
-
-void consensus::change_state(const ROUND_KIND s,
-                             const round_t r,
-                             const cluster_node &leader) {
-  auto old_state = _state;
-  _state.round_kind = s;
-  _state.round = r;
-  _state.leader = leader;
-  logger_info("node: ", _settings.name(), ": change state ", old_state, " => ", _state);
-}
-
-void consensus::change_state(const cluster_node &leader, const round_t r) {
-  auto old_state = _state;
-  _state.round = r;
-  _state.leader = leader;
-  logger_info("node: ", _settings.name(), ": change state ", old_state, " => ", _state);
 }
 
 void consensus::recv(const cluster_node &from, const append_entries &e) {
@@ -67,11 +46,18 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
   if (e.round < _state.round) {
     return;
   }
-  if (e.is_vote) {
+  switch (e.kind) {
+  case entries_kind_t::VOTE: {
     on_vote(from, e);
-  } else {
-    on_append_entries(from, e);
+    break;
   }
+  case entries_kind_t::APPEND: {
+    on_append_entries(from, e);
+    break;
+  }
+  default:
+    NOT_IMPLEMENTED;
+  };
 }
 
 void consensus::on_vote(const cluster_node &from, const append_entries &e) {
@@ -97,14 +83,14 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
   }
   switch (change_state_v.notify) {
   case NOTIFY_TARGET::ALL: {
-    auto ae = make_append_entries_unsafe();
-    ae.is_vote = true;
+    auto ae = make_append_entries();
+    ae.kind = entries_kind_t::VOTE;
     _cluster->send_all(_self_addr, ae);
     break;
   }
   case NOTIFY_TARGET::SENDER: {
-    auto ae = make_append_entries_unsafe();
-    ae.is_vote = true;
+    auto ae = make_append_entries();
+    ae.kind = entries_kind_t::VOTE;
     _cluster->send_to(_self_addr, from, ae);
     break;
   }
@@ -141,11 +127,12 @@ void consensus::on_heartbeat() {
 
   if (_state.round_kind == ROUND_KIND::CANDIDATE ||
       _state.round_kind == ROUND_KIND::LEADER) {
+    auto ae = make_append_entries();
     if (_state.round_kind == ROUND_KIND::LEADER) {
       logger_info("node: ", _settings.name(), ": heartbeat");
+    } else {
+      ae.kind = entries_kind_t::VOTE;
     }
-    auto ae = make_append_entries_unsafe();
-    ae.is_vote = _state.round_kind == ROUND_KIND::CANDIDATE;
     _cluster->send_all(_self_addr, ae);
   }
   update_next_heartbeat_interval();

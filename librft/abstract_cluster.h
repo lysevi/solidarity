@@ -24,15 +24,15 @@ inline std::string to_string(const cluster_node &s) {
 // leader term
 using term_t = uint64_t;
 
-enum class entries_kind_t { VOTE };
+enum class entries_kind_t { VOTE, APPEND };
 
 struct append_entries {
   /// on election;
-  bool is_vote;
+  entries_kind_t kind = {entries_kind_t::APPEND};
   /// round number;
   round_t round;
   /// sender start time;
-  uint64_t starttime={};
+  uint64_t starttime = {};
   /// leader;
   cluster_node leader;
 

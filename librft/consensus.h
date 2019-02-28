@@ -33,13 +33,9 @@ public:
 
 protected:
   append_entries make_append_entries() const;
-  append_entries make_append_entries_unsafe() const;
 
   void on_vote(const cluster_node &from, const append_entries &e);
   void on_append_entries(const cluster_node &from, const append_entries &e);
-
-  void change_state(const ROUND_KIND s, const round_t r, const cluster_node &leader);
-  void change_state(const cluster_node &cn, const round_t r);
 
   void update_next_heartbeat_interval();
 
