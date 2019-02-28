@@ -17,12 +17,9 @@ static void BM_ArgsToString(benchmark::State &state) {
 BENCHMARK(BM_ArgsToString);
 
 static void BM_SplitString(benchmark::State &state) {
+  std::string target("H e l l o , w o r l d !", 10);
   for (auto _ : state) {
-    benchmark::DoNotOptimize(split("Hello, world!"
-                                   "Hello, Worl! Hello, world! Hello, Worl! "
-                                   "Hello, world! Hello, Worl! Hello, world!"
-                                   "Hello, Worl!"
-                                   "Hello, world!", ' '));
+    benchmark::DoNotOptimize(split(target, ' '));
   }
 }
 BENCHMARK(BM_SplitString);
