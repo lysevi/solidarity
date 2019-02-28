@@ -5,6 +5,7 @@
 #include <librft/types.h>
 #include <map>
 #include <memory>
+#include <shared_mutex>
 
 namespace rft {
 
@@ -48,7 +49,6 @@ public:
 
 using journal_ptr = std::shared_ptr<abstract_journal>;
 
-// TODO thread saffety
 class memory_journal : public abstract_journal {
 public:
   EXPORT static std::shared_ptr<memory_journal> make_new();
@@ -61,6 +61,7 @@ public:
   EXPORT reccord_info commited_rec() const override;
 
 protected:
+  mutable std::shared_mutex _locker;
   std::map<index_t, log_entry> _wal;
   std::map<index_t, log_entry> _commited_data;
 

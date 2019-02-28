@@ -32,8 +32,9 @@ struct thread_info {
 
 struct task_result {
   bool runned;
-  locker
-      m; // dont use mutex. mutex::lock() requires that the calling thread owns the mutex.
+  /// dont use mutex.
+  /// mutex::lock() requires that the calling thread owns the mutex.
+  locker m;
   task_result() noexcept {
     runned = true;
     m.lock();

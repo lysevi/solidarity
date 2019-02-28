@@ -16,18 +16,23 @@ std::vector<std::string> utils::strings::tokens(const std::string &str) {
 }
 
 std::vector<std::string> utils::strings::split(const std::string &text, char sep) {
+  auto n = std::count_if(text.begin(), text.end(), [sep](auto c) { return c == sep; });
+
   std::vector<std::string> tokens;
+  tokens.reserve(n);
+  
   std::size_t start = 0, end = 0;
   while ((end = text.find(sep, start)) != std::string::npos) {
     std::string temp = text.substr(start, end - start);
     if (temp != "") {
-      tokens.push_back(temp);
+      tokens.emplace_back(std::move(temp));
     }
     start = end + 1;
   }
   std::string temp = text.substr(start);
-  if (temp != "")
-    tokens.push_back(temp);
+  if (temp != "") {
+    tokens.emplace_back(std::move(temp));
+  }
   return tokens;
 }
 

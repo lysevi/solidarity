@@ -78,9 +78,9 @@ void threads_pool::_pool_logic(size_t num) {
   ti.kind = _params.kind;
   ti.thread_number = num;
 
+  std::shared_ptr<task_wrapper> task = nullptr;
   while (!_stop_flag) {
-    std::shared_ptr<task_wrapper> task = nullptr;
-
+    task = nullptr;
     {
       std::unique_lock<std::shared_mutex> lock(_queue_mutex);
       this->_condition.wait(
@@ -88,7 +88,7 @@ void threads_pool::_pool_logic(size_t num) {
       if (this->_stop_flag) {
         return;
       }
-      _task_runned++;
+      ++_task_runned;
       for (auto v : _in_queue) {
         if (task == nullptr) {
           task = v;

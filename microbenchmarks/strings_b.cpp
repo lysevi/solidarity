@@ -15,3 +15,14 @@ static void BM_ArgsToString(benchmark::State &state) {
   }
 }
 BENCHMARK(BM_ArgsToString);
+
+static void BM_SplitString(benchmark::State &state) {
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(split("Hello, world!"
+                                   "Hello, Worl! Hello, world! Hello, Worl! "
+                                   "Hello, world! Hello, Worl! Hello, world!"
+                                   "Hello, Worl!"
+                                   "Hello, world!", ' '));
+  }
+}
+BENCHMARK(BM_SplitString);

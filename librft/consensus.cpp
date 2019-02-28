@@ -32,12 +32,13 @@ consensus::consensus(const node_settings &ns,
   _state.last_heartbeat_time = clock_t::now();
 }
 
-append_entries consensus::make_append_entries() const {
+append_entries
+consensus::make_append_entries(const entries_kind_t kind) const {
   append_entries ae;
   ae.round = _state.round;
   ae.starttime = _state.start_time;
   ae.leader = _state.leader;
-  ae.kind = entries_kind_t::APPEND;
+  ae.kind = kind;
   return ae;
 }
 
@@ -61,11 +62,11 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
 }
 
 void consensus::on_vote(const cluster_node &from, const append_entries &e) {
-  auto old_s = _state;
-  changed_state_t change_state_v =
+  const auto old_s = _state;
+  const changed_state_t change_state_v =
       node_state_t::on_vote(_state, _self_addr, _cluster->size(), from, e);
 
-  node_state_t ns = change_state_v.new_state;
+  const node_state_t ns = change_state_v.new_state;
   _state = ns;
   if (_state.round_kind != old_s.round_kind) {
     if (old_s.round_kind == ROUND_KIND::CANDIDATE &&
@@ -81,16 +82,15 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
       logger_info("node: ", _settings.name(), ": change state ", old_s, " => ", _state);
     }
   }
+
   switch (change_state_v.notify) {
   case NOTIFY_TARGET::ALL: {
-    auto ae = make_append_entries();
-    ae.kind = entries_kind_t::VOTE;
+    const auto ae = make_append_entries(entries_kind_t::VOTE);
     _cluster->send_all(_self_addr, ae);
     break;
   }
   case NOTIFY_TARGET::SENDER: {
-    auto ae = make_append_entries();
-    ae.kind = entries_kind_t::VOTE;
+    const auto ae = make_append_entries(entries_kind_t::VOTE);
     _cluster->send_to(_self_addr, from, ae);
     break;
   }
@@ -117,8 +117,8 @@ void consensus::on_heartbeat() {
     if (_state.round_kind == ROUND_KIND::ELECTION) {
       logger_info(1);
     }
-    auto old_s = _state;
-    auto ns = node_state_t::on_heartbeat(_state, _self_addr, _cluster->size());
+    const auto old_s = _state;
+    const auto ns = node_state_t::on_heartbeat(_state, _self_addr, _cluster->size());
     _state = ns;
 
     logger_info("node: ", _settings.name(), ": {", _state.round_kind, "} => - ",
@@ -139,7 +139,7 @@ void consensus::on_heartbeat() {
 }
 
 void consensus::update_next_heartbeat_interval() {
-  auto total_mls = _settings.election_timeout().count();
+  const auto total_mls = _settings.election_timeout().count();
   double k1 = 0.5, k2 = 2.0;
   if (_state.round_kind == ROUND_KIND::CANDIDATE) {
     k1 = 2.0;

@@ -32,7 +32,7 @@ public:
   }
 
 protected:
-  append_entries make_append_entries() const;
+  append_entries make_append_entries(const entries_kind_t kind=entries_kind_t::APPEND) const;
 
   void on_vote(const cluster_node &from, const append_entries &e);
   void on_append_entries(const cluster_node &from, const append_entries &e);
