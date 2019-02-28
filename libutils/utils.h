@@ -49,7 +49,7 @@ protected:
 struct elapsed_time {
   elapsed_time() noexcept { start_time = clock(); }
 
-  double elapsed() noexcept { return double(clock() - start_time) / CLOCKS_PER_SEC; }
+  double elapsed() noexcept { return ((double)clock() - start_time) / CLOCKS_PER_SEC; }
   clock_t start_time;
 };
 

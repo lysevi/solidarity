@@ -45,7 +45,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 IF(solidarity_ENABLE_DOUBLECHECKS)
  add_definitions(-DDOUBLE_CHECKS)
-ENDIF()
+ if(MSVC)
+   add_definitions(-D_ITERATOR_DEBUG_LEVEL=1)
+ ENDIF(MSVC)
+endif(solidarity_ENABLE_DOUBLECHECKS)
 
 find_package (Threads)
 

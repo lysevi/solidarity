@@ -15,16 +15,16 @@
 
 #define CODE_POS (utils::codepos(__FILE__, __LINE__, __FUNCTION__))
 
-#define MAKE_EXCEPTION(msg) utils::exception::create_and_log(CODE_POS, msg)
+#define MAKE_EXCEPTION(msg) utils::exception_t::create_and_log(CODE_POS, msg)
 // macros, because need CODE_POS
 
 #ifdef DEBUG
 #define THROW_EXCEPTION(...)                                                             \
-  throw utils::exception::create_and_log(CODE_POS, __VA_ARGS__);                         \
+  throw utils::exception_t::create_and_log(CODE_POS, __VA_ARGS__);                         \
   // std::exit(1);
 #else
 #define THROW_EXCEPTION(...)                                                             \
-  throw utils::exception::create_and_log(CODE_POS, __VA_ARGS__);
+  throw utils::exception_t::create_and_log(CODE_POS, __VA_ARGS__);
 #endif
 
 namespace utils {
@@ -47,10 +47,10 @@ struct codepos {
   codepos &operator=(const codepos &) = delete;
 };
 
-class exception : public std::exception {
+class exception_t : public std::exception {
 public:
   template <typename... T>
-  static exception create_and_log(const codepos &pos, T... message) {
+  static exception_t create_and_log(const codepos &pos, T... message) {
 
     auto expanded_message = utils::strings::args_to_string(message...);
     auto str_message = std::string("FATAL ERROR. The Exception will be thrown! ") +
@@ -83,7 +83,7 @@ public:
 #endif
 
     logging::logger_fatal(str_message);
-    return exception(expanded_message);
+    return exception_t(expanded_message);
   }
 
 public:
@@ -91,10 +91,10 @@ public:
   const std::string &message() const { return _msg; }
 
 protected:
-  exception() {}
-  exception(const char *&message)
+  exception_t() {}
+  exception_t(const char *&message)
       : _msg(std::string(message)) {}
-  exception(const std::string &message)
+  exception_t(const std::string &message)
       : _msg(message) {}
 
 private:

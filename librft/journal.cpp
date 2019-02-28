@@ -31,6 +31,20 @@ void memory_journal::commit(const reccord_info &i) {
   _commited = i;
 }
 
+log_entry memory_journal::get(const reccord_info &r) {
+  // TODO check _prev and _commited for better speed;
+
+  auto it = _wal.find(r.lsn);
+  if (it != _wal.end()) {
+    return it->second;
+  }
+  it = _commited_data.find(r.lsn);
+  if (it != _commited_data.end()) {
+    return it->second;
+  }
+  throw std::exception("data not founded");
+}
+
 size_t memory_journal::size() const {
   return _wal.size() + _commited_data.size();
 }

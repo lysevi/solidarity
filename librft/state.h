@@ -14,7 +14,7 @@ struct changed_state_t;
 struct node_state_t {
   round_t round{0};
   clock_t::time_point last_heartbeat_time;
-  std::chrono::milliseconds next_heartbeat_interval;
+  std::chrono::milliseconds next_heartbeat_interval={};
   cluster_node leader;
   ROUND_KIND round_kind{ROUND_KIND::FOLLOWER};
   size_t election_round = 0;

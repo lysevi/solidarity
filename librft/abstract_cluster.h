@@ -32,7 +32,7 @@ struct append_entries {
   /// round number;
   round_t round;
   /// sender start time;
-  uint64_t starttime;
+  uint64_t starttime={};
   /// leader;
   cluster_node leader;
 
