@@ -7,8 +7,8 @@
 
 #include <memory>
 #include <random>
-#include <set>
 #include <shared_mutex>
+#include <unordered_map>
 
 namespace rft {
 
@@ -59,7 +59,7 @@ private:
 
   node_state_t _state;
 
-  std::set<cluster_node> _last_entries_states;
+  std::unordered_map<cluster_node, logdb::reccord_info > _last_for_cluster;
 };
 
 }; // namespace rft

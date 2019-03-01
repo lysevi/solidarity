@@ -105,13 +105,18 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
     auto prev = _jrn->prev_rec();
     logger_info("node: ", _settings.name(), ": answer from ", from, " to {", prev.round,
                 ", ", prev.lsn, "}");
+
+    // TODO check for current>_last_for_cluster[from];
     if (e.current == _jrn->prev_rec()) {
-      _last_entries_states.insert(from);
+      _last_for_cluster[from] = e.current;
     }
     // TODO make as quorum:  percent and get it from settings
-    if (_last_entries_states.size() == _cluster->size()) {
-      logger_info("node: ", _settings.name(), ": append quorum");
-      _last_entries_states.clear();
+    auto target = e.current;
+    auto quorum = _cluster->size();
+    auto cnt = std::count_if(_last_for_cluster.cbegin(), _last_for_cluster.cend(),
+                             [quorum, target](auto &kv) { return kv.second == target; });
+    if (cnt == _cluster->size()) {
+      logger_info("node: ", _settings.name(), ": append quorum ", cnt, " from ", quorum);
       _jrn->commit(e.current);
 
       auto ae = make_append_entries();
@@ -181,7 +186,7 @@ void consensus::on_heartbeat() {
       || _state.round_kind == ROUND_KIND::LEADER) {
     auto ae = make_append_entries();
     if (_state.round_kind == ROUND_KIND::LEADER) {
-       logger_info("node: ", _settings.name(), ": heartbeat");
+      logger_info("node: ", _settings.name(), ": heartbeat");
     } else {
       ae.kind = entries_kind_t::VOTE;
     }
@@ -229,7 +234,7 @@ void consensus::add_command(const command &cmd) {
   ae.current = current;
   ae.commited = _jrn->commited_rec();
   ae.cmd = cmd;
-  _last_entries_states.insert(_self_addr);
+  _last_for_cluster[_self_addr] = current;
   logger_info("node: ", _settings.name(), ": add_command  {", current.round, ", ",
               current.lsn, "}");
   _cluster->send_all(_self_addr, ae);
