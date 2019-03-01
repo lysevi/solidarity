@@ -9,7 +9,7 @@
 #include <list>
 #include <sstream>
 
-class UnitTestLogger : public utils::logging::abstract_logger {
+class UnitTestLogger final: public utils::logging::abstract_logger {
 public:
   static bool verbose;
   bool _write_to_file;

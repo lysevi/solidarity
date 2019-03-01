@@ -7,7 +7,7 @@
 #include <shared_mutex>
 #include <tuple>
 
-class mock_cluster : public rft::abstract_cluster {
+class mock_cluster final: public rft::abstract_cluster {
   struct message_t {
     rft::cluster_node from;
     rft::cluster_node to;

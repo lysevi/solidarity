@@ -20,7 +20,7 @@
 
 #ifdef DEBUG
 #define THROW_EXCEPTION(...)                                                             \
-  throw utils::exception_t::create_and_log(CODE_POS, __VA_ARGS__);                         \
+  throw utils::exception_t::create_and_log(CODE_POS, __VA_ARGS__);                       \
   // std::exit(1);
 #else
 #define THROW_EXCEPTION(...)                                                             \
@@ -40,21 +40,21 @@ struct codepos {
       , _func(function) {}
 
   std::string toString() const {
-    auto ss = std::string(_file) + " line: " + std::to_string(_line) +
-              " function: " + std::string(_func) + "\n";
+    auto ss = std::string(_file) + " line: " + std::to_string(_line)
+        + " function: " + std::string(_func) + "\n";
     return ss;
   }
   codepos &operator=(const codepos &) = delete;
 };
 
-class exception_t : public std::exception {
+class exception_t final : public std::exception {
 public:
   template <typename... T>
   static exception_t create_and_log(const codepos &pos, T... message) {
 
     auto expanded_message = utils::strings::args_to_string(message...);
-    auto str_message = std::string("FATAL ERROR. The Exception will be thrown! ") +
-                       pos.toString() + " Message: " + expanded_message;
+    auto str_message = std::string("FATAL ERROR. The Exception will be thrown! ")
+        + pos.toString() + " Message: " + expanded_message;
 
 #ifdef UNIX_OS
     std::stringstream sstr;

@@ -2,7 +2,7 @@
 #include <libutils/logger.h>
 
 namespace microbenchmark_common {
-class BenchmarkLogger : public utils::logging::abstract_logger {
+class BenchmarkLogger final: public utils::logging::abstract_logger {
 public:
   BenchmarkLogger() {}
   ~BenchmarkLogger() {}

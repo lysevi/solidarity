@@ -4,7 +4,7 @@
 #include <libutils/logger.h>
 #include <catch.hpp>
 
-class mock_consumer : public rft::abstract_consensus_consumer {
+class mock_consumer final : public rft::abstract_consensus_consumer {
 public:
   void apply_cmd(const rft::command &cmd) override { last_cmd = cmd; }
 
@@ -128,6 +128,11 @@ TEST_CASE("consensus") {
   rft::command cmd;
   cmd.data.resize(1);
   cmd.data[0] = 0;
+
+  auto data_eq = [&cmd](const std::shared_ptr<mock_consumer> &c) -> bool {
+    return c->last_cmd.data == cmd.data;
+  };
+
   while (cluster->size() > 2) {
     std::vector<std::shared_ptr<rft::consensus>> leaders;
     while (true) {
@@ -157,9 +162,7 @@ TEST_CASE("consensus") {
       cluster->erase_if(is_leader_pred);
       utils::logging::logger_info("cluster size - ", cluster->size());
     } else {
-      auto data_eq = [&cmd](const std::shared_ptr<mock_consumer> &c) -> bool {
-        return c->last_cmd.data == cmd.data;
-      };
+
       for (int i = 0; i < 10; ++i) {
         cmd.data[0]++;
         leaders[0]->add_command(cmd);

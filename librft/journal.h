@@ -53,7 +53,7 @@ public:
 
 using journal_ptr = std::shared_ptr<abstract_journal>;
 
-class memory_journal : public abstract_journal {
+class memory_journal final: public abstract_journal {
 public:
   EXPORT static std::shared_ptr<memory_journal> make_new();
   EXPORT reccord_info put(const log_entry &e) override;
