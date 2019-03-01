@@ -54,11 +54,12 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
     if (old_s.round_kind == ROUND_KIND::CANDIDATE
         && ns.round_kind == ROUND_KIND::LEADER) { // if CANDIDATE => LEADER
       std::stringstream ss;
-      for (auto v : ns.votes_to_me) {
+      auto sz = ns.votes_to_me.size();
+      for (auto &&v : ns.votes_to_me) {
         ss << v.name() << ", ";
       }
-      logger_info("node: ", _settings.name(), ": quorum. i'am new leader with ",
-                  ns.votes_to_me.size(), " voices - ", ss.str());
+      logger_info("node: ", _settings.name(), ": quorum. i'am new leader with ", sz,
+                  " voices - ", ss.str());
       _state.votes_to_me.clear();
     } else {
       logger_info("node: ", _settings.name(), ": change state ", old_s, " => ", _state);

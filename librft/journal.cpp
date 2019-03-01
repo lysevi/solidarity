@@ -25,7 +25,7 @@ void memory_journal::commit(const reccord_info &i) {
   std::copy_if(_wal.cbegin(), _wal.cend(), std::back_inserter(to_commit),
                [i](auto kv) { return kv.first <= i.lsn; });
 
-  for (auto kv : to_commit) {
+  for (auto&&kv : to_commit) {
     index_t idx = kv.first;
     log_entry e = kv.second;
     _commited_data.insert(std::make_pair(idx, e));

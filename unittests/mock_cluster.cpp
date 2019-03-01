@@ -23,7 +23,7 @@ void mock_cluster::send_to(const rft::cluster_node &from,
 
 void mock_cluster::send_all(const rft::cluster_node &from, const rft::append_entries &m) {
   std::unique_lock<std::mutex> lg(_tasks_locker);
-  for (auto &kv : _cluster) {
+  for (const auto &kv : _cluster) {
     if (kv.first != from) {
       _tasks.push_back({from, kv.first, m});
     }
@@ -42,7 +42,7 @@ mock_cluster::by_filter(std::function<bool(const std::shared_ptr<rft::consensus>
   std::shared_lock<std::shared_mutex> lg(_cluster_locker);
   std::vector<std::shared_ptr<rft::consensus>> result;
   result.reserve(_cluster.size());
-  for (auto &kv : _cluster) {
+  for (const auto &kv : _cluster) {
     if (pred(kv.second)) {
       result.push_back(kv.second);
     }
@@ -52,7 +52,7 @@ mock_cluster::by_filter(std::function<bool(const std::shared_ptr<rft::consensus>
 
 void mock_cluster::apply(std::function<void(const std::shared_ptr<rft::consensus>)> f) {
   std::shared_lock<std::shared_mutex> lg(_cluster_locker);
-  for (auto &kv : _cluster) {
+  for (const auto &kv : _cluster) {
     f(kv.second);
   }
 }
@@ -76,12 +76,6 @@ void mock_cluster::erase_if(
                          [pred](auto kv) { return pred(kv.second); });
   if (it != _cluster.end()) {
     _cluster.erase(it);
-  } else {
-    for (auto &v : _cluster) {
-      if (pred(v.second)) {
-        utils::logging::logger_info(1);
-      }
-    }
   }
 }
 
