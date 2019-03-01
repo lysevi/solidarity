@@ -12,15 +12,22 @@
 
 namespace rft {
 
+class abstract_consensus_consumer {
+public:
+  virtual void apply_cmd(const command &cmd) = 0;
+};
+
 class consensus {
 public:
   EXPORT consensus(const node_settings &ns,
                    abstract_cluster *cluster,
-                   const logdb::journal_ptr &jrn);
+                   const logdb::journal_ptr &jrn,
+                   abstract_consensus_consumer *consumer);
   ROUND_KIND state() const { return _state.round_kind; }
   round_t round() const { return _state.round; }
   EXPORT void on_heartbeat();
   EXPORT void recv(const cluster_node &from, const append_entries &e);
+  EXPORT void add_command(const command &cmd);
 
   cluster_node get_leader() const {
     std::lock_guard<std::mutex> l(_locker);
@@ -32,7 +39,8 @@ public:
   }
 
 protected:
-  append_entries make_append_entries(const entries_kind_t kind=entries_kind_t::APPEND) const;
+  append_entries make_append_entries(const entries_kind_t kind
+                                     = entries_kind_t::APPEND) const;
 
   void on_vote(const cluster_node &from, const append_entries &e);
   void on_append_entries(const cluster_node &from, const append_entries &e);
@@ -40,6 +48,7 @@ protected:
   void update_next_heartbeat_interval();
 
 private:
+  abstract_consensus_consumer *const _consumer = nullptr;
   mutable std::mutex _locker;
   std::mt19937 _rnd_eng;
 
@@ -49,6 +58,8 @@ private:
   logdb::journal_ptr _jrn;
 
   node_state_t _state;
+
+  std::set<cluster_node> _last_entries_states;
 };
 
 }; // namespace rft

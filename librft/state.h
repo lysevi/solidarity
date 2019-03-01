@@ -14,7 +14,7 @@ struct changed_state_t;
 struct node_state_t {
   round_t round{0};
   clock_t::time_point last_heartbeat_time;
-  std::chrono::milliseconds next_heartbeat_interval={};
+  std::chrono::milliseconds next_heartbeat_interval = {};
   cluster_node leader;
   ROUND_KIND round_kind{ROUND_KIND::FOLLOWER};
   size_t election_round = 0;
@@ -34,10 +34,19 @@ struct node_state_t {
     return *this;
   }
 
+  bool operator==(const node_state_t &o) const {
+    return round == o.round && last_heartbeat_time == o.last_heartbeat_time
+        && next_heartbeat_interval == o.next_heartbeat_interval && leader == o.leader
+        && round_kind == o.round_kind && election_round == o.election_round
+        && votes_to_me == o.votes_to_me && start_time == o.start_time;
+  }
+
+  bool operator!=(const node_state_t &o) const { return !(*this == o); }
+
   bool is_heartbeat_missed() const {
     auto now = clock_t::now();
-    auto diff =
-        std::chrono::duration_cast<std::chrono::milliseconds>(now - last_heartbeat_time);
+    auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now - last_heartbeat_time);
     auto r = diff > next_heartbeat_interval;
     if (r) {
       return true;
@@ -57,7 +66,7 @@ struct node_state_t {
 
   EXPORT static node_state_t on_append_entries(const node_state_t &self,
                                                const cluster_node &from,
-                                               const logdb::abstract_journal*jrn,
+                                               const logdb::abstract_journal *jrn,
                                                const append_entries &e);
   EXPORT static node_state_t on_heartbeat(const node_state_t &self,
                                           const cluster_node &self_addr,

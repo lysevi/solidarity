@@ -7,12 +7,13 @@ std::shared_ptr<memory_journal> memory_journal::make_new() {
   return std::make_shared<memory_journal>();
 }
 
-void memory_journal::put(const log_entry &e) {
+reccord_info memory_journal::put(const log_entry &e) {
   std::lock_guard<std::shared_mutex> lg(_locker);
   _wal.insert(std::make_pair(_idx, e));
   _prev.lsn = _idx;
   _prev.round = e.round;
   ++_idx;
+  return _prev;
 }
 
 void memory_journal::commit(const reccord_info &i) {

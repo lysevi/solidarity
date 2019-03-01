@@ -24,7 +24,7 @@ inline std::string to_string(const cluster_node &s) {
 // leader term
 using term_t = uint64_t;
 
-enum class entries_kind_t { VOTE, APPEND };
+enum class entries_kind_t { VOTE, APPEND, ANSWER };
 
 struct append_entries {
   /// on election;
@@ -36,6 +36,8 @@ struct append_entries {
   /// leader;
   cluster_node leader;
 
+  /// cmd
+  command cmd;
   logdb::reccord_info current;
   logdb::reccord_info prev;
   logdb::reccord_info commited;
