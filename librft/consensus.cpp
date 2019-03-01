@@ -32,8 +32,7 @@ consensus::consensus(const node_settings &ns,
   _state.last_heartbeat_time = clock_t::now();
 }
 
-append_entries
-consensus::make_append_entries(const entries_kind_t kind) const {
+append_entries consensus::make_append_entries(const entries_kind_t kind) const {
   append_entries ae;
   ae.round = _state.round;
   ae.starttime = _state.start_time;
@@ -141,6 +140,10 @@ void consensus::on_heartbeat() {
 void consensus::update_next_heartbeat_interval() {
   const auto total_mls = _settings.election_timeout().count();
   double k1 = 0.5, k2 = 2.0;
+  if (_state.round_kind == ROUND_KIND::ELECTION) {
+    k1 = 0.5;
+    k2 = 1.0;
+  }
   if (_state.round_kind == ROUND_KIND::CANDIDATE) {
     k1 = 2.0;
     k2 = 3.0 * _state.election_round;
