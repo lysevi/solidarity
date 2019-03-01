@@ -136,9 +136,13 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
 
 void consensus::on_append_entries(const cluster_node &from, const append_entries &e) {
   const auto ns = node_state_t::on_append_entries(_state, from, _jrn.get(), e);
-
+  bool is_leader_to_follower
+      = _state.round_kind == ROUND_KIND::LEADER && ns.round_kind == ROUND_KIND::FOLLOWER;
   if (ns.round != _state.round) {
     _state = ns;
+    if (is_leader_to_follower) {
+      _last_for_cluster.clear();
+    }
   } else {
     // TODO add check prev,cur,commited
     if (e.cmd.is_empty() && !e.commited.is_empty()) {

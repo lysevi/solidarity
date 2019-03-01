@@ -6,6 +6,7 @@
 #include <librft/round_kind.h>
 #include <chrono>
 #include <string>
+#include <unordered_set>
 
 namespace rft {
 
@@ -18,7 +19,7 @@ struct node_state_t {
   cluster_node leader;
   ROUND_KIND round_kind{ROUND_KIND::FOLLOWER};
   size_t election_round = 0;
-  std::set<cluster_node> votes_to_me;
+  std::unordered_set<cluster_node> votes_to_me;
 
   uint64_t start_time;
 
