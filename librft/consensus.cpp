@@ -63,6 +63,8 @@ append_entries consensus::make_append_entries(const entries_kind_t kind) const {
   ae.starttime = _state.start_time;
   ae.leader = _state.leader;
   ae.kind = kind;
+  ae.current = _jrn->prev_rec();
+  ae.commited = _jrn->commited_rec();
   return ae;
 }
 
@@ -149,17 +151,14 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
       logger_info("node: ", _settings.name(), ": commit entry from ", from, " {",
                   e.commited.round, ", ", e.commited.lsn, "}");
       _jrn->commit(e.commited);
-      auto le = _jrn->get(_jrn->commited_rec());
+      auto commited = _jrn->commited_rec();
+      auto le = _jrn->get(commited);
       _consumer->apply_cmd(le.cmd);
     } else {
       if (!e.cmd.is_empty() && !e.current.is_empty()) {
         logger_info("node: ", _settings.name(), ": new entry from ", from, " {",
                     e.current.round, ", ", e.current.lsn, "}");
-        // TODO fill commited, prev, current in make_append_entries()
         auto ae = make_append_entries(entries_kind_t::ANSWER);
-        ae.prev = _jrn->prev_rec();
-        ae.commited = _jrn->commited_rec();
-
         logdb::log_entry le;
         le.round = _state.round;
         le.cmd = e.cmd;
@@ -193,8 +192,6 @@ void consensus::on_answer(const cluster_node &from, const append_entries &e) {
     _jrn->commit(e.current);
 
     auto ae = make_append_entries();
-    ae.prev = _jrn->prev_rec();
-    ae.commited = _jrn->commited_rec();
     _consumer->apply_cmd(_jrn->get(ae.commited).cmd);
 
     _cluster->send_all(_self_addr, ae);
@@ -235,14 +232,11 @@ void consensus::add_command(const command &cmd) {
   le.cmd = cmd;
   le.round = _state.round;
 
-  auto prev = _jrn->prev_rec();
-  auto current = _jrn->put(le);
-
   auto ae = make_append_entries(rft::entries_kind_t::APPEND);
-  ae.prev = prev;
+  auto current = _jrn->put(le);
   ae.current = current;
-  ae.commited = _jrn->commited_rec();
   ae.cmd = cmd;
+
   _last_for_cluster[_self_addr] = current;
   logger_info("node: ", _settings.name(), ": add_command  {", current.round, ", ",
               current.lsn, "}");

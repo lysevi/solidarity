@@ -177,4 +177,6 @@ TEST_CASE("consensus") {
       break;
     }
   }
+  cluster = nullptr;
+  consumers.clear();
 }
