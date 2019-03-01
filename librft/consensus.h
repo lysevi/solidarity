@@ -44,6 +44,7 @@ protected:
 
   void on_vote(const cluster_node &from, const append_entries &e);
   void on_append_entries(const cluster_node &from, const append_entries &e);
+  void on_answer(const cluster_node &from, const append_entries &e);
 
   void update_next_heartbeat_interval();
 

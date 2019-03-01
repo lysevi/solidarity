@@ -34,6 +34,29 @@ consensus::consensus(const node_settings &ns,
   _state.last_heartbeat_time = clock_t::now();
 }
 
+void consensus::update_next_heartbeat_interval() {
+  const auto total_mls = _settings.election_timeout().count();
+  double k1 = 0.5, k2 = 2.0;
+  if (_state.round_kind == ROUND_KIND::ELECTION) {
+    k1 = 0.5;
+    k2 = 1.0;
+  }
+  if (_state.round_kind == ROUND_KIND::CANDIDATE) {
+    k1 = 2.0;
+    k2 = 3.0 * _state.election_round;
+  }
+  if (_state.round_kind == ROUND_KIND::LEADER) {
+    k1 = 0.5;
+    k2 = 1.5;
+  }
+  std::uniform_int_distribution<uint64_t> distr(uint64_t(total_mls * k1),
+                                                uint64_t(total_mls * k2));
+
+  _state.next_heartbeat_interval = std::chrono::milliseconds(distr(_rnd_eng));
+  /*logger_info("node: ", _settings.name(), ": next heartbeat is ",
+              _state.next_heartbeat_interval.count());*/
+}
+
 append_entries consensus::make_append_entries(const entries_kind_t kind) const {
   append_entries ae;
   ae.round = _state.round;
@@ -103,30 +126,7 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
     break;
   }
   case entries_kind_t::ANSWER: {
-    auto prev = _jrn->prev_rec();
-    logger_info("node: ", _settings.name(), ": answer from ", from, " to {", prev.round,
-                ", ", prev.lsn, "}");
-
-    // TODO check for current>_last_for_cluster[from];
-    if (e.current == _jrn->prev_rec()) {
-      _last_for_cluster[from] = e.current;
-    }
-    // TODO make as quorum:  percent and get it from settings
-    auto target = e.current;
-    auto quorum = _cluster->size();
-    auto cnt = std::count_if(_last_for_cluster.cbegin(), _last_for_cluster.cend(),
-                             [quorum, target](auto &kv) { return kv.second == target; });
-    if (cnt == _cluster->size()) {
-      logger_info("node: ", _settings.name(), ": append quorum ", cnt, " from ", quorum);
-      _jrn->commit(e.current);
-
-      auto ae = make_append_entries();
-      ae.prev = _jrn->prev_rec();
-      ae.commited = _jrn->commited_rec();
-      _consumer->apply_cmd(_jrn->get(ae.commited).cmd);
-
-      _cluster->send_all(_self_addr, ae);
-    }
+    on_answer(from, e);
     break;
   }
   default:
@@ -140,7 +140,6 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
   if (ns.round != _state.round) {
     _state = ns;
   } else {
-    _state.last_heartbeat_time = clock_t::now();
     // TODO add check prev,cur,commited
     if (e.cmd.is_empty() && !e.commited.is_empty()) {
       logger_info("node: ", _settings.name(), ": commit entry from ", from, " {",
@@ -168,6 +167,34 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
       }
     }
   }
+  _state.last_heartbeat_time = clock_t::now();
+}
+
+void consensus::on_answer(const cluster_node &from, const append_entries &e) {
+  auto prev = _jrn->prev_rec();
+  logger_info("node: ", _settings.name(), ": answer from ", from, " to {", prev.round,
+              ", ", prev.lsn, "}");
+
+  // TODO check for current>_last_for_cluster[from];
+  if (e.current == _jrn->prev_rec()) {
+    _last_for_cluster[from] = e.current;
+  }
+  // TODO make as quorum:  percent and get it from settings
+  auto target = e.current;
+  auto quorum = _cluster->size();
+  auto cnt = std::count_if(_last_for_cluster.cbegin(), _last_for_cluster.cend(),
+                           [quorum, target](auto &kv) { return kv.second == target; });
+  if (size_t(cnt) == _cluster->size()) {
+    logger_info("node: ", _settings.name(), ": append quorum ", cnt, " from ", quorum);
+    _jrn->commit(e.current);
+
+    auto ae = make_append_entries();
+    ae.prev = _jrn->prev_rec();
+    ae.commited = _jrn->commited_rec();
+    _consumer->apply_cmd(_jrn->get(ae.commited).cmd);
+
+    _cluster->send_all(_self_addr, ae);
+  }
 }
 
 void consensus::on_heartbeat() {
@@ -194,29 +221,6 @@ void consensus::on_heartbeat() {
     _cluster->send_all(_self_addr, ae);
   }
   update_next_heartbeat_interval();
-}
-
-void consensus::update_next_heartbeat_interval() {
-  const auto total_mls = _settings.election_timeout().count();
-  double k1 = 0.5, k2 = 2.0;
-  if (_state.round_kind == ROUND_KIND::ELECTION) {
-    k1 = 0.5;
-    k2 = 1.0;
-  }
-  if (_state.round_kind == ROUND_KIND::CANDIDATE) {
-    k1 = 2.0;
-    k2 = 3.0 * _state.election_round;
-  }
-  if (_state.round_kind == ROUND_KIND::LEADER) {
-    k1 = 0.5;
-    k2 = 1.5;
-  }
-  std::uniform_int_distribution<uint64_t> distr(uint64_t(total_mls * k1),
-                                                uint64_t(total_mls * k2));
-
-  _state.next_heartbeat_interval = std::chrono::milliseconds(distr(_rnd_eng));
-  /*logger_info("node: ", _settings.name(), ": next heartbeat is ",
-              _state.next_heartbeat_interval.count());*/
 }
 
 void consensus::add_command(const command &cmd) {

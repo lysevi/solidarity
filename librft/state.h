@@ -31,6 +31,7 @@ struct node_state_t {
     election_round = o.election_round;
     votes_to_me = o.votes_to_me;
     start_time = o.start_time;
+    last_heartbeat_time = o.last_heartbeat_time;
     return *this;
   }
 
