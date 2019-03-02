@@ -121,6 +121,7 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
   switch (e.kind) {
   case entries_kind_t::VOTE: {
     on_vote(from, e);
+    _last_for_cluster[from] = e.current;
     break;
   }
   case entries_kind_t::APPEND: {
@@ -214,9 +215,10 @@ void consensus::on_heartbeat() {
   if (_state.round_kind == ROUND_KIND::CANDIDATE
       || _state.round_kind == ROUND_KIND::LEADER) {
     auto ae = make_append_entries();
-    if (_state.round_kind == ROUND_KIND::LEADER) {
+    if (_state.round_kind == ROUND_KIND::LEADER) { /// CANDIDATE => LEADER
       logger_info("node: ", _settings.name(), ": heartbeat");
-    } else {
+    } else { /// CANDIDATE => CANDIDATE
+      _last_for_cluster.clear();
       ae.kind = entries_kind_t::VOTE;
     }
     _cluster->send_all(_self_addr, ae);
