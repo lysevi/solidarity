@@ -21,10 +21,7 @@ inline std::string to_string(const cluster_node &s) {
   return std::string("node:://") + s.name();
 }
 
-// leader term
-using term_t = uint64_t;
-
-enum class entries_kind_t { VOTE, APPEND, ANSWER };
+enum class entries_kind_t { VOTE, APPEND, ANSWER_OK, ANSWER_FAILED };
 
 struct append_entries {
   /// on election;

@@ -128,7 +128,7 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
     on_append_entries(from, e);
     break;
   }
-  case entries_kind_t::ANSWER: {
+  case entries_kind_t::ANSWER_OK: {
     on_answer(from, e);
     break;
   }
@@ -159,7 +159,7 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
       if (!e.cmd.is_empty() && !e.current.is_empty()) {
         logger_info("node: ", _settings.name(), ": new entry from ", from, " {",
                     e.current.round, ", ", e.current.lsn, "}");
-        auto ae = make_append_entries(entries_kind_t::ANSWER);
+        auto ae = make_append_entries(entries_kind_t::ANSWER_OK);
         logdb::log_entry le;
         le.round = _state.round;
         le.cmd = e.cmd;
