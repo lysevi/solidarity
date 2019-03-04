@@ -71,7 +71,7 @@ append_entries consensus::make_append_entries(const entries_kind_t kind) const {
 void consensus::on_vote(const cluster_node &from, const append_entries &e) {
   const auto old_s = _state;
   const changed_state_t change_state_v
-      = node_state_t::on_vote(_state, _self_addr, _cluster->size(), from, e);
+      = node_state_t::on_vote(_state, _settings, _self_addr, _cluster->size(), from, e);
 
   const node_state_t ns = change_state_v.new_state;
   _state = ns;
@@ -185,10 +185,10 @@ void consensus::on_answer(const cluster_node &from, const append_entries &e) {
   }
   // TODO make as quorum:  percent and get it from settings
   auto target = e.current;
-  auto quorum = _cluster->size();
+  auto quorum = _cluster->size() * _settings.append_quorum();
   auto cnt = std::count_if(_last_for_cluster.cbegin(), _last_for_cluster.cend(),
                            [quorum, target](auto &kv) { return kv.second == target; });
-  if (size_t(cnt) == _cluster->size()) {
+  if (size_t(cnt) >= _cluster->size()) {
     logger_info("node: ", _settings.name(), ": append quorum ", cnt, " from ", quorum);
     _jrn->commit(e.current);
 

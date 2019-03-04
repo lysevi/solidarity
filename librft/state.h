@@ -4,6 +4,7 @@
 #include <librft/exports.h>
 #include <librft/journal.h>
 #include <librft/round_kind.h>
+#include <librft/settings.h>
 #include <chrono>
 #include <string>
 #include <unordered_set>
@@ -61,6 +62,7 @@ struct node_state_t {
   void change_state(const cluster_node &cn, const round_t r);
 
   EXPORT static changed_state_t on_vote(const node_state_t &self,
+                                        const node_settings &settings,
                                         const cluster_node &self_addr,
                                         const size_t cluster_size,
                                         const cluster_node &from,

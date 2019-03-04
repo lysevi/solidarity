@@ -29,6 +29,7 @@ void node_state_t::change_state(const cluster_node &leader_, const round_t r) {
 }
 
 changed_state_t node_state_t::on_vote(const node_state_t &self,
+                                      const node_settings &settings,
                                       const cluster_node &self_addr,
                                       const size_t cluster_size,
                                       const cluster_node &from,
@@ -92,7 +93,10 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
     }
     case ROUND_KIND::CANDIDATE: {
       result.votes_to_me.insert(from);
-      auto quorum = (size_t(cluster_size / 2.0) + 1);
+      auto quorum = (size_t(cluster_size * settings.vote_quorum()));
+      if (settings.vote_quorum() != 1.0) {
+        quorum += 1;
+      }
       if (result.votes_to_me.size() >= quorum) {
         result.round_kind = ROUND_KIND::LEADER;
         result.round++;
@@ -135,9 +139,9 @@ node_state_t node_state_t::on_append_entries(const node_state_t &self,
   }
   case ROUND_KIND::LEADER: {
     auto last_lst = jrn->commited_rec();
-    if (result.round < e.round || (e.commited.round > last_lst.round) ||
-        (e.commited.round != logdb::UNDEFINED_ROUND &&
-         last_lst.round == logdb::UNDEFINED_ROUND)) {
+    if (result.round < e.round || (e.commited.round > last_lst.round)
+        || (e.commited.round != logdb::UNDEFINED_ROUND
+            && last_lst.round == logdb::UNDEFINED_ROUND)) {
       result.round_kind = ROUND_KIND::FOLLOWER;
       result.round = e.round;
       result.leader = e.leader;
