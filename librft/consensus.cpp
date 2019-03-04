@@ -63,7 +63,7 @@ append_entries consensus::make_append_entries(const entries_kind_t kind) const {
   ae.starttime = _state.start_time;
   ae.leader = _state.leader;
   ae.kind = kind;
-  ae.current = _jrn->prev_rec();
+  ae.prev = _jrn->prev_rec();
   ae.commited = _jrn->commited_rec();
   return ae;
 }
