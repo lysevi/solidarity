@@ -57,7 +57,7 @@ void consensus::update_next_heartbeat_interval() {
               _state.next_heartbeat_interval.count());*/
 }
 
-append_entries consensus::make_append_entries(const entries_kind_t kind) const {
+append_entries consensus::make_append_entries(const entries_kind_t kind) const noexcept {
   append_entries ae;
   ae.round = _state.round;
   ae.starttime = _state.start_time;
@@ -139,11 +139,11 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
 
 void consensus::on_append_entries(const cluster_node &from, const append_entries &e) {
   const auto ns = node_state_t::on_append_entries(_state, from, _jrn.get(), e);
+  bool is_demotion
+      = _state.round_kind == ROUND_KIND::LEADER && ns.round_kind == ROUND_KIND::FOLLOWER;
 
   if (ns.round != _state.round) {
     _state = ns;
-    bool is_demotion = _state.round_kind == ROUND_KIND::LEADER
-        && ns.round_kind == ROUND_KIND::FOLLOWER;
     if (is_demotion) {
       _last_for_cluster.clear();
     }
@@ -170,14 +170,20 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
     if (!e.cmd.is_empty() && !e.current.is_empty()) {
       logger_info("node: ", _settings.name(), ": new entry from ", from, " {",
                   e.current.round, ", ", e.current.lsn, "}");
-      auto ae = make_append_entries(entries_kind_t::ANSWER_OK);
-      logdb::log_entry le;
-      le.round = _state.round;
-      le.cmd = e.cmd;
-      _jrn->put(le);
+      auto self_prev = _jrn->prev_rec();
+      append_entries ae;
+      if (e.prev == self_prev || self_prev.is_empty()) {
+        ae = make_append_entries(entries_kind_t::ANSWER_OK);
+        logdb::log_entry le;
+        le.round = _state.round;
+        le.cmd = e.cmd;
+        _jrn->put(le);
 
-      ae.current = e.current;
-
+        ae.current = e.current;
+      } else {
+        // TODO add unittest
+        ae = make_append_entries(entries_kind_t::ANSWER_FAILED);
+      }
       _cluster->send_to(_self_addr, from, ae);
     }
   }

@@ -27,6 +27,10 @@ struct reccord_info {
     return round == o.round && lsn == o.lsn;
   }
 
+  bool operator!=(const reccord_info &o) const {
+    return round != o.round && lsn != o.lsn;
+  }
+
   round_t round;
   logdb::index_t lsn;
 };
@@ -44,9 +48,9 @@ public:
   virtual log_entry get(const logdb::index_t lsn) = 0;
   virtual size_t size() const = 0;
 
-  virtual reccord_info prev_rec() const = 0;
-  virtual reccord_info first_uncommited_rec() const = 0;
-  virtual reccord_info commited_rec() const = 0;
+  virtual reccord_info prev_rec() const noexcept = 0;
+  virtual reccord_info first_uncommited_rec() const noexcept = 0;
+  virtual reccord_info commited_rec() const noexcept = 0;
 };
 
 using journal_ptr = std::shared_ptr<abstract_journal>;
@@ -59,9 +63,9 @@ public:
   EXPORT log_entry get(const logdb::index_t lsn) override;
   EXPORT size_t size() const override;
 
-  EXPORT reccord_info prev_rec() const override;
-  EXPORT reccord_info first_uncommited_rec() const override;
-  EXPORT reccord_info commited_rec() const override;
+  EXPORT reccord_info prev_rec() const noexcept override;
+  EXPORT reccord_info first_uncommited_rec() const noexcept override;
+  EXPORT reccord_info commited_rec() const noexcept override;
 
 protected:
   mutable std::shared_mutex _locker;

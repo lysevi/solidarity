@@ -61,12 +61,12 @@ size_t memory_journal::size() const {
   return _wal.size() + _commited_data.size();
 }
 
-reccord_info memory_journal::prev_rec() const {
+reccord_info memory_journal::prev_rec() const noexcept {
   std::shared_lock<std::shared_mutex> lg(_locker);
   return _prev;
 }
 
-reccord_info memory_journal::first_uncommited_rec() const {
+reccord_info memory_journal::first_uncommited_rec() const noexcept {
   std::shared_lock<std::shared_mutex> lg(_locker);
   reccord_info result;
   if (_wal.empty()) {
@@ -81,7 +81,7 @@ reccord_info memory_journal::first_uncommited_rec() const {
   return result;
 }
 
-reccord_info memory_journal::commited_rec() const {
+reccord_info memory_journal::commited_rec() const noexcept {
   std::shared_lock<std::shared_mutex> lg(_locker);
   return _commited;
 }
