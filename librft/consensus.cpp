@@ -173,13 +173,15 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
       auto self_prev = _jrn->prev_rec();
       append_entries ae;
       if (e.prev == self_prev || self_prev.is_empty()) {
-        ae = make_append_entries(entries_kind_t::ANSWER_OK);
-        logdb::log_entry le;
-        le.round = _state.round;
-        le.cmd = e.cmd;
-        _jrn->put(le);
+        if (e.current != _jrn->prev_rec()) {
+          ae = make_append_entries(entries_kind_t::ANSWER_OK);
+          logdb::log_entry le;
+          le.round = _state.round;
+          le.cmd = e.cmd;
+          _jrn->put(le);
 
-        ae.current = e.current;
+          ae.current = e.current;
+        }
       } else {
         // TODO add unittest
         ae = make_append_entries(entries_kind_t::ANSWER_FAILED);

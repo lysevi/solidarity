@@ -27,9 +27,7 @@ struct reccord_info {
     return round == o.round && lsn == o.lsn;
   }
 
-  bool operator!=(const reccord_info &o) const {
-    return round != o.round && lsn != o.lsn;
-  }
+  bool operator!=(const reccord_info &o) const { return !(*this == o); }
 
   round_t round;
   logdb::index_t lsn;
