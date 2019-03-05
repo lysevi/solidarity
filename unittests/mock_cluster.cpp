@@ -2,16 +2,17 @@
 #include <libutils/logger.h>
 
 mock_cluster::mock_cluster() {
-  _worker_thread = std::thread([this]() { this->worker(); });
 }
 
 mock_cluster::~mock_cluster() {
   utils::logging::logger_info("~ mock_cluster ");
-  while (_is_worker_active) {
+  while (_is_worker_active.load() != size_t(0)) {
     _stop_flag = true;
     _cond.notify_all();
   }
-  _worker_thread.join();
+  for (auto &&t : _worker_thread) {
+    t.join();
+  }
 }
 
 void mock_cluster::send_to(const rft::cluster_node &from,
@@ -35,6 +36,7 @@ void mock_cluster::send_all(const rft::cluster_node &from, const rft::append_ent
 void mock_cluster::add_new(const rft::cluster_node &addr,
                            const std::shared_ptr<rft::consensus> &c) {
   std::lock_guard<std::shared_mutex> lg(_cluster_locker);
+  _worker_thread.emplace_back(std::thread([this]() { this->worker(); }));
   _cluster[addr] = c;
 }
 
@@ -86,7 +88,7 @@ size_t mock_cluster::size() {
 }
 
 void mock_cluster::worker() {
-  _is_worker_active = true;
+  _is_worker_active++;
   try {
 
     while (!_stop_flag) {
@@ -121,8 +123,9 @@ void mock_cluster::worker() {
       }
       local_copy.clear();
     }
-    _is_worker_active = false;
+    
   } catch (std::exception &ex) {
     utils::logging::logger_fatal("mock_cluster: worker error:", ex.what());
   }
+  _is_worker_active--;
 }

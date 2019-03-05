@@ -7,7 +7,7 @@
 #include <shared_mutex>
 #include <tuple>
 
-class mock_cluster final: public rft::abstract_cluster {
+class mock_cluster final : public rft::abstract_cluster {
   struct message_t {
     rft::cluster_node from;
     rft::cluster_node to;
@@ -44,9 +44,9 @@ protected:
   void worker();
 
 private:
-  std::thread _worker_thread;
+  std::vector<std::thread> _worker_thread;
   volatile bool _stop_flag = false;
-  bool _is_worker_active = false;
+  std::atomic_size_t _is_worker_active = {0};
   std::mutex _tasks_locker;
   std::condition_variable _cond;
   /// from, to, message
