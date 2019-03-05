@@ -21,10 +21,7 @@ struct reccord_info {
     lsn = UNDEFINED_INDEX;
   }
 
-  bool is_empty() const {
-    return round == std::numeric_limits<round_t>::min()
-        && lsn == std::numeric_limits<logdb::index_t>::max();
-  }
+  bool is_empty() const { return round == UNDEFINED_ROUND && lsn == UNDEFINED_INDEX; }
 
   bool operator==(const reccord_info &o) const {
     return round == o.round && lsn == o.lsn;
@@ -43,25 +40,27 @@ class abstract_journal {
 public:
   ~abstract_journal() {}
   virtual reccord_info put(const log_entry &e) = 0;
-  virtual void commit(const reccord_info &i) = 0;
-  virtual log_entry get(const reccord_info &r) = 0;
+  virtual void commit(const index_t lsn) = 0;
+  virtual log_entry get(const logdb::index_t lsn) = 0;
   virtual size_t size() const = 0;
 
   virtual reccord_info prev_rec() const = 0;
+  virtual reccord_info first_uncommited_rec() const = 0;
   virtual reccord_info commited_rec() const = 0;
 };
 
 using journal_ptr = std::shared_ptr<abstract_journal>;
 
-class memory_journal final: public abstract_journal {
+class memory_journal final : public abstract_journal {
 public:
   EXPORT static std::shared_ptr<memory_journal> make_new();
   EXPORT reccord_info put(const log_entry &e) override;
-  EXPORT void commit(const reccord_info &i) override;
-  EXPORT log_entry get(const reccord_info &r) override;
+  EXPORT void commit(const index_t lsn) override;
+  EXPORT log_entry get(const logdb::index_t lsn) override;
   EXPORT size_t size() const override;
 
   EXPORT reccord_info prev_rec() const override;
+  EXPORT reccord_info first_uncommited_rec() const override;
   EXPORT reccord_info commited_rec() const override;
 
 protected:

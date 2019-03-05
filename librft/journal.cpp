@@ -16,33 +16,40 @@ reccord_info memory_journal::put(const log_entry &e) {
   return _prev;
 }
 
-void memory_journal::commit(const reccord_info &i) {
+void memory_journal::commit(const index_t lsn) {
   std::lock_guard<std::shared_mutex> lg(_locker);
   // TODO round check
   using mtype = std::map<index_t, log_entry>::const_iterator::value_type;
+
   std::vector<mtype> to_commit;
   to_commit.reserve(_wal.size());
-  std::copy_if(_wal.cbegin(), _wal.cend(), std::back_inserter(to_commit),
-               [i](auto kv) { return kv.first <= i.lsn; });
 
-  for (auto&&kv : to_commit) {
+  std::copy_if(_wal.cbegin(), _wal.cend(), std::back_inserter(to_commit),
+               [lsn](const mtype &kv) -> bool { return kv.first <= lsn; });
+
+  /*std::sort(to_commit.begin(), to_commit.end(),
+            [](const mtype &l, const mtype &r) -> bool { return l.first < r.first; });*/
+
+  for (auto &&kv : to_commit) {
     index_t idx = kv.first;
     log_entry e = kv.second;
     _commited_data.insert(std::make_pair(idx, e));
     _wal.erase(kv.first);
   }
-  _commited = i;
+  auto last = to_commit.back();
+  _commited.lsn = last.first;
+  _commited.round = last.second.round;
 }
 
-log_entry memory_journal::get(const reccord_info &r) {
+log_entry memory_journal::get(const logdb::index_t lsn) {
   std::shared_lock<std::shared_mutex> lg(_locker);
   // TODO check _prev and _commited for better speed;
 
-  const auto wal_it = _wal.find(r.lsn);
+  const auto wal_it = _wal.find(lsn);
   if (wal_it != _wal.end()) {
     return wal_it->second;
   }
-  const auto commited_it = _commited_data.find(r.lsn);
+  const auto commited_it = _commited_data.find(lsn);
   if (commited_it != _commited_data.end()) {
     return commited_it->second;
   }
@@ -58,6 +65,22 @@ reccord_info memory_journal::prev_rec() const {
   std::shared_lock<std::shared_mutex> lg(_locker);
   return _prev;
 }
+
+reccord_info memory_journal::first_uncommited_rec() const {
+  std::shared_lock<std::shared_mutex> lg(_locker);
+  reccord_info result;
+  if (_wal.empty()) {
+    result.lsn = UNDEFINED_INDEX;
+    result.round = UNDEFINED_ROUND;
+  } else {
+    auto front = _wal.begin();
+
+    result.lsn = front->first;
+    result.round = front->second.round;
+  }
+  return result;
+}
+
 reccord_info memory_journal::commited_rec() const {
   std::shared_lock<std::shared_mutex> lg(_locker);
   return _commited;

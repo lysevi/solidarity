@@ -45,7 +45,7 @@ protected:
 
 private:
   std::thread _worker_thread;
-  bool _stop_flag = false;
+  volatile bool _stop_flag = false;
   bool _is_worker_active = false;
   std::mutex _tasks_locker;
   std::condition_variable _cond;
