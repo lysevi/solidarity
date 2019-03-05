@@ -21,7 +21,7 @@ inline std::string to_string(const cluster_node &s) {
   return std::string("node:://") + s.name();
 }
 
-enum class entries_kind_t { VOTE, APPEND, ANSWER_OK, ANSWER_FAILED };
+enum class entries_kind_t { HEARTBEAT, VOTE, APPEND, ANSWER_OK, ANSWER_FAILED };
 
 struct append_entries {
   /// on election;

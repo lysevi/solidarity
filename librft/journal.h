@@ -33,6 +33,8 @@ struct reccord_info {
   logdb::index_t lsn;
 };
 
+EXPORT std::string to_string(const reccord_info&ri);
+
 struct log_entry {
   round_t round;
   command cmd;

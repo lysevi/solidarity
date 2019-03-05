@@ -3,6 +3,16 @@
 using namespace rft;
 using namespace logdb;
 
+namespace rft {
+namespace logdb {
+std::string to_string(const reccord_info &ri) {
+  std::stringstream ss;
+  ss << "{r:" << ri.round << ", lsn:" << ri.lsn << "}";
+  return ss.str();
+}
+} // namespace logdb
+} // namespace rft
+
 std::shared_ptr<memory_journal> memory_journal::make_new() {
   return std::make_shared<memory_journal>();
 }
