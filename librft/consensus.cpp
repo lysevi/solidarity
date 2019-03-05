@@ -148,52 +148,52 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
       _last_for_cluster.clear();
     }
   } else {
-    // TODO add check prev,cur,commited
-    if (!e.commited.is_empty()) { /// commit uncommited
-      if (_jrn->commited_rec().lsn != e.commited.lsn) {
-        auto to_commit = _jrn->first_uncommited_rec();
-        //ENSURE(!to_commit.is_empty());
-         if (!to_commit.is_empty()){
 
-          auto i = to_commit.lsn;
-          while (i <= e.commited.lsn) {
-            logger_info("node: ", _settings.name(), ": commit entry from ", from,
-                        " { lsn:", i, "}");
-            _jrn->commit(i++);
-            auto commited = _jrn->commited_rec();
-            auto le = _jrn->get(commited.lsn);
-            _consumer->apply_cmd(le.cmd);
-          }
-        }
-      }
-    }
+    auto self_prev = _jrn->prev_rec();
+    if (!e.cmd.is_empty() && e.prev != self_prev && !self_prev.is_empty()) {
+      auto ae = make_append_entries(entries_kind_t::ANSWER_FAILED);
+      _cluster->send_to(_self_addr, from, ae);
+    } else {
 
-    if (!e.cmd.is_empty()) {
-      ENSURE(!e.current.is_empty());
-      logger_info("node: ", _settings.name(), ": new entry from ", from, " {",
-                  e.current.round, ", ", e.current.lsn, "}");
-      auto self_prev = _jrn->prev_rec();
-      append_entries ae;
-      if (e.prev == self_prev || self_prev.is_empty()) {
+      auto ae = make_append_entries(entries_kind_t::ANSWER_OK);
+      // TODO add check prev,cur,commited
+      if (!e.cmd.is_empty()) {
+        ENSURE(!e.current.is_empty());
+        logger_info("node: ", _settings.name(), ": new entry from ", from, " {",
+                    e.current.round, ", ", e.current.lsn, "}");
         if (e.current != _jrn->prev_rec()) {
           logger_info("node: ", _settings.name(), ": write to journal ");
-          ae = make_append_entries(entries_kind_t::ANSWER_OK);
           logdb::log_entry le;
           le.round = _state.round;
           le.cmd = e.cmd;
-          _jrn->put(le);
-
-          ae.current = e.current;
+          ae.current=_jrn->put(le);
         } else {
           logger_info("node: ", _settings.name(), ": duplicates");
         }
-      } else {
-        // TODO add unittest
-        ae = make_append_entries(entries_kind_t::ANSWER_FAILED);
       }
-      _cluster->send_to(_self_addr, from, ae);
-    } else { /// Pong for "heartbeat"
-      auto ae = make_append_entries(entries_kind_t::ANSWER_OK);
+
+      if (!e.commited.is_empty()) { /// commit uncommited
+        if (_jrn->commited_rec().lsn != e.commited.lsn) {
+          auto to_commit = _jrn->first_uncommited_rec();
+          // ENSURE(!to_commit.is_empty());
+          if (!to_commit.is_empty()) {
+
+            auto i = to_commit.lsn;
+            while (i <= e.commited.lsn) {
+              logger_info("node: ", _settings.name(), ": commit entry from ", from,
+                          " { lsn:", i, "}");
+              _jrn->commit(i++);
+              auto commited = _jrn->commited_rec();
+			  ae.commited=commited;
+              auto le = _jrn->get(commited.lsn);
+              _consumer->apply_cmd(le.cmd);
+            }
+          }
+        }
+      }
+
+      /// Pong for "heartbeat"
+
       _cluster->send_to(_self_addr, from, ae);
     }
   }
@@ -220,7 +220,7 @@ void consensus::on_answer(const cluster_node &from, const append_entries &e) {
     logger_info("node: ", _settings.name(), ": append quorum ", cnt, " from ", quorum);
     _jrn->commit(target.lsn);
 
-    auto ae = make_append_entries();
+    auto ae = make_append_entries(entries_kind_t::APPEND);
     _consumer->apply_cmd(_jrn->get(ae.commited.lsn).cmd);
 
     _cluster->send_all(_self_addr, ae);
