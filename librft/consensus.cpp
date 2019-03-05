@@ -145,66 +145,64 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
 
 void consensus::on_append_entries(const cluster_node &from, const append_entries &e) {
   const auto ns = node_state_t::on_append_entries(_state, from, _jrn.get(), e);
-  bool is_demotion
-      = _state.round_kind == ROUND_KIND::LEADER && ns.round_kind == ROUND_KIND::FOLLOWER;
 
   if (ns.round != _state.round) {
     _state = ns;
-    if (is_demotion) {
-      _last_for_cluster.clear();
+    _last_for_cluster.clear();
+    return;
+  }
+  _state.last_heartbeat_time = clock_t::now();
+
+  auto self_prev = _jrn->prev_rec();
+  if (e.prev != self_prev && !self_prev.is_empty()) {
+    logger_fatal("node: ", _settings.name(), ": wrong entry from:", from, " ", e.prev,
+                 ", ", self_prev);
+    auto ae = make_append_entries(entries_kind_t::ANSWER_FAILED);
+    _cluster->send_to(_self_addr, from, ae);
+    return;
+  }
+
+  auto ae = make_append_entries(entries_kind_t::ANSWER_OK);
+  // TODO add check prev,cur,commited
+  if (!e.cmd.is_empty() && e.round == ae.round) {
+    ENSURE(!e.current.is_empty());
+    logger_info("node: ", _settings.name(), ": new entry from ", from, " {",
+                e.current.round, ", ", e.current.lsn, "}");
+    if (e.current != _jrn->prev_rec()) {
+      logger_info("node: ", _settings.name(), ": write to journal ");
+      logdb::log_entry le;
+      le.round = _state.round;
+      le.cmd = e.cmd;
+      ae.current = _jrn->put(le);
+    } else {
+      logger_info("node: ", _settings.name(), ": duplicates");
     }
-  } else {
+  }
 
-    auto self_prev = _jrn->prev_rec();
-    if (e.prev != self_prev && !self_prev.is_empty()) {
-      logger_fatal("node: ", _settings.name(), ": wrong entry from:", from, " ", e.prev,
-                   ", ", self_prev);
-      auto ae = make_append_entries(entries_kind_t::ANSWER_FAILED);
-      _cluster->send_to(_self_addr, from, ae);
-      return;
-    }
+  if (!e.commited.is_empty()) { /// commit uncommited
+    if (_jrn->commited_rec().lsn != e.commited.lsn) {
+      auto to_commit = _jrn->first_uncommited_rec();
+      // ENSURE(!to_commit.is_empty());
+      if (!to_commit.is_empty()) {
 
-    auto ae = make_append_entries(entries_kind_t::ANSWER_OK);
-    // TODO add check prev,cur,commited
-    if (!e.cmd.is_empty() && e.round == ae.round) {
-      ENSURE(!e.current.is_empty());
-      logger_info("node: ", _settings.name(), ": new entry from ", from, " {",
-                  e.current.round, ", ", e.current.lsn, "}");
-      if (e.current != _jrn->prev_rec()) {
-        logger_info("node: ", _settings.name(), ": write to journal ");
-        logdb::log_entry le;
-        le.round = _state.round;
-        le.cmd = e.cmd;
-        ae.current = _jrn->put(le);
-      } else {
-        logger_info("node: ", _settings.name(), ": duplicates");
-      }
-    }
-
-    if (!e.commited.is_empty()) { /// commit uncommited
-      if (_jrn->commited_rec().lsn != e.commited.lsn) {
-        auto to_commit = _jrn->first_uncommited_rec();
-        // ENSURE(!to_commit.is_empty());
-        if (!to_commit.is_empty()) {
-
-          auto i = to_commit.lsn;
-          while (i <= e.commited.lsn) {
-            logger_info("node: ", _settings.name(), ": commit entry from ", from,
-                        " { lsn:", i, "}");
-            _jrn->commit(i++);
-            auto commited = _jrn->commited_rec();
-            ae.commited = commited;
-            auto le = _jrn->get(commited.lsn);
-            _consumer->apply_cmd(le.cmd);
-          }
+        auto i = to_commit.lsn;
+        while (i <= e.commited.lsn) {
+          logger_info("node: ", _settings.name(), ": commit entry from ", from,
+                      " { lsn:", i, "}");
+          _jrn->commit(i++);
+          auto commited = _jrn->commited_rec();
+          ae.commited = commited;
+          auto le = _jrn->get(commited.lsn);
+          _consumer->apply_cmd(le.cmd);
         }
       }
     }
-
-    /// Pong for "heartbeat"
-
-    _cluster->send_to(_self_addr, from, ae);
   }
+
+  /// Pong for "heartbeat"
+
+  _cluster->send_to(_self_addr, from, ae);
+
   _state.last_heartbeat_time = clock_t::now();
 }
 
