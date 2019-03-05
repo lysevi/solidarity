@@ -166,21 +166,22 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
   // TODO add check prev,cur,commited
   if (!e.cmd.is_empty() && e.round == ae.round) {
     ENSURE(!e.current.is_empty());
-    logger_info("node: ", _settings.name(), ": new entry from ", from, " {",
-                e.current.round, ", ", e.current.lsn, "}");
-    if (e.current != _jrn->prev_rec()) {
+    logger_info("node: ", _settings.name(), ": new entry from:", from,
+                " cur:", e.current);
+
+    if (e.current == _jrn->prev_rec()) {
+      logger_info("node: ", _settings.name(), ": duplicates");
+    } else {
       logger_info("node: ", _settings.name(), ": write to journal ");
       logdb::log_entry le;
       le.round = _state.round;
       le.cmd = e.cmd;
       ae.current = _jrn->put(le);
-    } else {
-      logger_info("node: ", _settings.name(), ": duplicates");
     }
   }
 
   if (!e.commited.is_empty()) { /// commit uncommited
-    if (_jrn->commited_rec().lsn != e.commited.lsn) {
+    if (_jrn->commited_rec() != e.commited) {
       auto to_commit = _jrn->first_uncommited_rec();
       // ENSURE(!to_commit.is_empty());
       if (!to_commit.is_empty()) {
@@ -232,7 +233,6 @@ void consensus::on_answer(const cluster_node &from, const append_entries &e) {
     _consumer->apply_cmd(_jrn->get(ae.commited.lsn).cmd);
 
     _cluster->send_all(_self_addr, ae);
-  } else {
   }
 
   /*for (auto &kv : _last_for_cluster) {
