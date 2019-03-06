@@ -1,8 +1,7 @@
 #include "mock_cluster.h"
 #include <libutils/logger.h>
 
-mock_cluster::mock_cluster() {
-}
+mock_cluster::mock_cluster() {}
 
 mock_cluster::~mock_cluster() {
   utils::logging::logger_info("~ mock_cluster ");
@@ -123,9 +122,26 @@ void mock_cluster::worker() {
       }
       local_copy.clear();
     }
-    
+
   } catch (std::exception &ex) {
     utils::logging::logger_fatal("mock_cluster: worker error:", ex.what());
   }
   _is_worker_active--;
+}
+
+void mock_cluster::wait_leader_eletion() {
+  while (true) {
+    auto leaders = by_filter(is_leader_pred);
+    if (leaders.size() > 1) {
+      utils::logging::logger_fatal("consensus error!!!");
+      print_cluster();
+      throw std::logic_error("consensus error");
+      return;
+    }
+    if (leaders.size() == 1) {
+      break;
+    }
+    on_heartbeat();
+    print_cluster();
+  }
 }

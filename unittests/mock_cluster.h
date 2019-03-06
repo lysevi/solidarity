@@ -40,6 +40,8 @@ public:
 
   size_t size() override;
 
+  void wait_leader_eletion();
+
 protected:
   void worker();
 
@@ -54,4 +56,8 @@ private:
 
   mutable std::shared_mutex _cluster_locker;
   std::map<rft::cluster_node, std::shared_ptr<rft::consensus>> _cluster;
+};
+
+inline bool is_leader_pred(const std::shared_ptr<rft::consensus> &v) {
+  return v->state() == rft::ROUND_KIND::LEADER;
 };

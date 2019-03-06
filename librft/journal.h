@@ -6,6 +6,7 @@
 #include <map>
 #include <memory>
 #include <shared_mutex>
+#include <utility>
 
 namespace rft {
 
@@ -33,7 +34,7 @@ struct reccord_info {
   logdb::index_t lsn;
 };
 
-EXPORT std::string to_string(const reccord_info&ri);
+EXPORT std::string to_string(const reccord_info &ri);
 
 struct log_entry {
   round_t round;
@@ -51,6 +52,7 @@ public:
   virtual reccord_info prev_rec() const noexcept = 0;
   virtual reccord_info first_uncommited_rec() const noexcept = 0;
   virtual reccord_info commited_rec() const noexcept = 0;
+  virtual reccord_info first_rec() const noexcept = 0;
 };
 
 using journal_ptr = std::shared_ptr<abstract_journal>;
@@ -66,6 +68,7 @@ public:
   EXPORT reccord_info prev_rec() const noexcept override;
   EXPORT reccord_info first_uncommited_rec() const noexcept override;
   EXPORT reccord_info commited_rec() const noexcept override;
+  EXPORT reccord_info first_rec() const noexcept override;
 
 protected:
   mutable std::shared_mutex _locker;
@@ -78,3 +81,14 @@ protected:
 };
 } // namespace logdb
 } // namespace rft
+
+namespace std {
+template <>
+struct hash<rft::logdb::reccord_info> {
+  std::size_t operator()(const rft::logdb::reccord_info &k) const {
+    size_t h1 = std::hash<rft::round_t>()(k.round);
+    size_t h2 = std::hash<rft::logdb::index_t>()(k.lsn);
+    return h1 ^ (h2 << 1);
+  }
+};
+} // namespace std

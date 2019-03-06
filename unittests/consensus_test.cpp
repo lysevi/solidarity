@@ -11,10 +11,6 @@ public:
   rft::command last_cmd;
 };
 
-bool is_leader_pred(const std::shared_ptr<rft::consensus> &v) {
-  return v->state() == rft::ROUND_KIND::LEADER;
-};
-
 TEST_CASE("consensus.add_nodes") {
   auto cluster = std::make_shared<mock_cluster>();
 
@@ -112,12 +108,9 @@ TEST_CASE("consensus") {
   consumers.reserve(nodes_count);
 
   auto et = std::chrono::milliseconds(300);
-  /*if (append_entries) {
-    et = std::chrono::milliseconds(1500);
-  }*/
   for (size_t i = 0; i < nodes_count; ++i) {
-    auto sett
-        = rft::node_settings().set_name("_" + std::to_string(i)).set_election_timeout(et);
+    auto nname = "_" + std::to_string(i);
+    auto sett = rft::node_settings().set_name(nname).set_election_timeout(et);
     auto c = std::make_shared<mock_consumer>();
     consumers.push_back(c);
     auto cons = std::make_shared<rft::consensus>(
@@ -179,4 +172,96 @@ TEST_CASE("consensus") {
   }
   cluster = nullptr;
   consumers.clear();
+}
+
+TEST_CASE("consensus.replication") {
+  /*using rft::cluster_node;
+  using rft::consensus;
+  using rft::logdb::memory_journal;
+
+  auto cluster = std::make_shared<mock_cluster>();
+
+  size_t exists_nodes_count = 1;
+  size_t new_nodes_count = 1;
+
+  SECTION("consensus.replication.1x1") {
+    exists_nodes_count = 1;
+    new_nodes_count = 1;
+  }
+
+  std::vector<std::shared_ptr<mock_consumer>> consumers;
+  consumers.reserve(exists_nodes_count);
+
+  auto et = std::chrono::milliseconds(300);
+
+  for (size_t i = 0; i < exists_nodes_count; ++i) {
+    auto nname = "_" + std::to_string(i);
+    auto sett = rft::node_settings().set_name(nname).set_election_timeout(et);
+    auto consumer = std::make_shared<mock_consumer>();
+    consumers.push_back(consumer);
+    auto cons = std::make_shared<consensus>(sett, cluster.get(),
+                                            memory_journal::make_new(), consumer.get());
+    cluster->add_new(cluster_node().set_name(sett.name()), cons);
+  }
+  rft::command cmd;
+  cmd.data.resize(1);
+  cmd.data[0] = 0;
+
+  auto data_eq = [&cmd](const std::shared_ptr<mock_consumer> &c) -> bool {
+    return c->last_cmd.data == cmd.data;
+  };
+
+  std::vector<std::shared_ptr<rft::consensus>> leaders;
+  while (true) {
+    leaders = cluster->by_filter(is_leader_pred);
+    if (leaders.size() > 1) {
+      utils::logging::logger_fatal("consensus error!!!");
+      cluster->print_cluster();
+      EXPECT_FALSE(true);
+      return;
+    }
+    if (leaders.size() == 1) {
+      break;
+    }
+    cluster->on_heartbeat();
+    cluster->print_cluster();
+  }
+
+  leaders = cluster->by_filter(is_leader_pred);
+  EXPECT_EQ(leaders.size(), size_t(1));
+
+  for (int i = 0; i < 10; ++i) {
+    cmd.data[0]++;
+    leaders[0]->add_command(cmd);
+    while (true) {
+      cluster->on_heartbeat();
+      auto replicated_on = std::count_if(consumers.cbegin(), consumers.cend(), data_eq);
+      if (replicated_on == consumers.size()) {
+        break;
+      }
+    }
+  }
+
+  for (int i = 0; i < new_nodes_count; ++i) {
+    auto nname = "_" + std::to_string(i + 1 + exists_nodes_count);
+    auto sett = rft::node_settings().set_name(nname).set_election_timeout(et);
+    auto consumer = std::make_shared<mock_consumer>();
+    consumers.push_back(consumer);
+    auto cons = std::make_shared<consensus>(sett, cluster.get(),
+                                            memory_journal::make_new(), consumer.get());
+    cluster->add_new(cluster_node().set_name(sett.name()), cons);
+    cluster->wait_leader_eletion();
+  }
+
+  while (true) {
+    auto replicated_on = std::count_if(consumers.cbegin(), consumers.cend(), data_eq);
+    if (replicated_on == consumers.size()) {
+      break;
+    }
+    utils::logging::logger_info("[test] replicated_on: ", replicated_on);
+    cluster->on_heartbeat();
+  }
+
+  cluster = nullptr;
+  consumers.clear();*/
 }

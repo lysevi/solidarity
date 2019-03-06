@@ -95,3 +95,22 @@ reccord_info memory_journal::commited_rec() const noexcept {
   std::shared_lock<std::shared_mutex> lg(_locker);
   return _commited;
 }
+
+reccord_info memory_journal::first_rec() const noexcept {
+  std::shared_lock<std::shared_mutex> lg(_locker);
+  reccord_info result{};
+  if (!_wal.empty()) {
+    auto f = _wal.cbegin();
+    result.lsn = f->first;
+    result.round = f->second.round;
+  }
+
+  if (!_commited_data.empty()) {
+    auto f = _commited_data.cbegin();
+    if (result.lsn > f->first) {
+      result.lsn = f->first;
+      result.round = f->second.round;
+    }
+  }
+  return result;
+}
