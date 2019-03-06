@@ -120,7 +120,7 @@ node_state_t node_state_t::on_append_entries(const node_state_t &self,
   node_state_t result = self;
   switch (result.round_kind) {
   case ROUND_KIND::ELECTION: {
-    if (from == result.leader) {
+    if (from == result.leader || (from == e.leader && e.round > result.round)) {
       result.change_state(ROUND_KIND::FOLLOWER, e.round, from);
       result.leader = e.leader;
       result.last_heartbeat_time = clock_t::now();
@@ -150,7 +150,7 @@ node_state_t node_state_t::on_append_entries(const node_state_t &self,
     break;
   }
   case ROUND_KIND::CANDIDATE: {
-    if (result.round < e.round) {
+    if (result.round <= e.round && e.leader == from) {
       result.election_round = 0;
       result.round_kind = ROUND_KIND::FOLLOWER;
       result.round = e.round;

@@ -47,7 +47,7 @@ void consensus::update_next_heartbeat_interval() {
   }
   if (_state.round_kind == ROUND_KIND::LEADER) {
     k1 = 0.5;
-    k2 = 1.5;
+    k2 = 1;
   }
   std::uniform_int_distribution<uint64_t> distr(uint64_t(total_mls * k1),
                                                 uint64_t(total_mls * k2));
