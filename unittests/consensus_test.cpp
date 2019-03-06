@@ -175,7 +175,7 @@ TEST_CASE("consensus") {
 }
 
 TEST_CASE("consensus.replication") {
-  /*using rft::cluster_node;
+  using rft::cluster_node;
   using rft::consensus;
   using rft::logdb::memory_journal;
 
@@ -187,6 +187,27 @@ TEST_CASE("consensus.replication") {
   SECTION("consensus.replication.1x1") {
     exists_nodes_count = 1;
     new_nodes_count = 1;
+  }
+  SECTION("consensus.replication.1x2") {
+    exists_nodes_count = 1;
+    new_nodes_count = 2;
+  }
+  SECTION("consensus.replication.1x3") {
+    exists_nodes_count = 1;
+    new_nodes_count = 3;
+  }
+
+  SECTION("consensus.replication.2x1") {
+    exists_nodes_count = 2;
+    new_nodes_count = 1;
+  }
+  SECTION("consensus.replication.2x2") {
+    exists_nodes_count = 2;
+    new_nodes_count = 2;
+  }
+  SECTION("consensus.replication.3x3") {
+    exists_nodes_count = 3;
+    new_nodes_count = 3;
   }
 
   std::vector<std::shared_ptr<mock_consumer>> consumers;
@@ -236,7 +257,7 @@ TEST_CASE("consensus.replication") {
     while (true) {
       cluster->on_heartbeat();
       auto replicated_on = std::count_if(consumers.cbegin(), consumers.cend(), data_eq);
-      if (replicated_on == consumers.size()) {
+      if (size_t(replicated_on) == consumers.size()) {
         break;
       }
     }
@@ -255,7 +276,7 @@ TEST_CASE("consensus.replication") {
 
   while (true) {
     auto replicated_on = std::count_if(consumers.cbegin(), consumers.cend(), data_eq);
-    if (replicated_on == consumers.size()) {
+    if (size_t(replicated_on) == consumers.size()) {
       break;
     }
     utils::logging::logger_info("[test] replicated_on: ", replicated_on);
@@ -263,5 +284,5 @@ TEST_CASE("consensus.replication") {
   }
 
   cluster = nullptr;
-  consumers.clear();*/
+  consumers.clear();
 }

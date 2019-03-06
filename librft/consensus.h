@@ -48,7 +48,9 @@ protected:
 
   void update_next_heartbeat_interval();
 
-  void commit_reccord(const logdb::reccord_info&target);
+  void commit_reccord(const logdb::reccord_info &target);
+  void replicate_log();
+
 private:
   abstract_consensus_consumer *const _consumer = nullptr;
   mutable std::mutex _locker;
@@ -61,7 +63,8 @@ private:
 
   node_state_t _state;
 
-  std::unordered_map<cluster_node, logdb::reccord_info > _to_replication;
+  std::unordered_map<cluster_node, logdb::reccord_info> _log_state;
+  std::unordered_map<cluster_node, logdb::reccord_info> _last_sended;
 };
 
 }; // namespace rft
