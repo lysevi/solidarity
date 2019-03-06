@@ -347,6 +347,7 @@ void consensus::add_command(const command &cmd) {
               current.lsn, "}");
   if (_cluster->size() != size_t(1)) {
     for (auto &kv : _log_state) {
+      // we or not replicated yet
       if (kv.first == _self_addr || (kv.second.lsn + 1) != ae.current.lsn) {
         continue;
       }

@@ -35,11 +35,11 @@ public:
   EXPORT void message(message_kind kind, const std::string &msg) noexcept override;
 };
 
-enum class verbose { verbose, debug, quiet };
+enum class verbose_kind { verbose, debug, quiet };
 
 class logger_manager {
 public:
-  EXPORT static verbose verbose;
+  EXPORT static verbose_kind verbose;
   logger_manager(abstract_logger_ptr &logger);
 
   EXPORT static void start(abstract_logger_ptr &logger);

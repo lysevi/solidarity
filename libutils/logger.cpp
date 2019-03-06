@@ -8,7 +8,7 @@ using namespace utils::async;
 std::shared_ptr<logger_manager> logger_manager::_instance = nullptr;
 utils::async::locker logger_manager::_locker;
 
-verbose logger_manager::verbose = verbose::debug;
+verbose_kind logger_manager::verbose = verbose_kind::debug;
 
 void logger_manager::start(abstract_logger_ptr &logger) {
   if (_instance == nullptr) {
@@ -39,11 +39,11 @@ logger_manager::logger_manager(abstract_logger_ptr &logger) {
 }
 
 void console_logger::message(message_kind kind, const std::string &msg) noexcept {
-  if (logger_manager::verbose == verbose::quiet) {
+  if (logger_manager::verbose == verbose_kind::quiet) {
     return;
   }
   switch (kind) {
-  case message_kind::fatal:
+  case message_kind::fatal: 
     std::cerr << "[err] " << msg << std::endl;
     break;
   case message_kind::warn:
@@ -53,7 +53,7 @@ void console_logger::message(message_kind kind, const std::string &msg) noexcept
     std::cout << "[inf] " << msg << std::endl;
     break;
   case message_kind::message:
-    if (logger_manager::verbose == verbose::debug) {
+    if (logger_manager::verbose == verbose_kind::debug) {
       std::cout << "[dbg] " << msg << std::endl;
     }
     break;
