@@ -24,14 +24,14 @@ TEST_CASE("consensus.add_nodes") {
                                               c_0_consumer.get());
 
   cluster->add_new(rft::cluster_node().set_name("_0"), c_0);
-  EXPECT_EQ(c_0->round(), rft::round_t(0));
-  EXPECT_EQ(c_0->state(), rft::ROUND_KIND::FOLLOWER);
+  EXPECT_EQ(c_0->term(), rft::term_t(0));
+  EXPECT_EQ(c_0->state(), rft::NODE_KIND::FOLLOWER);
 
-  while (c_0->state() != rft::ROUND_KIND::LEADER) {
+  while (c_0->state() != rft::NODE_KIND::LEADER) {
     c_0->on_heartbeat();
     cluster->print_cluster();
   }
-  EXPECT_EQ(c_0->round(), rft::round_t(1));
+  EXPECT_EQ(c_0->term(), rft::term_t(1));
 
   /// TWO NODES
   auto settings_1 = rft::node_settings().set_name("_1").set_election_timeout(
@@ -46,9 +46,9 @@ TEST_CASE("consensus.add_nodes") {
     cluster->on_heartbeat();
     cluster->print_cluster();
   }
-  EXPECT_EQ(c_0->state(), rft::ROUND_KIND::LEADER);
-  EXPECT_EQ(c_1->state(), rft::ROUND_KIND::FOLLOWER);
-  EXPECT_EQ(c_0->round(), c_1->round());
+  EXPECT_EQ(c_0->state(), rft::NODE_KIND::LEADER);
+  EXPECT_EQ(c_1->state(), rft::NODE_KIND::FOLLOWER);
+  EXPECT_EQ(c_0->term(), c_1->term());
   EXPECT_EQ(c_1->get_leader(), c_0->get_leader());
 
   /// THREE NODES
@@ -67,10 +67,10 @@ TEST_CASE("consensus.add_nodes") {
     cluster->print_cluster();
   }
 
-  EXPECT_EQ(c_0->state(), rft::ROUND_KIND::LEADER);
-  EXPECT_EQ(c_1->state(), rft::ROUND_KIND::FOLLOWER);
-  EXPECT_EQ(c_0->round(), c_1->round());
-  EXPECT_EQ(c_2->round(), c_1->round());
+  EXPECT_EQ(c_0->state(), rft::NODE_KIND::LEADER);
+  EXPECT_EQ(c_1->state(), rft::NODE_KIND::FOLLOWER);
+  EXPECT_EQ(c_0->term(), c_1->term());
+  EXPECT_EQ(c_2->term(), c_1->term());
   EXPECT_EQ(c_1->get_leader().name(), c_0->get_leader().name());
   cluster = nullptr;
 }

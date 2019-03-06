@@ -13,31 +13,29 @@ namespace rft {
 namespace logdb {
 /// log sequence numbder;
 using index_t = uint64_t;
-const round_t UNDEFINED_ROUND = std::numeric_limits<round_t>::min();
+const term_t UNDEFINED_TERM = std::numeric_limits<term_t>::min();
 const index_t UNDEFINED_INDEX = std::numeric_limits<logdb::index_t>::max();
 
 struct reccord_info {
   reccord_info() noexcept {
-    round = UNDEFINED_ROUND;
+    term = UNDEFINED_TERM;
     lsn = UNDEFINED_INDEX;
   }
 
-  bool is_empty() const { return round == UNDEFINED_ROUND && lsn == UNDEFINED_INDEX; }
+  bool is_empty() const { return term == UNDEFINED_TERM && lsn == UNDEFINED_INDEX; }
 
-  bool operator==(const reccord_info &o) const {
-    return round == o.round && lsn == o.lsn;
-  }
+  bool operator==(const reccord_info &o) const { return term == o.term && lsn == o.lsn; }
 
   bool operator!=(const reccord_info &o) const { return !(*this == o); }
 
-  round_t round;
+  term_t term;
   logdb::index_t lsn;
 };
 
 EXPORT std::string to_string(const reccord_info &ri);
 
 struct log_entry {
-  round_t round;
+  term_t term;
   command cmd;
 };
 
@@ -86,7 +84,7 @@ namespace std {
 template <>
 struct hash<rft::logdb::reccord_info> {
   std::size_t operator()(const rft::logdb::reccord_info &k) const {
-    size_t h1 = std::hash<rft::round_t>()(k.round);
+    size_t h1 = std::hash<rft::term_t>()(k.term);
     size_t h2 = std::hash<rft::logdb::index_t>()(k.lsn);
     return h1 ^ (h2 << 1);
   }

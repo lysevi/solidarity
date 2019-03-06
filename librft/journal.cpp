@@ -7,7 +7,7 @@ namespace rft {
 namespace logdb {
 std::string to_string(const reccord_info &ri) {
   std::stringstream ss;
-  ss << "{r:" << ri.round << ", lsn:" << ri.lsn << "}";
+  ss << "{r:" << ri.term << ", lsn:" << ri.lsn << "}";
   return ss.str();
 }
 } // namespace logdb
@@ -21,14 +21,14 @@ reccord_info memory_journal::put(const log_entry &e) {
   std::lock_guard<std::shared_mutex> lg(_locker);
   _wal.insert(std::make_pair(_idx, e));
   _prev.lsn = _idx;
-  _prev.round = e.round;
+  _prev.term = e.term;
   ++_idx;
   return _prev;
 }
 
 void memory_journal::commit(const index_t lsn) {
   std::lock_guard<std::shared_mutex> lg(_locker);
-  // TODO round check
+  // TODO term check
   using mtype = std::map<index_t, log_entry>::const_iterator::value_type;
 
   std::vector<mtype> to_commit;
@@ -48,7 +48,7 @@ void memory_journal::commit(const index_t lsn) {
   }
   auto last = to_commit.back();
   _commited.lsn = last.first;
-  _commited.round = last.second.round;
+  _commited.term = last.second.term;
 }
 
 log_entry memory_journal::get(const logdb::index_t lsn) {
@@ -81,12 +81,12 @@ reccord_info memory_journal::first_uncommited_rec() const noexcept {
   reccord_info result;
   if (_wal.empty()) {
     result.lsn = UNDEFINED_INDEX;
-    result.round = UNDEFINED_ROUND;
+    result.term = UNDEFINED_TERM;
   } else {
     auto front = _wal.begin();
 
     result.lsn = front->first;
-    result.round = front->second.round;
+    result.term = front->second.term;
   }
   return result;
 }
@@ -102,14 +102,14 @@ reccord_info memory_journal::first_rec() const noexcept {
   if (!_wal.empty()) {
     auto f = _wal.cbegin();
     result.lsn = f->first;
-    result.round = f->second.round;
+    result.term = f->second.term;
   }
 
   if (!_commited_data.empty()) {
     auto f = _commited_data.cbegin();
     if (result.lsn > f->first) {
       result.lsn = f->first;
-      result.round = f->second.round;
+      result.term = f->second.term;
     }
   }
   return result;

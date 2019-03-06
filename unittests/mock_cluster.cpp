@@ -68,7 +68,7 @@ void mock_cluster::on_heartbeat() {
 void mock_cluster::print_cluster() {
   utils::logging::logger_info("----------------------------");
   apply([](auto n) {
-    utils::logging::logger_info("?: ", n->self_addr(), "{", n->state(), ":", n->round(),
+    utils::logging::logger_info("?: ", n->self_addr(), "{", n->state(), ":", n->term(),
                                 "}", " => ", n->get_leader());
   });
 }

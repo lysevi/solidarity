@@ -59,5 +59,5 @@ private:
 };
 
 inline bool is_leader_pred(const std::shared_ptr<rft::consensus> &v) {
-  return v->state() == rft::ROUND_KIND::LEADER;
+  return v->state() == rft::NODE_KIND::LEADER;
 };

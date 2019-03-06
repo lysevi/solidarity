@@ -23,8 +23,8 @@ public:
                    abstract_cluster *cluster,
                    const logdb::journal_ptr &jrn,
                    abstract_consensus_consumer *consumer);
-  ROUND_KIND state() const { return _state.round_kind; }
-  round_t round() const { return _state.round; }
+  NODE_KIND state() const { return _state.node_kind; }
+  term_t term() const { return _state.term; }
   EXPORT void on_heartbeat();
   EXPORT void recv(const cluster_node &from, const append_entries &e);
   EXPORT void add_command(const command &cmd);

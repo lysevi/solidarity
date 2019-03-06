@@ -37,15 +37,15 @@ consensus::consensus(const node_settings &ns,
 void consensus::update_next_heartbeat_interval() {
   const auto total_mls = _settings.election_timeout().count();
   double k1 = 0.5, k2 = 2.0;
-  if (_state.round_kind == ROUND_KIND::ELECTION) {
+  if (_state.node_kind == NODE_KIND::ELECTION) {
     k1 = 0.5;
     k2 = 1.0;
   }
-  if (_state.round_kind == ROUND_KIND::CANDIDATE) {
+  if (_state.node_kind == NODE_KIND::CANDIDATE) {
     k1 = 2.0;
     k2 = 3.0 * _state.election_round;
   }
-  if (_state.round_kind == ROUND_KIND::LEADER) {
+  if (_state.node_kind == NODE_KIND::LEADER) {
     k1 = 0.5;
     k2 = 1;
   }
@@ -59,7 +59,7 @@ void consensus::update_next_heartbeat_interval() {
 
 append_entries consensus::make_append_entries(const entries_kind_t kind) const noexcept {
   append_entries ae;
-  ae.round = _state.round;
+  ae.term = _state.term;
   ae.starttime = _state.start_time;
   ae.leader = _state.leader;
   ae.kind = kind;
@@ -75,9 +75,9 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
 
   const node_state_t ns = change_state_v.new_state;
   _state = ns;
-  if (_state.round_kind != old_s.round_kind) {
-    if (old_s.round_kind == ROUND_KIND::CANDIDATE
-        && ns.round_kind == ROUND_KIND::LEADER) { // if CANDIDATE => LEADER
+  if (_state.node_kind != old_s.node_kind) {
+    if (old_s.node_kind == NODE_KIND::CANDIDATE
+        && ns.node_kind == NODE_KIND::LEADER) { // if CANDIDATE => LEADER
       std::stringstream ss;
       auto sz = ns.votes_to_me.size();
       for (auto &&v : ns.votes_to_me) {
@@ -115,7 +115,7 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
 
 void consensus::recv(const cluster_node &from, const append_entries &e) {
   std::lock_guard<std::mutex> l(_locker);
-  if (e.round < _state.round) {
+  if (e.term < _state.term) {
     return;
   }
   switch (e.kind) {
@@ -156,7 +156,7 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
 void consensus::on_append_entries(const cluster_node &from, const append_entries &e) {
   const auto ns = node_state_t::on_append_entries(_state, from, _jrn.get(), e);
 
-  if (ns.round != _state.round) {
+  if (ns.term != _state.term) {
     _state = ns;
     _log_state.clear();
     return;
@@ -174,7 +174,7 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
 
   auto ae = make_append_entries(entries_kind_t::ANSWER_OK);
   // TODO add check prev,cur,commited
-  if (!e.cmd.is_empty() && e.round == _state.round) {
+  if (!e.cmd.is_empty() && e.term == _state.term) {
     ENSURE(!e.current.is_empty());
     logger_info("node: ", _settings.name(), ": new entry from:", from,
                 " cur:", e.current);
@@ -184,7 +184,7 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
     } else {
       logger_info("node: ", _settings.name(), ": write to journal ");
       logdb::log_entry le;
-      le.round = _state.round;
+      le.term = _state.term;
       le.cmd = e.cmd;
       ae.current = _jrn->put(le);
     }
@@ -268,20 +268,20 @@ void consensus::commit_reccord(const logdb::reccord_info &target) {
 void consensus::on_heartbeat() {
   std::lock_guard<std::mutex> l(_locker);
 
-  if (_state.round_kind != ROUND_KIND::LEADER && _state.is_heartbeat_missed()) {
+  if (_state.node_kind != NODE_KIND::LEADER && _state.is_heartbeat_missed()) {
     // logger_info("node: ", _settings.name(), ": heartbeat");
     const auto old_s = _state;
     const auto ns = node_state_t::on_heartbeat(_state, _self_addr, _cluster->size());
     _state = ns;
 
-    logger_info("node: ", _settings.name(), ": {", _state.round_kind, "} => - ",
+    logger_info("node: ", _settings.name(), ": {", _state.node_kind, "} => - ",
                 _state.leader);
   }
 
-  if (_state.round_kind == ROUND_KIND::CANDIDATE
-      || _state.round_kind == ROUND_KIND::LEADER) {
+  if (_state.node_kind == NODE_KIND::CANDIDATE
+      || _state.node_kind == NODE_KIND::LEADER) {
     auto ae = make_append_entries();
-    if (_state.round_kind == ROUND_KIND::LEADER) { /// CANDIDATE => LEADER
+    if (_state.node_kind == NODE_KIND::LEADER) { /// CANDIDATE => LEADER
       // logger_info("node: ", _settings.name(), ": heartbeat");
       ae.kind = entries_kind_t::HEARTBEAT;
     } else { /// CANDIDATE => CANDIDATE
@@ -313,12 +313,12 @@ void consensus::replicate_log() {
       auto ae = make_append_entries(rft::entries_kind_t::APPEND);
       auto cur = _jrn->get(lsn_to_replicate);
       ae.current.lsn = lsn_to_replicate;
-      ae.current.round = cur.round;
+      ae.current.term = cur.term;
       ae.cmd = cur.cmd;
       if (!kv.second.is_empty()) {
         auto prev = _jrn->get(kv.second.lsn);
         ae.prev.lsn = kv.second.lsn;
-        ae.prev.round = kv.second.round;
+        ae.prev.term = kv.second.term;
       }
       _last_sended[kv.first] = ae.current;
       logger_info("node: ", _settings.name(), ": replicate ", ae.current, " to ",
@@ -335,7 +335,7 @@ void consensus::add_command(const command &cmd) {
   ENSURE(!cmd.is_empty());
   logdb::log_entry le;
   le.cmd = cmd;
-  le.round = _state.round;
+  le.term = _state.term;
 
   auto ae = make_append_entries(rft::entries_kind_t::APPEND);
   auto current = _jrn->put(le);
@@ -343,7 +343,7 @@ void consensus::add_command(const command &cmd) {
   ae.cmd = cmd;
 
   _log_state[_self_addr] = current;
-  logger_info("node: ", _settings.name(), ": add_command  {", current.round, ", ",
+  logger_info("node: ", _settings.name(), ": add_command  {", current.term, ", ",
               current.lsn, "}");
   if (_cluster->size() != size_t(1)) {
     for (auto &kv : _log_state) {

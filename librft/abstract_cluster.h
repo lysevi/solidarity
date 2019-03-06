@@ -26,8 +26,8 @@ enum class entries_kind_t { HEARTBEAT, VOTE, APPEND, ANSWER_OK, ANSWER_FAILED, H
 struct append_entries {
   /// on election;
   entries_kind_t kind = {entries_kind_t::APPEND};
-  /// round number;
-  round_t round;
+  /// term number;
+  term_t term;
   /// sender start time;
   uint64_t starttime = {};
   /// leader;
