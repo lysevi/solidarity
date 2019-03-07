@@ -36,19 +36,20 @@ consensus::consensus(const node_settings &ns,
 
 void consensus::update_next_heartbeat_interval() {
   const auto total_mls = _settings.election_timeout().count();
-  double k1 = 0.5, k2 = 2.0;
+  double k1 = 1.5, k2 = 2.0;
+  if (_state.node_kind == NODE_KIND::LEADER) {
+    k1 = 0.5;
+    k2 = 1;
+  }
   if (_state.node_kind == NODE_KIND::ELECTION) {
     k1 = 0.5;
     k2 = 1.0;
   }
   if (_state.node_kind == NODE_KIND::CANDIDATE) {
-    k1 = 2.0;
-    k2 = 3.0 * _state.election_round;
+    k1 = 1.0;
+    k2 = 1.0 * _state.election_round;
   }
-  if (_state.node_kind == NODE_KIND::LEADER) {
-    k1 = 0.5;
-    k2 = 1;
-  }
+  
   std::uniform_int_distribution<uint64_t> distr(uint64_t(total_mls * k1),
                                                 uint64_t(total_mls * k2));
 
@@ -278,8 +279,7 @@ void consensus::on_heartbeat() {
                 _state.leader);
   }
 
-  if (_state.node_kind == NODE_KIND::CANDIDATE
-      || _state.node_kind == NODE_KIND::LEADER) {
+  if (_state.node_kind == NODE_KIND::CANDIDATE || _state.node_kind == NODE_KIND::LEADER) {
     auto ae = make_append_entries();
     if (_state.node_kind == NODE_KIND::LEADER) { /// CANDIDATE => LEADER
       // logger_info("node: ", _settings.name(), ": heartbeat");
