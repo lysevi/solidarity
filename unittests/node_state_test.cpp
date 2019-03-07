@@ -211,23 +211,13 @@ SCENARIO("node_state.on_append_entries") {
     self.node_kind = rft::NODE_KIND::FOLLOWER;
     self.leader.clear();
     self.term = 0;
-    WHEN("term!=self.leader") {
+    WHEN("term>self.leader") {
       auto new_state
           = rft::node_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
       THEN("follow to sender") {
         EXPECT_EQ(new_state.node_kind, rft::NODE_KIND::FOLLOWER);
         EXPECT_EQ(new_state.leader.name(), from_s_addr.name());
         EXPECT_EQ(new_state.term, from_s.term);
-      }
-    }
-    WHEN("from==self.leader") {
-      self.leader.set_name("other name");
-      auto new_state
-          = rft::node_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
-      THEN("do nothing") {
-        EXPECT_EQ(new_state.node_kind, self.node_kind);
-        EXPECT_EQ(new_state.leader.name(), self.leader.name());
-        EXPECT_EQ(new_state.term, self.term);
       }
     }
   }

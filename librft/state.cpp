@@ -130,7 +130,7 @@ node_state_t node_state_t::on_append_entries(const node_state_t &self,
     break;
   }
   case NODE_KIND::FOLLOWER: {
-    if (result.leader.is_empty()) {
+    if (e.term > result.term) {
       result.leader = e.leader;
       result.term = e.term;
       result.last_heartbeat_time = clock_t::now();
