@@ -49,7 +49,7 @@ void consensus::update_next_heartbeat_interval() {
     k1 = 1.0;
     k2 = 1.0 * _state.election_round;
   }
-  
+
   std::uniform_int_distribution<uint64_t> distr(uint64_t(total_mls * k1),
                                                 uint64_t(total_mls * k2));
 
@@ -67,6 +67,14 @@ append_entries consensus::make_append_entries(const entries_kind_t kind) const n
   ae.prev = _jrn->prev_rec();
   ae.commited = _jrn->commited_rec();
   return ae;
+}
+
+void consensus::send(const entries_kind_t kind) {
+  _cluster->send_all(_self_addr, make_append_entries(kind));
+}
+
+void consensus::send(const cluster_node &to, const entries_kind_t kind) {
+  _cluster->send_to(_self_addr, to, make_append_entries(kind));
 }
 
 void consensus::on_vote(const cluster_node &from, const append_entries &e) {
@@ -94,13 +102,11 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
 
   switch (change_state_v.notify) {
   case NOTIFY_TARGET::ALL: {
-    const auto ae = make_append_entries(entries_kind_t::VOTE);
-    _cluster->send_all(_self_addr, ae);
+    send(entries_kind_t::VOTE);
     break;
   }
   case NOTIFY_TARGET::SENDER: {
-    const auto ae = make_append_entries(entries_kind_t::VOTE);
-    _cluster->send_to(_self_addr, from, ae);
+    send(from, entries_kind_t::VOTE);
     break;
   }
   case NOTIFY_TARGET::NOBODY: {
@@ -121,12 +127,12 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
   }
   switch (e.kind) {
   case entries_kind_t::HEARTBEAT: {
-    bool is_alone_follower = _state.leader.is_empty();
+    const auto old_s = _state;
     const auto ns = node_state_t::on_append_entries(_state, from, _jrn.get(), e);
     _state = ns;
     _state.last_heartbeat_time = clock_t::now();
-    if (is_alone_follower) {
-      _cluster->send_to(_self_addr, from, make_append_entries(entries_kind_t::HELLO));
+    if (old_s.leader.is_empty() || old_s.leader != _state.leader) {
+      send(from, entries_kind_t::HELLO);
     }
     break;
   }
@@ -138,7 +144,7 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
   }
   case entries_kind_t::VOTE: {
     on_vote(from, e);
-    _log_state[from] = e.current;
+    _log_state[from] = e.prev;
     break;
   }
   case entries_kind_t::APPEND: {
@@ -168,8 +174,7 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
   if (e.prev != self_prev && !self_prev.is_empty()) {
     logger_fatal("node: ", _settings.name(), ": wrong entry from:", from, " ", e.prev,
                  ", ", self_prev);
-    auto ae = make_append_entries(entries_kind_t::ANSWER_FAILED);
-    _cluster->send_to(_self_addr, from, ae);
+    send(from, entries_kind_t::ANSWER_FAILED);
     return;
   }
 
@@ -286,6 +291,7 @@ void consensus::on_heartbeat() {
       ae.kind = entries_kind_t::HEARTBEAT;
     } else { /// CANDIDATE => CANDIDATE
       _log_state.clear();
+      _last_sended.clear();
       ae.kind = entries_kind_t::VOTE;
     }
     _cluster->send_all(_self_addr, ae);

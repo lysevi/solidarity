@@ -41,8 +41,11 @@ public:
 protected:
   append_entries make_append_entries(const entries_kind_t kind
                                      = entries_kind_t::APPEND) const noexcept;
+  void send(const entries_kind_t kind);
+  void send(const cluster_node&to, const entries_kind_t kind);
 
-  void on_vote(const cluster_node &from, const append_entries &e);
+  void on_vote(const cluster_node &from,
+                                         const append_entries &e);
   void on_append_entries(const cluster_node &from, const append_entries &e);
   void on_answer(const cluster_node &from, const append_entries &e);
 
