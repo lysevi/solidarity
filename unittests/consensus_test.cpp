@@ -28,7 +28,7 @@ TEST_CASE("consensus.add_nodes") {
   EXPECT_EQ(c_0->state(), rft::NODE_KIND::FOLLOWER);
 
   while (c_0->state() != rft::NODE_KIND::LEADER) {
-    c_0->on_heartbeat();
+    c_0->heartbeat();
     cluster->print_cluster();
   }
   EXPECT_EQ(c_0->term(), rft::term_t(1));
@@ -43,7 +43,7 @@ TEST_CASE("consensus.add_nodes") {
   cluster->add_new(rft::cluster_node().set_name(settings_1.name()), c_1);
 
   while (c_1->get_leader().name() != c_0->self_addr().name()) {
-    cluster->on_heartbeat();
+    cluster->heartbeat();
     cluster->print_cluster();
   }
   EXPECT_EQ(c_0->state(), rft::NODE_KIND::LEADER);
@@ -63,7 +63,7 @@ TEST_CASE("consensus.add_nodes") {
 
   while (c_1->get_leader().name() != c_0->self_addr().name()
          || c_2->get_leader().name() != c_0->self_addr().name()) {
-    cluster->on_heartbeat();
+    cluster->heartbeat();
     cluster->print_cluster();
   }
 
@@ -150,7 +150,7 @@ TEST_CASE("consensus") {
           break;
         }
       }
-      cluster->on_heartbeat();
+      cluster->heartbeat();
       cluster->print_cluster();
     }
 
@@ -164,7 +164,7 @@ TEST_CASE("consensus") {
         cmd.data[0]++;
         leaders[0]->add_command(cmd);
         while (true) {
-          cluster->on_heartbeat();
+          cluster->heartbeat();
           bool all_of = std::all_of(consumers.cbegin(), consumers.cend(), data_eq);
           if (all_of) {
             break;
@@ -246,7 +246,7 @@ TEST_CASE("consensus.replication") {
     cmd.data[0]++;
     leaders[0]->add_command(cmd);
     while (true) {
-      cluster->on_heartbeat();
+      cluster->heartbeat();
       auto replicated_on = std::count_if(consumers.cbegin(), consumers.cend(), data_eq);
       if (size_t(replicated_on) == consumers.size()) {
         break;
@@ -271,7 +271,7 @@ TEST_CASE("consensus.replication") {
       break;
     }
     utils::logging::logger_info("[test] replicated_on: ", replicated_on);
-    cluster->on_heartbeat();
+    cluster->heartbeat();
   }
 
   cluster = nullptr;
@@ -319,7 +319,7 @@ TEST_CASE("consensus.rollback") {
       cmd.data[0]++;
       leaders[0]->add_command(cmd);
       while (true) {
-        cluster->on_heartbeat();
+        cluster->heartbeat();
         auto replicated_on = std::count_if(consumers.cbegin(), consumers.cend(), data_eq);
         if (size_t(replicated_on) == consumers.size()) {
           break;
@@ -329,16 +329,18 @@ TEST_CASE("consensus.rollback") {
   }
 
   auto cluster2 = cluster->split(1);
-  while (!cluster->is_leader_eletion_complete()
-         && !cluster->is_leader_eletion_complete()) {
-    cluster->on_heartbeat();
-    cluster2->on_heartbeat();
+  while (true) {
+    cluster->heartbeat();
+    cluster2->heartbeat();
 
     utils::logging::logger_info("[test] cluster 1:");
     cluster->print_cluster();
 
     utils::logging::logger_info("[test] cluster 2:");
     cluster2->print_cluster();
+    if (cluster->is_leader_eletion_complete() && cluster2->is_leader_eletion_complete()) {
+      break;
+    }
   }
 
   rft::command cmd2;
@@ -368,7 +370,7 @@ TEST_CASE("consensus.rollback") {
   cluster->wait_leader_eletion(2);
 
   while (true) {
-    cluster->on_heartbeat();
+    cluster->heartbeat();
     if (consumers.front()->last_cmd.data == consumers.back()->last_cmd.data) {
       break;
     }

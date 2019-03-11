@@ -72,7 +72,7 @@ struct node_state_t {
                                                const cluster_node &from,
                                                const logdb::abstract_journal *jrn,
                                                const append_entries &e);
-  EXPORT static node_state_t on_heartbeat(const node_state_t &self,
+  EXPORT static node_state_t heartbeat(const node_state_t &self,
                                           const cluster_node &self_addr,
                                           const size_t cluster_size);
 };

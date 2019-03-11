@@ -78,8 +78,8 @@ void mock_cluster::apply(std::function<void(const std::shared_ptr<rft::consensus
   }
 }
 
-void mock_cluster::on_heartbeat() {
-  apply([](auto n) { return n->on_heartbeat(); });
+void mock_cluster::heartbeat() {
+  apply([](auto n) { return n->heartbeat(); });
 }
 
 void mock_cluster::print_cluster() {
@@ -158,7 +158,7 @@ void mock_cluster::wait_leader_eletion(size_t max_leaders) {
     if (is_leader_eletion_complete(max_leaders)) {
       break;
     }
-    on_heartbeat();
+    heartbeat();
     print_cluster();
   }
 }

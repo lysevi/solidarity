@@ -163,7 +163,7 @@ node_state_t node_state_t::on_append_entries(const node_state_t &self,
   return result;
 }
 
-node_state_t node_state_t::on_heartbeat(const node_state_t &self,
+node_state_t node_state_t::heartbeat(const node_state_t &self,
                                         const cluster_node &self_addr,
                                         const size_t cluster_size) {
   node_state_t result = self;

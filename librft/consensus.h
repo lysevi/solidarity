@@ -29,7 +29,7 @@ public:
   logdb::journal_ptr journal() const { return _jrn; }
 
   EXPORT void set_cluster(abstract_cluster *cluster);
-  EXPORT void on_heartbeat();
+  EXPORT void heartbeat();
   EXPORT void recv(const cluster_node &from, const append_entries &e);
   EXPORT void add_command(const command &cmd);
   EXPORT void lost_connection_with(const cluster_node &addr);
@@ -49,6 +49,7 @@ protected:
   void send(const entries_kind_t kind);
   void send(const cluster_node &to, const entries_kind_t kind);
 
+  void on_heartbeat(const cluster_node &from, const append_entries &e);
   void on_vote(const cluster_node &from, const append_entries &e);
   void on_append_entries(const cluster_node &from, const append_entries &e);
   void on_answer_ok(const cluster_node &from, const append_entries &e);

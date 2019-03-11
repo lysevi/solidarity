@@ -90,6 +90,33 @@ void consensus::lost_connection_with(const cluster_node &addr) {
   _state.votes_to_me.erase(addr);
 }
 
+void consensus::on_heartbeat(const cluster_node &from, const append_entries &e) {
+  const auto old_s = _state;
+  const auto ns = node_state_t::on_append_entries(_state, from, _jrn.get(), e);
+  _state = ns;
+  _state.last_heartbeat_time = clock_t::now();
+  if (old_s.leader.is_empty() || old_s.leader != _state.leader) {
+    _log_state.clear();
+    // TODO optimize it!
+    bool reset = false;
+    if (e.prev.lsn != _jrn->prev_rec().lsn) {
+      _jrn->erase_all_after(e.prev);
+      reset = true;
+    }
+    if (e.commited.lsn != _jrn->commited_rec().lsn) {
+      _jrn->erase_all_after(e.prev);
+      reset = true;
+    }
+    // TODO log compaction;
+    if (reset) {
+      _consumer->reset();
+      auto f = [this](const logdb::log_entry &le) { _consumer->apply_cmd(le.cmd); };
+      _jrn->visit(f);
+    }
+    send(from, entries_kind_t::HELLO);
+  }
+}
+
 void consensus::on_vote(const cluster_node &from, const append_entries &e) {
   const auto old_s = _state;
   const changed_state_t change_state_v
@@ -139,27 +166,11 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
   if (e.term < _state.term) {
     return;
   }
+
   switch (e.kind) {
   case entries_kind_t::HEARTBEAT: {
-    const auto old_s = _state;
-    const auto ns = node_state_t::on_append_entries(_state, from, _jrn.get(), e);
-    _state = ns;
-    _state.last_heartbeat_time = clock_t::now();
-    if (old_s.leader.is_empty() || old_s.leader != _state.leader) {
-      _log_state.clear();
-      // TODO optimize it!
-      if (e.prev.lsn != _jrn->prev_rec().lsn) {
-        _jrn->erase_all_after(e.prev);
-      }
-      if (e.commited.lsn != _jrn->commited_rec().lsn) {
-        _jrn->erase_all_after(e.prev);
-      }
-      // TODO log compaction;
-      _consumer->reset();
-      auto f = [this](const logdb::log_entry &le) { _consumer->apply_cmd(le.cmd); };
-      _jrn->visit(f);
-      send(from, entries_kind_t::HELLO);
-    }
+    on_heartbeat(from, e);
+
     break;
   }
   case entries_kind_t::HELLO: {
@@ -297,13 +308,13 @@ void consensus::commit_reccord(const logdb::reccord_info &target) {
   _cluster->send_all(_self_addr, ae);
 }
 
-void consensus::on_heartbeat() {
+void consensus::heartbeat() {
   std::lock_guard<std::mutex> l(_locker);
 
   if (_state.node_kind != NODE_KIND::LEADER && _state.is_heartbeat_missed()) {
     // logger_info("node: ", _settings.name(), ": heartbeat");
     const auto old_s = _state;
-    const auto ns = node_state_t::on_heartbeat(_state, _self_addr, _cluster->size());
+    const auto ns = node_state_t::heartbeat(_state, _self_addr, _cluster->size());
     _state = ns;
 
     logger_info("node: ", _settings.name(), ": {", _state.node_kind, "} => - ",

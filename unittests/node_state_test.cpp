@@ -294,7 +294,7 @@ SCENARIO("node_state.on_heartbeat") {
   WHEN("self == ELECTION") {
     self.node_kind = rft::NODE_KIND::ELECTION;
 
-    auto new_state = rft::node_state_t::on_heartbeat(self, self_addr, 2);
+    auto new_state = rft::node_state_t::heartbeat(self, self_addr, 2);
     THEN("be a follower") {
       EXPECT_EQ(new_state.node_kind, rft::NODE_KIND::FOLLOWER);
       EXPECT_TRUE(new_state.leader.is_empty());
@@ -305,7 +305,7 @@ SCENARIO("node_state.on_heartbeat") {
   WHEN("self == FOLLOWER") {
     self.node_kind = rft::NODE_KIND::FOLLOWER;
     WHEN("alone in cluster") {
-      auto new_state = rft::node_state_t::on_heartbeat(self, self_addr, 1);
+      auto new_state = rft::node_state_t::heartbeat(self, self_addr, 1);
       THEN("be a LEADER") {
         EXPECT_EQ(new_state.node_kind, rft::NODE_KIND::LEADER);
         EXPECT_EQ(new_state.leader.name(), self_addr.name());
@@ -314,7 +314,7 @@ SCENARIO("node_state.on_heartbeat") {
     }
 
     WHEN("not alone in cluster") {
-      auto new_state = rft::node_state_t::on_heartbeat(self, self_addr, 2);
+      auto new_state = rft::node_state_t::heartbeat(self, self_addr, 2);
       THEN("be a LEADER") {
         EXPECT_EQ(new_state.node_kind, rft::NODE_KIND::CANDIDATE);
         EXPECT_EQ(new_state.leader.name(), self_addr.name());
@@ -329,7 +329,7 @@ SCENARIO("node_state.on_heartbeat") {
     self.node_kind = rft::NODE_KIND::CANDIDATE;
     WHEN("election_round>=5") {
       self.election_round = 5;
-      auto new_state = rft::node_state_t::on_heartbeat(self, self_addr, 2);
+      auto new_state = rft::node_state_t::heartbeat(self, self_addr, 2);
       THEN("be a CANDIDATE") {
         EXPECT_EQ(new_state.node_kind, rft::NODE_KIND::CANDIDATE);
         EXPECT_EQ(new_state.leader.name(), self_addr.name());
@@ -340,7 +340,7 @@ SCENARIO("node_state.on_heartbeat") {
 
     WHEN("not alone in cluster") {
       self.election_round = 4;
-      auto new_state = rft::node_state_t::on_heartbeat(self, self_addr, 2);
+      auto new_state = rft::node_state_t::heartbeat(self, self_addr, 2);
       THEN("be a CANDIDATE") {
         EXPECT_EQ(new_state.node_kind, rft::NODE_KIND::CANDIDATE);
         EXPECT_EQ(new_state.leader.name(), self_addr.name());

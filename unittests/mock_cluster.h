@@ -33,7 +33,7 @@ public:
 
   void apply(std::function<void(const std::shared_ptr<rft::consensus>)> f);
 
-  void on_heartbeat();
+  void heartbeat();
 
   void print_cluster();
 
