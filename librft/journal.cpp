@@ -5,6 +5,10 @@ using namespace logdb;
 
 namespace rft {
 namespace logdb {
+namespace inner {
+using cmtype = std::map<index_t, log_entry>::const_iterator::value_type;
+} // namespace inner
+
 std::string to_string(const reccord_info &ri) {
   std::stringstream ss;
   ss << "{r:" << ri.term << ", lsn:" << ri.lsn << "}";
@@ -29,13 +33,13 @@ reccord_info memory_journal::put(const log_entry &e) {
 void memory_journal::commit(const index_t lsn) {
   std::lock_guard<std::shared_mutex> lg(_locker);
   // TODO term check
-  using mtype = std::map<index_t, log_entry>::const_iterator::value_type;
+  using inner::cmtype;
 
-  std::vector<mtype> to_commit;
+  std::vector<cmtype> to_commit;
   to_commit.reserve(_wal.size());
 
   std::copy_if(_wal.cbegin(), _wal.cend(), std::back_inserter(to_commit),
-               [lsn](const mtype &kv) -> bool { return kv.first <= lsn; });
+               [lsn](const cmtype &kv) -> bool { return kv.first <= lsn; });
 
   /*std::sort(to_commit.begin(), to_commit.end(),
             [](const mtype &l, const mtype &r) -> bool { return l.first < r.first; });*/
@@ -113,4 +117,54 @@ reccord_info memory_journal::first_rec() const noexcept {
     }
   }
   return result;
+}
+
+void memory_journal::erase_all_after(const reccord_info &e) {
+  std::lock_guard<std::shared_mutex> lg(_locker);
+  using inner::cmtype;
+
+  auto erase_pred = [e](const cmtype &kv) -> bool { return kv.first > e.lsn; };
+  std::vector<cmtype> to_commit;
+  to_commit.reserve(std::max(_wal.size(), _commited_data.size()));
+
+  std::copy_if(_wal.cbegin(), _wal.cend(), std::back_inserter(to_commit), erase_pred);
+  for (auto &kv : to_commit) {
+    _wal.erase(kv.first);
+  }
+  to_commit.clear();
+  std::copy_if(_commited_data.cbegin(), _commited_data.cend(),
+               std::back_inserter(to_commit), erase_pred);
+  for (auto &kv : to_commit) {
+    _commited_data.erase(kv.first);
+  }
+
+  if (!_wal.empty()) {
+    auto it = _wal.rbegin();
+    _prev.lsn = it->first;
+    _prev.term = it->second.term;
+  } else {
+    _prev = reccord_info{};
+  }
+
+  if (!_commited_data.empty()) {
+    auto it = _commited_data.rbegin();
+    _commited.lsn = it->first;
+    _commited.term = it->second.term;
+  } else {
+    _commited = reccord_info{};
+  }
+  if (_prev.is_empty() && !_commited.is_empty()) {
+    _prev = _commited;
+  }
+}
+
+void memory_journal::visit(std::function<void(const log_entry &)> f) {
+  std::shared_lock<std::shared_mutex> lg(_locker);
+  for (const auto &kv : _wal) {
+    f(kv.second);
+  }
+
+  for (const auto &kv : _commited_data) {
+    f(kv.second);
+  }
 }

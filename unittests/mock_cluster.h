@@ -73,3 +73,7 @@ private:
 inline bool is_leader_pred(const std::shared_ptr<rft::consensus> &v) {
   return v->state() == rft::NODE_KIND::LEADER;
 };
+
+inline bool is_follower_pred(const std::shared_ptr<rft::consensus> &v) {
+  return v->state() == rft::NODE_KIND::FOLLOWER;
+};

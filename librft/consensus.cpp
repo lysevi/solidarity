@@ -82,6 +82,14 @@ void consensus::send(const cluster_node &to, const entries_kind_t kind) {
   _cluster->send_to(_self_addr, to, make_append_entries(kind));
 }
 
+void consensus::lost_connection_with(const cluster_node &addr) {
+  std::lock_guard<std::mutex> lg(_locker);
+  logger_info("node: ", _settings.name(), ": lost connection with ", addr);
+  _log_state.erase(addr);
+  _last_sended.erase(addr);
+  _state.votes_to_me.erase(addr);
+}
+
 void consensus::on_vote(const cluster_node &from, const append_entries &e) {
   const auto old_s = _state;
   const changed_state_t change_state_v
@@ -100,6 +108,7 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
       logger_info("node: ", _settings.name(), ": quorum. i'am new leader with ", sz,
                   " voices - ", ss.str());
       _state.votes_to_me.clear();
+      _log_state[_self_addr] = _jrn->prev_rec();
     } else {
       logger_info("node: ", _settings.name(), ": change state ", old_s, " => ", _state);
     }
@@ -137,6 +146,18 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
     _state = ns;
     _state.last_heartbeat_time = clock_t::now();
     if (old_s.leader.is_empty() || old_s.leader != _state.leader) {
+      _log_state.clear();
+      // TODO optimize it!
+      if (e.prev.lsn != _jrn->prev_rec().lsn) {
+        _jrn->erase_all_after(e.prev);
+      }
+      if (e.commited.lsn != _jrn->commited_rec().lsn) {
+        _jrn->erase_all_after(e.prev);
+      }
+      // TODO log compaction;
+      _consumer->reset();
+      auto f = [this](const logdb::log_entry &le) { _consumer->apply_cmd(le.cmd); };
+      _jrn->visit(f);
       send(from, entries_kind_t::HELLO);
     }
     break;
@@ -294,8 +315,12 @@ void consensus::on_heartbeat() {
     if (_state.node_kind == NODE_KIND::LEADER) { /// CANDIDATE => LEADER
       // logger_info("node: ", _settings.name(), ": heartbeat");
       ae.kind = entries_kind_t::HEARTBEAT;
+      if (_log_state.find(_self_addr) == _log_state.end()) {
+        _log_state[_self_addr] = _jrn->prev_rec();
+      }
     } else { /// CANDIDATE => CANDIDATE
       _log_state.clear();
+      _log_state[_self_addr] = _jrn->prev_rec();
       _last_sended.clear();
       ae.kind = entries_kind_t::VOTE;
     }

@@ -7,7 +7,7 @@
 class mock_consumer final : public rft::abstract_consensus_consumer {
 public:
   void apply_cmd(const rft::command &cmd) override { last_cmd = cmd; }
-
+  void reset() override { last_cmd.data.clear(); }
   rft::command last_cmd;
 };
 
@@ -310,19 +310,20 @@ TEST_CASE("consensus.rollback") {
   };
 
   cluster->wait_leader_eletion();
+  {
+    std::vector<std::shared_ptr<rft::consensus>> leaders
+        = cluster->by_filter(is_leader_pred);
+    EXPECT_EQ(leaders.size(), size_t(1));
 
-  std::vector<std::shared_ptr<rft::consensus>> leaders
-      = cluster->by_filter(is_leader_pred);
-  EXPECT_EQ(leaders.size(), size_t(1));
-
-  for (int i = 0; i < 10; ++i) {
-    cmd.data[0]++;
-    leaders[0]->add_command(cmd);
-    while (true) {
-      cluster->on_heartbeat();
-      auto replicated_on = std::count_if(consumers.cbegin(), consumers.cend(), data_eq);
-      if (size_t(replicated_on) == consumers.size()) {
-        break;
+    for (int i = 0; i < 10; ++i) {
+      cmd.data[0]++;
+      leaders[0]->add_command(cmd);
+      while (true) {
+        cluster->on_heartbeat();
+        auto replicated_on = std::count_if(consumers.cbegin(), consumers.cend(), data_eq);
+        if (size_t(replicated_on) == consumers.size()) {
+          break;
+        }
       }
     }
   }
@@ -354,15 +355,24 @@ TEST_CASE("consensus.rollback") {
 
   for (int i = 0; i < 10; ++i) {
     cmd.data[0]++;
-    leaders[0]->add_command(cmd);
+    leaders1[0]->add_command(cmd);
     cmd.data[0]++;
-    leaders[0]->add_command(cmd);
+    leaders1[0]->add_command(cmd);
     cmd2.data[0] += 5;
     leaders2[0]->add_command(cmd2);
   }
 
+  EXPECT_FALSE(consumers.front()->last_cmd.data == consumers.back()->last_cmd.data);
+
   cluster->union_with(cluster2);
   cluster->wait_leader_eletion(2);
+
+  while (true) {
+    cluster->on_heartbeat();
+    if (consumers.front()->last_cmd.data == consumers.back()->last_cmd.data) {
+      break;
+    }
+  }
 
   cluster = nullptr;
   cluster2 = nullptr;

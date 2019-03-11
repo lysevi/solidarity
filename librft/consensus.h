@@ -15,6 +15,7 @@ namespace rft {
 class abstract_consensus_consumer {
 public:
   virtual void apply_cmd(const command &cmd) = 0;
+  virtual void reset()=0;
 };
 
 class consensus {
@@ -25,11 +26,13 @@ public:
                    abstract_consensus_consumer *consumer);
   NODE_KIND state() const { return _state.node_kind; }
   term_t term() const { return _state.term; }
+  logdb::journal_ptr journal() const { return _jrn; }
+
   EXPORT void set_cluster(abstract_cluster *cluster);
   EXPORT void on_heartbeat();
   EXPORT void recv(const cluster_node &from, const append_entries &e);
   EXPORT void add_command(const command &cmd);
-  
+  EXPORT void lost_connection_with(const cluster_node &addr);
 
   cluster_node get_leader() const {
     std::lock_guard<std::mutex> l(_locker);
@@ -44,10 +47,9 @@ protected:
   append_entries make_append_entries(const entries_kind_t kind
                                      = entries_kind_t::APPEND) const noexcept;
   void send(const entries_kind_t kind);
-  void send(const cluster_node&to, const entries_kind_t kind);
+  void send(const cluster_node &to, const entries_kind_t kind);
 
-  void on_vote(const cluster_node &from,
-                                         const append_entries &e);
+  void on_vote(const cluster_node &from, const append_entries &e);
   void on_append_entries(const cluster_node &from, const append_entries &e);
   void on_answer_ok(const cluster_node &from, const append_entries &e);
 

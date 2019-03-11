@@ -214,6 +214,13 @@ std::shared_ptr<mock_cluster> mock_cluster::split(size_t count_to_move) {
                                 }),
                  _tasks.end());
   }
+  for (auto &rkv : result->_cluster) {
+    for (auto &kv : _cluster) {
+      kv.second->lost_connection_with(rkv.first);
+      rkv.second->lost_connection_with(kv.first);
+    }
+  }
+
   start_workers();
   result->start_workers();
   return result;
@@ -223,6 +230,7 @@ void mock_cluster::union_with(std::shared_ptr<mock_cluster> other) {
   other->stop_workers();
   stop_workers();
   for (auto &&kv : other->_cluster) {
+    kv.second->set_cluster(this);
     _cluster.insert(std::move(kv));
   }
   other->_cluster.clear();
