@@ -25,9 +25,11 @@ public:
                    abstract_consensus_consumer *consumer);
   NODE_KIND state() const { return _state.node_kind; }
   term_t term() const { return _state.term; }
+  EXPORT void set_cluster(abstract_cluster *cluster);
   EXPORT void on_heartbeat();
   EXPORT void recv(const cluster_node &from, const append_entries &e);
   EXPORT void add_command(const command &cmd);
+  
 
   cluster_node get_leader() const {
     std::lock_guard<std::mutex> l(_locker);
@@ -47,7 +49,7 @@ protected:
   void on_vote(const cluster_node &from,
                                          const append_entries &e);
   void on_append_entries(const cluster_node &from, const append_entries &e);
-  void on_answer(const cluster_node &from, const append_entries &e);
+  void on_answer_ok(const cluster_node &from, const append_entries &e);
 
   void update_next_heartbeat_interval();
 

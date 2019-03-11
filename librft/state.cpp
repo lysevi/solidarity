@@ -141,7 +141,9 @@ node_state_t node_state_t::on_append_entries(const node_state_t &self,
     auto last_lst = jrn->commited_rec();
     if (result.term < e.term || (e.commited.term > last_lst.term)
         || (e.commited.term != logdb::UNDEFINED_TERM
-            && last_lst.term == logdb::UNDEFINED_TERM)) {
+            && last_lst.term == logdb::UNDEFINED_TERM)
+        || ((last_lst.is_empty() && !e.commited.is_empty())
+            || (e.commited.lsn > last_lst.lsn))) {
       result.node_kind = NODE_KIND::FOLLOWER;
       result.term = e.term;
       result.leader = e.leader;

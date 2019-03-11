@@ -34,6 +34,11 @@ consensus::consensus(const node_settings &ns,
   _state.last_heartbeat_time = clock_t::now();
 }
 
+void consensus::set_cluster(abstract_cluster *cluster) {
+  std::lock_guard<std::mutex> lg(_locker);
+  _cluster = cluster;
+}
+
 void consensus::update_next_heartbeat_interval() {
   const auto total_mls = _settings.election_timeout().count();
   double k1 = 1.5, k2 = 2.0;
@@ -152,7 +157,7 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
     break;
   }
   case entries_kind_t::ANSWER_OK: {
-    on_answer(from, e);
+    on_answer_ok(from, e);
     break;
   }
   default:
@@ -223,7 +228,7 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
   _state.last_heartbeat_time = clock_t::now();
 }
 
-void consensus::on_answer(const cluster_node &from, const append_entries &e) {
+void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) {
   logger_info("node: ", _settings.name(), ": answer from:", from, " cur:", e.current,
               ", prev", e.prev, ", ci:", e.commited);
 

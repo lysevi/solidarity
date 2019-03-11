@@ -236,23 +236,10 @@ TEST_CASE("consensus.replication") {
     return c->last_cmd.data == cmd.data;
   };
 
-  std::vector<std::shared_ptr<rft::consensus>> leaders;
-  while (true) {
-    leaders = cluster->by_filter(is_leader_pred);
-    if (leaders.size() > 1) {
-      utils::logging::logger_fatal("consensus error!!!");
-      cluster->print_cluster();
-      EXPECT_FALSE(true);
-      return;
-    }
-    if (leaders.size() == 1) {
-      break;
-    }
-    cluster->on_heartbeat();
-    cluster->print_cluster();
-  }
+  cluster->wait_leader_eletion();
 
-  leaders = cluster->by_filter(is_leader_pred);
+  std::vector<std::shared_ptr<rft::consensus>> leaders
+      = cluster->by_filter(is_leader_pred);
   EXPECT_EQ(leaders.size(), size_t(1));
 
   for (int i = 0; i < 10; ++i) {
@@ -288,5 +275,96 @@ TEST_CASE("consensus.replication") {
   }
 
   cluster = nullptr;
+  consumers.clear();
+}
+
+TEST_CASE("consensus.rollback") {
+  using rft::cluster_node;
+  using rft::consensus;
+  using rft::logdb::memory_journal;
+
+  auto cluster = std::make_shared<mock_cluster>();
+
+  size_t exists_nodes_count = 2;
+
+  std::vector<std::shared_ptr<mock_consumer>> consumers;
+  consumers.reserve(exists_nodes_count);
+
+  auto et = std::chrono::milliseconds(300);
+
+  for (size_t i = 0; i < exists_nodes_count; ++i) {
+    auto nname = "_" + std::to_string(i);
+    auto sett = rft::node_settings().set_name(nname).set_election_timeout(et);
+    auto consumer = std::make_shared<mock_consumer>();
+    consumers.push_back(consumer);
+    auto cons = std::make_shared<consensus>(sett, cluster.get(),
+                                            memory_journal::make_new(), consumer.get());
+    cluster->add_new(cluster_node().set_name(sett.name()), cons);
+  }
+  rft::command cmd;
+  cmd.data.resize(1);
+  cmd.data[0] = 0;
+
+  auto data_eq = [&cmd](const std::shared_ptr<mock_consumer> &c) -> bool {
+    return c->last_cmd.data == cmd.data;
+  };
+
+  cluster->wait_leader_eletion();
+
+  std::vector<std::shared_ptr<rft::consensus>> leaders
+      = cluster->by_filter(is_leader_pred);
+  EXPECT_EQ(leaders.size(), size_t(1));
+
+  for (int i = 0; i < 10; ++i) {
+    cmd.data[0]++;
+    leaders[0]->add_command(cmd);
+    while (true) {
+      cluster->on_heartbeat();
+      auto replicated_on = std::count_if(consumers.cbegin(), consumers.cend(), data_eq);
+      if (size_t(replicated_on) == consumers.size()) {
+        break;
+      }
+    }
+  }
+
+  auto cluster2 = cluster->split(1);
+  while (!cluster->is_leader_eletion_complete()
+         && !cluster->is_leader_eletion_complete()) {
+    cluster->on_heartbeat();
+    cluster2->on_heartbeat();
+
+    utils::logging::logger_info("[test] cluster 1:");
+    cluster->print_cluster();
+
+    utils::logging::logger_info("[test] cluster 2:");
+    cluster2->print_cluster();
+  }
+
+  rft::command cmd2;
+  cmd2.data.resize(1);
+  cmd2.data[0] = 0;
+
+  std::vector<std::shared_ptr<rft::consensus>> leaders1
+      = cluster->by_filter(is_leader_pred);
+  EXPECT_EQ(leaders1.size(), size_t(1));
+
+  std::vector<std::shared_ptr<rft::consensus>> leaders2
+      = cluster2->by_filter(is_leader_pred);
+  EXPECT_EQ(leaders2.size(), size_t(1));
+
+  for (int i = 0; i < 10; ++i) {
+    cmd.data[0]++;
+    leaders[0]->add_command(cmd);
+    cmd.data[0]++;
+    leaders[0]->add_command(cmd);
+    cmd2.data[0] += 5;
+    leaders2[0]->add_command(cmd2);
+  }
+
+  cluster->union_with(cluster2);
+  cluster->wait_leader_eletion(2);
+
+  cluster = nullptr;
+  cluster2 = nullptr;
   consumers.clear();
 }
