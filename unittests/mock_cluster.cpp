@@ -100,7 +100,16 @@ void mock_cluster::erase_if(
   auto it = std::find_if(_cluster.begin(), _cluster.end(),
                          [pred](auto kv) { return pred(kv.second); });
   if (it != _cluster.end()) {
-    _cluster.erase(it);
+    auto key = it->first;
+    _cluster.erase(key);
+    _tasks.erase(std::remove_if(_tasks.begin(), _tasks.end(),
+                                [key](const message_t &m) -> bool {
+                                  return m.from == key || m.to == key;
+                                }),
+                 _tasks.end());
+    for (auto &kv : _cluster) {
+      kv.second->lost_connection_with(key);
+    }
   }
 }
 

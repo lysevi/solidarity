@@ -173,6 +173,18 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
   if (e.term < _state.term) {
     return;
   }
+  /// if leader receive message from follower with other leader,
+  /// but with new election term.
+  if (e.kind != entries_kind_t::VOTE && _self_addr == _state.leader
+      && e.term > _state.term && !e.leader.is_empty()) {
+    logger_info("node: ", _settings.name(), ": change state to follower");
+    _state.leader.clear();
+    _state.change_state(NODE_KIND::FOLLOWER, e.term, e.leader);
+    send(e.leader, entries_kind_t::HELLO);
+    _log_state.clear();
+    _state.votes_to_me.clear();
+    return;
+  }
 
   switch (e.kind) {
   case entries_kind_t::HEARTBEAT: {
