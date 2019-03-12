@@ -5,9 +5,6 @@ using namespace logdb;
 
 namespace rft {
 namespace logdb {
-namespace inner {
-using cmtype = std::map<index_t, log_entry>::const_iterator::value_type;
-} // namespace inner
 
 std::string to_string(const reccord_info &ri) {
   std::stringstream ss;
@@ -105,13 +102,16 @@ reccord_info memory_journal::first_rec() const noexcept {
 
 void memory_journal::erase_all_after(const reccord_info &e) {
   std::lock_guard<std::shared_mutex> lg(_locker);
-  using inner::cmtype;
 
-  auto erase_pred = [e](const cmtype &kv) -> bool { return kv.first > e.lsn; };
-  std::vector<cmtype> to_erase;
+  using rmtype = std::map<index_t, log_entry>::reverse_iterator::value_type;
+  std::vector<rmtype> to_erase;
   to_erase.reserve(_wal.size());
-
-  std::copy_if(_wal.cbegin(), _wal.cend(), std::back_inserter(to_erase), erase_pred);
+  for (auto it = _wal.rbegin(); it != _wal.rend(); ++it) {
+    if (it->first == e.lsn && it->second.term == e.term) {
+      break;
+    }
+    to_erase.push_back(*it);
+  }
   for (auto &kv : to_erase) {
     _wal.erase(kv.first);
   }
