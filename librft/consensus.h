@@ -27,6 +27,7 @@ public:
   NODE_KIND state() const { return _state.node_kind; }
   term_t term() const { return _state.term; }
   logdb::journal_ptr journal() const { return _jrn; }
+  const abstract_consensus_consumer *const consumer() {return _consumer;}
 
   EXPORT void set_cluster(abstract_cluster *cluster);
   EXPORT void heartbeat();

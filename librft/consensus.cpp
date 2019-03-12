@@ -97,21 +97,28 @@ void consensus::on_heartbeat(const cluster_node &from, const append_entries &e) 
   _state.last_heartbeat_time = clock_t::now();
   if (old_s.leader.is_empty() || old_s.leader != _state.leader) {
     _log_state.clear();
-    // TODO optimize it!
     bool reset = false;
+    logdb::reccord_info to_erase{};
     if (e.prev.lsn != _jrn->prev_rec().lsn) {
-      _jrn->erase_all_after(e.prev);
+      logger_info("node: ", _settings.name(), ": erase prev ", _jrn->prev_rec(), " => ",
+                  e.prev);
       reset = true;
+      to_erase = e.prev;
     }
     if (e.commited.lsn != _jrn->commited_rec().lsn) {
-      _jrn->erase_all_after(e.prev);
       reset = true;
+      if (to_erase.is_empty() || e.commited.lsn < to_erase.lsn) {
+        logger_info("node: ", _settings.name(), ": erase commited ", _jrn->commited_rec(),
+                    " => ", e.commited);
+        to_erase = e.commited;
+      }
     }
-    // TODO log compaction;
     if (reset) {
+      _jrn->erase_all_after(to_erase);
       _consumer->reset();
       auto f = [this](const logdb::log_entry &le) { _consumer->apply_cmd(le.cmd); };
       _jrn->visit(f);
+      logger_info("node: ", _settings.name(), ": consumer restored ");
     }
     send(from, entries_kind_t::HELLO);
   }
@@ -174,6 +181,8 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
     break;
   }
   case entries_kind_t::HELLO: {
+    logger_info("node: ", _settings.name(), ": log_state:", _log_state[from], " => ",
+                e.prev);
     _log_state[from] = e.prev;
 
     replicate_log();
@@ -347,6 +356,9 @@ void consensus::replicate_log() {
     if (kv.first == _self_addr) {
       continue;
     }
+    logger_info("node: ", _settings.name(), ": check replication for ", kv.first,
+                " => lsn:", kv.second.lsn, " < self.lsn:", self_log_state.lsn,
+                "==", kv.second.lsn < self_log_state.lsn);
     if (kv.second.is_empty() || kv.second.lsn < self_log_state.lsn) {
       auto lsn_to_replicate = kv.second.lsn;
       if (kv.second.is_empty()) {
@@ -371,7 +383,6 @@ void consensus::replicate_log() {
       logger_info("node: ", _settings.name(), ": replicate ", ae.current, " to ",
                   kv.first);
       _cluster->send_to(_self_addr, kv.first, ae);
-      continue;
     }
   }
 }

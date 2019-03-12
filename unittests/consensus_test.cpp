@@ -360,8 +360,15 @@ TEST_CASE("consensus.rollback") {
     leaders1[0]->add_command(cmd);
     cmd.data[0]++;
     leaders1[0]->add_command(cmd);
+    auto cons1 = dynamic_cast<const mock_consumer *>(leaders1[0]->consumer());
+    while (cons1->last_cmd.data != cmd.data) {
+    }
     cmd2.data[0] += 5;
     leaders2[0]->add_command(cmd2);
+
+    auto cons2 = dynamic_cast<const mock_consumer *>(leaders2[0]->consumer());
+    while (cons2->last_cmd.data != cmd2.data) {
+    }
   }
 
   EXPECT_FALSE(consumers.front()->last_cmd.data == consumers.back()->last_cmd.data);
