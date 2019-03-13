@@ -105,32 +105,40 @@ void consensus::on_heartbeat(const cluster_node &from, const append_entries &e) 
   const auto ns = node_state_t::on_append_entries(_state, from, _jrn.get(), e);
   _state = ns;
   _state.last_heartbeat_time = clock_t::now();
-  if (old_s.leader.is_empty() || old_s.leader != _state.leader) {
+  if (old_s.leader.is_empty() || old_s.leader != _state.leader
+      || old_s.node_kind != _state.node_kind) {
+
     _log_state.clear();
-    bool reset = false;
-    logdb::reccord_info to_erase{};
-    if (e.prev.lsn != _jrn->prev_rec().lsn) {
-      logger_info("node: ", _settings.name(), ": erase prev ", _jrn->prev_rec(), " => ",
-                  e.prev);
-      reset = true;
-      to_erase = e.prev;
-    }
-    if (e.commited.lsn != _jrn->commited_rec().lsn) {
-      reset = true;
-      if (to_erase.is_empty() || e.commited.lsn < to_erase.lsn) {
-        logger_info("node: ", _settings.name(), ": erase commited ", _jrn->commited_rec(),
-                    " => ", e.commited);
-        to_erase = e.commited;
-      }
-    }
-    if (reset) {
-      _jrn->erase_all_after(to_erase);
-      _consumer->reset();
-      auto f = [this](const logdb::log_entry &le) { _consumer->apply_cmd(le.cmd); };
-      _jrn->visit(f);
-      logger_info("node: ", _settings.name(), ": consumer restored ");
-    }
+    log_fsck(e);
+    logger_info("node: ", _settings.name(), ": send hello to ", from);
     send(from, entries_kind_t::HELLO);
+  }
+}
+
+/// clear uncommited reccord in journal
+void consensus::log_fsck(const append_entries &e) {
+  bool reset = false;
+  logdb::reccord_info to_erase{};
+  if (e.prev.lsn != _jrn->prev_rec().lsn) {
+    logger_info("node: ", _settings.name(), ": erase prev ", _jrn->prev_rec(), " => ",
+                e.prev);
+    reset = true;
+    to_erase = e.prev;
+  }
+  if (e.commited.lsn != _jrn->commited_rec().lsn) {
+    reset = true;
+    if (to_erase.is_empty() || e.commited.lsn < to_erase.lsn) {
+      logger_info("node: ", _settings.name(), ": erase commited ", _jrn->commited_rec(),
+                  " => ", e.commited);
+      to_erase = e.commited;
+    }
+  }
+  if (reset) {
+    _jrn->erase_all_after(to_erase);
+    _consumer->reset();
+    auto f = [this](const logdb::log_entry &le) { _consumer->apply_cmd(le.cmd); };
+    _jrn->visit(f);
+    logger_info("node: ", _settings.name(), ": consumer restored ");
   }
 }
 
@@ -190,6 +198,8 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
     logger_info("node: ", _settings.name(), ": change state to follower");
     _state.leader.clear();
     _state.change_state(NODE_KIND::FOLLOWER, e.term, e.leader);
+    log_fsck(e);
+    logger_info("node: ", _settings.name(), ": send hello to ", from);
     send(e.leader, entries_kind_t::HELLO);
     _log_state.clear();
     _state.votes_to_me.clear();

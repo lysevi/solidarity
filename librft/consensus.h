@@ -59,6 +59,7 @@ protected:
 
   void commit_reccord(const logdb::reccord_info &target);
   void replicate_log();
+  void log_fsck(const append_entries &e);
 
 private:
   abstract_consensus_consumer *const _consumer = nullptr;
