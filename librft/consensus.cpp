@@ -32,6 +32,16 @@ consensus::consensus(const node_settings &ns,
   _state.start_time = clock_t::now().time_since_epoch().count();
   update_next_heartbeat_interval();
   _state.last_heartbeat_time = clock_t::now();
+
+  // consumer->reset();
+  auto from = _jrn->restore_start_point();
+  auto to = _jrn->commited_rec();
+  if (!from.is_empty() && !to.is_empty()) {
+    for (auto i = from.lsn; i <= to.lsn; ++i) {
+      auto rec = jrn->get(i);
+      consumer->apply_cmd(rec.cmd);
+    }
+  }
 }
 
 void consensus::set_cluster(abstract_cluster *cluster) {
@@ -370,7 +380,9 @@ void consensus::replicate_log() {
     }
     logger_info("node: ", _settings.name(), ": check replication for ", kv.first,
                 " => lsn:", kv.second.lsn, " < self.lsn:", self_log_state.lsn,
-                "==", kv.second.lsn < self_log_state.lsn);
+                "==", kv.second.lsn < self_log_state.lsn, " term:", kv.second.term,
+                "== self.term:", self_log_state.term,
+                " ==", kv.second.term == self_log_state.term);
     if (kv.second.is_empty() || kv.second.lsn < self_log_state.lsn) {
       auto lsn_to_replicate = kv.second.lsn;
       if (kv.second.is_empty()) {

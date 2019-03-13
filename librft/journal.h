@@ -53,6 +53,7 @@ public:
   virtual reccord_info first_uncommited_rec() const noexcept = 0;
   virtual reccord_info commited_rec() const noexcept = 0;
   virtual reccord_info first_rec() const noexcept = 0;
+  virtual reccord_info restore_start_point() const noexcept = 0;
 };
 
 using journal_ptr = std::shared_ptr<abstract_journal>;
@@ -71,6 +72,7 @@ public:
   EXPORT reccord_info first_uncommited_rec() const noexcept override;
   EXPORT reccord_info commited_rec() const noexcept override;
   EXPORT reccord_info first_rec() const noexcept override;
+  EXPORT reccord_info restore_start_point() const noexcept override;
 
 protected:
   mutable std::shared_mutex _locker;

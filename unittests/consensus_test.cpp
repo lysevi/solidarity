@@ -387,3 +387,44 @@ TEST_CASE("consensus.rollback") {
   cluster2 = nullptr;
   consumers.clear();
 }
+
+TEST_CASE("consensus.apply_journal_on_start") {
+  using rft::cluster_node;
+  using rft::consensus;
+  using rft::logdb::memory_journal;
+
+  auto cluster = std::make_shared<mock_cluster>();
+
+  size_t exists_nodes_count = 1;
+  std::vector<std::shared_ptr<mock_consumer>> consumers;
+  consumers.reserve(exists_nodes_count);
+
+  auto et = std::chrono::milliseconds(300);
+  auto jrn = memory_journal::make_new();
+
+  rft::command cmd;
+  cmd.data.resize(1);
+  cmd.data[0] = 0;
+
+  for (int i = 0; i < 10; ++i) {
+    cmd.data[0]+=2;
+    rft::logdb::log_entry le;
+    le.cmd = cmd;
+    le.term = 1;
+    auto ri = jrn->put(le);
+    jrn->commit(ri.lsn);
+  }
+
+  auto nname = "_" + std::to_string(size_t(1));
+  auto sett = rft::node_settings().set_name(nname).set_election_timeout(et);
+  auto consumer = std::make_shared<mock_consumer>();
+  consumers.push_back(consumer);
+  auto cons = std::make_shared<consensus>(sett, cluster.get(), jrn, consumer.get());
+  cluster->add_new(cluster_node().set_name(sett.name()), cons);
+
+  auto data_eq = [&cmd](const std::shared_ptr<mock_consumer> &c) -> bool {
+    return c->last_cmd.data == cmd.data;
+  };
+
+  EXPECT_EQ(consumer->last_cmd.data, cmd.data);
+}

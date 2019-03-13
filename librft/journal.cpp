@@ -100,6 +100,10 @@ reccord_info memory_journal::first_rec() const noexcept {
   return result;
 }
 
+reccord_info memory_journal::restore_start_point() const noexcept {
+  return first_rec();
+}
+
 void memory_journal::erase_all_after(const reccord_info &e) {
   std::lock_guard<std::shared_mutex> lg(_locker);
 
