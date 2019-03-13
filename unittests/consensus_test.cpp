@@ -24,14 +24,14 @@ TEST_CASE("consensus.add_nodes") {
                                               c_0_consumer.get());
 
   cluster->add_new(rft::cluster_node().set_name("_0"), c_0);
-  EXPECT_EQ(c_0->term(), rft::term_t(0));
+  EXPECT_EQ(c_0->term(), rft::UNDEFINED_TERM);
   EXPECT_EQ(c_0->state(), rft::NODE_KIND::FOLLOWER);
 
   while (c_0->state() != rft::NODE_KIND::LEADER) {
     c_0->heartbeat();
     cluster->print_cluster();
   }
-  EXPECT_EQ(c_0->term(), rft::term_t(1));
+  EXPECT_EQ(c_0->term(), rft::term_t(0));
 
   /// TWO NODES
   auto settings_1 = rft::node_settings().set_name("_1").set_election_timeout(
@@ -407,7 +407,7 @@ TEST_CASE("consensus.apply_journal_on_start") {
   cmd.data[0] = 0;
 
   for (int i = 0; i < 10; ++i) {
-    cmd.data[0]+=2;
+    cmd.data[0] += 2;
     rft::logdb::log_entry le;
     le.cmd = cmd;
     le.term = 1;

@@ -31,6 +31,7 @@ void node_state_t::change_state(const cluster_node &leader_, const term_t r) {
 changed_state_t node_state_t::on_vote(const node_state_t &self,
                                       const node_settings &settings,
                                       const cluster_node &self_addr,
+                                      const logdb::reccord_info commited,
                                       const size_t cluster_size,
                                       const cluster_node &from,
                                       const append_entries &e) {
@@ -50,7 +51,14 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
       break;
     }
     case NODE_KIND::FOLLOWER: {
-      if (result.leader.is_empty()) {
+      // vote to biggest journal.
+      auto sender_log_is_empty = commited.is_empty() && !e.commited.is_empty();
+      auto above_not_empty = !commited.is_empty() && !e.commited.is_empty();
+      auto my_log_is_smallest = commited.lsn <= e.commited.lsn;
+      auto sender_is_biggest
+          = sender_log_is_empty || (above_not_empty && my_log_is_smallest);
+
+      if (result.term <= e.term && sender_is_biggest) {
         result.node_kind = NODE_KIND::ELECTION;
         result.term = e.term;
         result.leader = e.leader;
@@ -164,8 +172,8 @@ node_state_t node_state_t::on_append_entries(const node_state_t &self,
 }
 
 node_state_t node_state_t::heartbeat(const node_state_t &self,
-                                        const cluster_node &self_addr,
-                                        const size_t cluster_size) {
+                                     const cluster_node &self_addr,
+                                     const size_t cluster_size) {
   node_state_t result = self;
   if (result.node_kind != NODE_KIND::LEADER && result.is_heartbeat_missed()) {
     result.leader.clear();
