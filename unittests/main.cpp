@@ -16,16 +16,17 @@ public:
   std::unique_ptr<std::ofstream> _output;
   UnitTestLogger(bool write_to_file = true) : _write_to_file(write_to_file) {
     if (_write_to_file) {
-      auto cur_time = std::chrono::system_clock::now();
-      std::time_t tt = std::chrono::system_clock::to_time_t(cur_time);
-      tm *ptm = gmtime(&tt);
+     
 
       std::stringstream fname_ss;
       fname_ss << "solidarity_unittests_";
+     /* auto cur_time = std::chrono::system_clock::now();
+      std::time_t tt = std::chrono::system_clock::to_time_t(cur_time);
+      tm *ptm = gmtime(&tt);
       char buf[1024];
       std::fill(std::begin(buf), std::end(buf), '\0');
       std::strftime(buf, 1024, "%F", ptm);
-      fname_ss << buf;
+      fname_ss << buf;*/
       fname_ss << ".log";
 	  
       auto logname = fname_ss.str();
