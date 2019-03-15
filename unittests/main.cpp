@@ -70,8 +70,9 @@ public:
       if (verbose) {
         std::cout << ss.str();
       } else {
-
-        _messages.push_back(ss.str());
+        if (!_write_to_file) {
+          _messages.push_back(ss.str());
+        }
       }
     }
   }

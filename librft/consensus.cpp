@@ -381,6 +381,7 @@ void consensus::heartbeat() {
       _last_sended.clear();
       auto ae = make_append_entries();
       ae.kind = entries_kind_t::VOTE;
+      logger_info("node: ", _settings.name(), ":send all vote. ");
       _cluster->send_all(_self_addr, ae);
     }
   }
