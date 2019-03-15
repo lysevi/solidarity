@@ -50,7 +50,8 @@ void mock_cluster::send_all(const rft::cluster_node &from, const rft::append_ent
 void mock_cluster::add_new(const rft::cluster_node &addr,
                            const std::shared_ptr<rft::consensus> &c) {
   std::lock_guard<std::shared_mutex> lg(_cluster_locker);
-  if (_worker_thread.size() < std::thread::hardware_concurrency()) {
+  // if (_worker_thread.size() < std::thread::hardware_concurrency())
+  if (_worker_thread.empty()) {
     _worker_thread.emplace_back(std::thread([this]() { this->worker(); }));
     _worker_thread_count++;
   }
