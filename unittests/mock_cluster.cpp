@@ -50,7 +50,7 @@ void mock_cluster::send_all(const rft::cluster_node &from, const rft::append_ent
 void mock_cluster::add_new(const rft::cluster_node &addr,
                            const std::shared_ptr<rft::consensus> &c) {
   std::lock_guard<std::shared_mutex> lg(_cluster_locker);
-  if (_worker_thread.size() < 5) {
+  if (_worker_thread.size() < std::thread::hardware_concurrency()) {
     _worker_thread.emplace_back(std::thread([this]() { this->worker(); }));
     _worker_thread_count++;
   }
@@ -172,6 +172,7 @@ void mock_cluster::worker() {
 
   } catch (std::exception &ex) {
     utils::logging::logger_fatal("mock_cluster: worker error:", ex.what());
+    std::abort();
   }
   _is_worker_active--;
 }
