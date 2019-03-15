@@ -84,7 +84,7 @@ append_entries consensus::make_append_entries(const entries_kind_t kind) const n
   return ae;
 }
 
-void consensus::send(const entries_kind_t kind) {
+void consensus::send_all(const entries_kind_t kind) {
   _cluster->send_all(_self_addr, make_append_entries(kind));
 }
 
@@ -168,7 +168,7 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
 
   switch (change_state_v.notify) {
   case NOTIFY_TARGET::ALL: {
-    send(entries_kind_t::VOTE);
+    send_all(entries_kind_t::VOTE);
     break;
   }
   case NOTIFY_TARGET::SENDER: {
