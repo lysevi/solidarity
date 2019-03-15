@@ -107,7 +107,9 @@ void consensus::on_heartbeat(const cluster_node &from, const append_entries &e) 
   _state.last_heartbeat_time = clock_t::now();
   if (old_s.leader.is_empty() || old_s.leader != _state.leader
       || old_s.node_kind != _state.node_kind) {
-
+    logger_info("node: ", _settings.name(),
+                ":on_heartbeat. change leader from: ", old_s.leader, " => ",
+                _state.leader);
     _log_state.clear();
     log_fsck(e);
     logger_info("node: ", _settings.name(), ": send hello to ", from);
@@ -117,6 +119,7 @@ void consensus::on_heartbeat(const cluster_node &from, const append_entries &e) 
 
 /// clear uncommited reccord in journal
 void consensus::log_fsck(const append_entries &e) {
+  /// TODO really need this?
   bool reset = false;
   logdb::reccord_info to_erase{};
   if (e.prev.lsn != _jrn->prev_rec().lsn) {
@@ -162,7 +165,8 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
       _state.votes_to_me.clear();
       _log_state[_self_addr] = _jrn->prev_rec();
     } else {
-      logger_info("node: ", _settings.name(), ": change state ", old_s, " => ", _state);
+      logger_info("node: ", _settings.name(), ":on_vote. change state ", old_s, " => ",
+                  _state);
     }
   }
 
@@ -213,10 +217,14 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
     break;
   }
   case entries_kind_t::HELLO: {
-    logger_info("node: ", _settings.name(), ": log_state:", _log_state[from], " => ",
-                e.prev);
-    _log_state[from] = e.prev;
+    auto it = _log_state.find(from);
 
+    /// TODO what if the sender clean log and resend hello? it is possible?
+    if (it == _log_state.end() || it->second.is_empty()) {
+      logger_info("node: ", _settings.name(), ": hello. update log_state[", from,
+                  "]:", _log_state[from], " => ", e.prev);
+      _log_state[from] = e.prev;
+    }
     // replicate_log();
     break;
   }
@@ -358,8 +366,8 @@ void consensus::heartbeat() {
     const auto ns = node_state_t::heartbeat(_state, _self_addr, _cluster->size());
     _state = ns;
 
-    logger_info("node: ", _settings.name(), ": {", _state.node_kind, "} => - ",
-                _state.leader);
+    logger_info("node: ", _settings.name(), ":heartbeat. ", _state.node_kind, "=> ",
+                old_s.node_kind, " leader:", _state.leader);
   }
 
   if (_state.node_kind == NODE_KIND::CANDIDATE || _state.node_kind == NODE_KIND::LEADER) {
@@ -386,6 +394,8 @@ void consensus::replicate_log() {
   // TODO check if log is empty.
   auto self_log_state = _log_state[_self_addr];
   auto all = _cluster->all_nodes();
+  /*auto jrn_sz = _jrn->size();
+  auto jrn_is_empty = jrn_sz == size_t(0);*/
   for (const auto &naddr : all) {
     if (naddr == _self_addr) {
       continue;
@@ -395,7 +405,9 @@ void consensus::replicate_log() {
       send(naddr, entries_kind_t::HEARTBEAT);
       continue;
     }
-    if (kv->second.is_empty() || kv->second.lsn < self_log_state.lsn) {
+    bool is_append = false;
+    if (kv->second.is_empty()
+        || /*!self_log_state.is_empty() && */ kv->second.lsn < self_log_state.lsn) {
       logger_info("node: ", _settings.name(), ": check replication for ", kv->first,
                   " => lsn:", kv->second.lsn, " < self.lsn:", self_log_state.lsn,
                   "==", kv->second.lsn < self_log_state.lsn, " term:", kv->second.term,
@@ -408,23 +420,26 @@ void consensus::replicate_log() {
       } else {
         ++lsn_to_replicate; // we need a next record;
       }
-      if (_last_sended[kv->first].lsn == lsn_to_replicate) {
-        continue;
+      if (_last_sended[kv->first].lsn != lsn_to_replicate) {
+        auto ae = make_append_entries(rft::entries_kind_t::APPEND);
+        auto cur = _jrn->get(lsn_to_replicate);
+        ae.current.lsn = lsn_to_replicate;
+        ae.current.term = cur.term;
+        ae.cmd = cur.cmd;
+        if (!kv->second.is_empty()) {
+          auto prev = _jrn->get(kv->second.lsn);
+          ae.prev.lsn = kv->second.lsn;
+          ae.prev.term = kv->second.term;
+        }
+        _last_sended[kv->first] = ae.current;
+        logger_info("node: ", _settings.name(), ": replicate ", ae.current, " to ",
+                    kv->first);
+        _cluster->send_to(_self_addr, kv->first, ae);
+        is_append = true;
       }
-      auto ae = make_append_entries(rft::entries_kind_t::APPEND);
-      auto cur = _jrn->get(lsn_to_replicate);
-      ae.current.lsn = lsn_to_replicate;
-      ae.current.term = cur.term;
-      ae.cmd = cur.cmd;
-      if (!kv->second.is_empty()) {
-        auto prev = _jrn->get(kv->second.lsn);
-        ae.prev.lsn = kv->second.lsn;
-        ae.prev.term = kv->second.term;
-      }
-      _last_sended[kv->first] = ae.current;
-      logger_info("node: ", _settings.name(), ": replicate ", ae.current, " to ",
-                  kv->first);
-      _cluster->send_to(_self_addr, kv->first, ae);
+    }
+    if (!is_append) {
+      send(naddr, entries_kind_t::HEARTBEAT);
     }
   }
 }
