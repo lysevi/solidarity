@@ -50,7 +50,7 @@ log_entry memory_journal::get(const logdb::index_t lsn) {
     return wal_it->second;
   }
 
-  throw std::exception("data not founded");
+  throw std::exception("memory_journal: data not founded");
 }
 
 size_t memory_journal::size() const {
