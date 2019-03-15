@@ -9,7 +9,7 @@ namespace logdb {
 
 std::string to_string(const reccord_info &ri) {
   std::stringstream ss;
-  ss << "{r:" << ri.term << ", lsn:" << ri.lsn << "}";
+  ss << "{t:" << ri.term << ", lsn:" << ri.lsn << "}";
   return ss.str();
 }
 } // namespace logdb
