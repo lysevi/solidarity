@@ -49,6 +49,7 @@ public:
   virtual void send_all(const cluster_node &from, const append_entries &m) = 0;
   /// total nodes count
   virtual size_t size() = 0;
+  virtual std::vector<cluster_node> all_nodes() const = 0;
 };
 }; // namespace rft
 

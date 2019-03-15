@@ -217,7 +217,7 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
                 e.prev);
     _log_state[from] = e.prev;
 
-    replicate_log();
+    // replicate_log();
     break;
   }
   case entries_kind_t::VOTE: {
@@ -337,7 +337,7 @@ void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) 
       commit_reccord(target);
     }
   }
-  replicate_log();
+  // replicate_log();
 }
 
 void consensus::commit_reccord(const logdb::reccord_info &target) {
@@ -363,44 +363,52 @@ void consensus::heartbeat() {
   }
 
   if (_state.node_kind == NODE_KIND::CANDIDATE || _state.node_kind == NODE_KIND::LEADER) {
-    auto ae = make_append_entries();
+
     if (_state.node_kind == NODE_KIND::LEADER) { /// CANDIDATE => LEADER
-      // logger_info("node: ", _settings.name(), ": heartbeat");
-      ae.kind = entries_kind_t::HEARTBEAT;
       if (_log_state.find(_self_addr) == _log_state.end()) {
         _log_state[_self_addr] = _jrn->prev_rec();
       }
+      replicate_log();
     } else { /// CANDIDATE => CANDIDATE
       _log_state.clear();
       _log_state[_self_addr] = _jrn->prev_rec();
       _last_sended.clear();
+      auto ae = make_append_entries();
       ae.kind = entries_kind_t::VOTE;
+      _cluster->send_all(_self_addr, ae);
     }
-    _cluster->send_all(_self_addr, ae);
   }
   update_next_heartbeat_interval();
 }
 
 void consensus::replicate_log() {
+  logger_info("node: ", _settings.name(), ": log replication");
   // TODO check if log is empty.
   auto self_log_state = _log_state[_self_addr];
-  for (auto &kv : _log_state) {
-    if (kv.first == _self_addr) {
+  auto all = _cluster->all_nodes();
+  for (const auto &naddr : all) {
+    if (naddr == _self_addr) {
       continue;
     }
-    logger_info("node: ", _settings.name(), ": check replication for ", kv.first,
-                " => lsn:", kv.second.lsn, " < self.lsn:", self_log_state.lsn,
-                "==", kv.second.lsn < self_log_state.lsn, " term:", kv.second.term,
-                "== self.term:", self_log_state.term,
-                " ==", kv.second.term == self_log_state.term);
-    if (kv.second.is_empty() || kv.second.lsn < self_log_state.lsn) {
-      auto lsn_to_replicate = kv.second.lsn;
-      if (kv.second.is_empty()) {
+    auto kv = _log_state.find(naddr);
+    if (kv == _log_state.end()) {
+      send(naddr, entries_kind_t::HEARTBEAT);
+      continue;
+    }
+    if (kv->second.is_empty() || kv->second.lsn < self_log_state.lsn) {
+      logger_info("node: ", _settings.name(), ": check replication for ", kv->first,
+                  " => lsn:", kv->second.lsn, " < self.lsn:", self_log_state.lsn,
+                  "==", kv->second.lsn < self_log_state.lsn, " term:", kv->second.term,
+                  "== self.term:", self_log_state.term,
+                  " ==", kv->second.term == self_log_state.term);
+
+      auto lsn_to_replicate = kv->second.lsn;
+      if (kv->second.is_empty()) {
         lsn_to_replicate = _jrn->first_rec().lsn;
       } else {
         ++lsn_to_replicate; // we need a next record;
       }
-      if (_last_sended[kv.first].lsn == lsn_to_replicate) {
+      if (_last_sended[kv->first].lsn == lsn_to_replicate) {
         continue;
       }
       auto ae = make_append_entries(rft::entries_kind_t::APPEND);
@@ -408,15 +416,15 @@ void consensus::replicate_log() {
       ae.current.lsn = lsn_to_replicate;
       ae.current.term = cur.term;
       ae.cmd = cur.cmd;
-      if (!kv.second.is_empty()) {
-        auto prev = _jrn->get(kv.second.lsn);
-        ae.prev.lsn = kv.second.lsn;
-        ae.prev.term = kv.second.term;
+      if (!kv->second.is_empty()) {
+        auto prev = _jrn->get(kv->second.lsn);
+        ae.prev.lsn = kv->second.lsn;
+        ae.prev.term = kv->second.term;
       }
-      _last_sended[kv.first] = ae.current;
+      _last_sended[kv->first] = ae.current;
       logger_info("node: ", _settings.name(), ": replicate ", ae.current, " to ",
-                  kv.first);
-      _cluster->send_to(_self_addr, kv.first, ae);
+                  kv->first);
+      _cluster->send_to(_self_addr, kv->first, ae);
     }
   }
 }

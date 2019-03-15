@@ -118,6 +118,20 @@ size_t mock_cluster::size() {
   return _cluster.size() - _stoped.size();
 }
 
+std::vector<rft::cluster_node> mock_cluster::all_nodes() const {
+  std::shared_lock<std::shared_mutex> lg(_cluster_locker);
+  std::vector<rft::cluster_node> result;
+  if (_cluster.size() != _stoped.size()) {
+    result.reserve(_cluster.size() - _stoped.size());
+    for (const auto &kv : _cluster) {
+      if (_stoped.find(kv.first) == _stoped.end()) {
+        result.push_back(kv.first);
+      }
+    }
+  }
+  return result;
+}
+
 void mock_cluster::worker() {
   _is_worker_active++;
   try {

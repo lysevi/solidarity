@@ -22,9 +22,11 @@ public:
 
   void send_to(const rft::cluster_node &from,
                const rft::cluster_node &to,
-               const rft::append_entries &m);
+               const rft::append_entries &m) override;
 
-  void send_all(const rft::cluster_node &from, const rft::append_entries &m);
+  void send_all(const rft::cluster_node &from, const rft::append_entries &m) override;
+  size_t size() override;
+  std::vector<rft::cluster_node> all_nodes()const override;
 
   void add_new(const rft::cluster_node &addr, const std::shared_ptr<rft::consensus> &c);
 
@@ -39,7 +41,7 @@ public:
 
   void erase_if(std::function<bool(const std::shared_ptr<rft::consensus>)> pred);
 
-  size_t size() override;
+  
 
   void wait_leader_eletion(size_t max_leaders=1);
   bool is_leader_eletion_complete(size_t max_leaders=1);
