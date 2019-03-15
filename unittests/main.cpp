@@ -9,32 +9,32 @@
 #include <list>
 #include <sstream>
 
-class UnitTestLogger final: public utils::logging::abstract_logger {
+class UnitTestLogger final : public utils::logging::abstract_logger {
 public:
   static bool verbose;
   bool _write_to_file;
   std::unique_ptr<std::ofstream> _output;
-  UnitTestLogger(bool write_to_file = true) : _write_to_file(write_to_file) {
+  UnitTestLogger(bool write_to_file = true)
+      : _write_to_file(write_to_file) {
     if (_write_to_file) {
-     
 
       std::stringstream fname_ss;
-      fname_ss << "solidarity_unittests_";
-     /* auto cur_time = std::chrono::system_clock::now();
-      std::time_t tt = std::chrono::system_clock::to_time_t(cur_time);
-      tm *ptm = gmtime(&tt);
-      char buf[1024];
-      std::fill(std::begin(buf), std::end(buf), '\0');
-      std::strftime(buf, 1024, "%F", ptm);
-      fname_ss << buf;*/
+      fname_ss << "solidarity_unittests";
+      /* auto cur_time = std::chrono::system_clock::now();
+       std::time_t tt = std::chrono::system_clock::to_time_t(cur_time);
+       tm *ptm = gmtime(&tt);
+       char buf[1024];
+       std::fill(std::begin(buf), std::end(buf), '\0');
+       std::strftime(buf, 1024, "%F", ptm);
+       fname_ss <<"_"<< buf;*/
       fname_ss << ".log";
-	  
+
       auto logname = fname_ss.str();
       if (verbose) {
         std::cout << "See output in " << logname << std::endl;
       }
       _output = std::make_unique<std::ofstream>(logname, std::ofstream::app);
-      (*_output) << "Start programm"<<std::endl;
+      (*_output) << "Start programm" << std::endl;
     }
   }
   ~UnitTestLogger() {}
@@ -60,7 +60,7 @@ public:
 
     if (_write_to_file) {
       (*_output) << ss.str();
-	  _output->flush();
+      _output->flush();
       _output->flush();
     }
 
