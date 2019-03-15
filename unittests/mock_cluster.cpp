@@ -172,7 +172,7 @@ void mock_cluster::worker() {
 
   } catch (std::exception &ex) {
     utils::logging::logger_fatal("mock_cluster: worker error:", ex.what());
-    std::abort();
+    std::exit(1);
   }
   _is_worker_active--;
 }
