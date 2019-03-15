@@ -220,7 +220,8 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
     auto it = _log_state.find(from);
 
     /// TODO what if the sender clean log and resend hello? it is possible?
-    if (it == _log_state.end() || it->second.is_empty()) {
+    //if (it == _log_state.end() || it->second.is_empty()) 
+	{
       logger_info("node: ", _settings.name(), ": hello. update log_state[", from,
                   "]:", _log_state[from], " => ", e.prev);
       _log_state[from] = e.prev;

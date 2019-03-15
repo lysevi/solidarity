@@ -1,60 +1,121 @@
 #include "mock_cluster.h"
 #include <libutils/logger.h>
+#include <libutils/utils.h>
 #include <algorithm>
+#include <cassert>
+
+worker_t::worker_t(std::shared_ptr<rft::consensus> t) {
+  _target = t;
+  self_addr = _target->self_addr();
+  _tread = std::thread([this]() { this->worker(); });
+}
+
+worker_t::~worker_t() {}
+
+void worker_t::stop() {
+  while (!_is_stoped) {
+    _stop_flag = true;
+    _cond.notify_all();
+  }
+  _tread.join();
+  /* try {
+     _tread.join();
+   } catch (...) {
+   }*/
+  /* while (_tread.joinable()) {
+     std::this_thread::yield();
+   }*/
+}
+
+void worker_t::add_task(const message_t &mt) {
+  {
+    std::lock_guard<std::mutex> l(_tasks_locker);
+    ENSURE(mt.to == self_addr);
+    _tasks.push_back(mt);
+  }
+  _cond.notify_all();
+}
+
+void worker_t::worker() {
+  try {
+    while (!_stop_flag) {
+      std::vector<message_t> local_copy;
+      {
+        std::unique_lock<std::mutex> ul(_tasks_locker);
+        _cond.wait(ul, [this] { return this->_stop_flag || !this->_tasks.empty(); });
+        if (_stop_flag) {
+          break;
+        }
+        if (_tasks.empty()) {
+          continue;
+        }
+        local_copy.reserve(_tasks.size());
+        std::copy(_tasks.begin(), _tasks.end(), std::back_inserter(local_copy));
+        _tasks.clear();
+      }
+      for (auto &&v : local_copy) {
+        if (!_is_node_stoped) {
+          _target->recv(v.from, v.m);
+        }
+      }
+      local_copy.clear();
+    }
+
+  } catch (std::exception &ex) {
+    utils::logging::logger_fatal("mock_cluster: worker ", _target->self_addr(),
+                                 " error:", ex.what());
+    std::exit(1);
+  }
+  _is_stoped = true;
+}
 
 mock_cluster::mock_cluster() {}
 
 mock_cluster::~mock_cluster() {
   utils::logging::logger_info("~ mock_cluster ");
-  if (!_worker_thread.empty()) {
-    stop_workers();
-  }
+  stop_workers();
 }
 
 void mock_cluster::start_workers() {
-  _stop_flag = false;
-  for (size_t i = 0; i < _worker_thread_count; ++i) {
-    _worker_thread.emplace_back(std::thread([this]() { this->worker(); }));
+  std::lock_guard<std::shared_mutex> l(_cluster_locker);
+  for (auto &kv : _cluster) {
+    _workers[kv.first] = std::shared_ptr<worker_t>();
   }
 }
 
 void mock_cluster::stop_workers() {
-  while (_is_worker_active.load() != size_t(0)) {
-    _stop_flag = true;
-    _cond.notify_all();
+  {
+    std::shared_lock<std::shared_mutex> l(_cluster_locker);
+    for (auto &v : _workers) {
+      v.second->stop();
+    }
   }
-  for (auto &&t : _worker_thread) {
-    t.join();
-  }
-  _worker_thread.clear();
+  std::lock_guard<std::shared_mutex> l(_cluster_locker);
+  _workers.clear();
 }
 
 void mock_cluster::send_to(const rft::cluster_node &from,
                            const rft::cluster_node &to,
                            const rft::append_entries &m) {
-  std::unique_lock<std::mutex> ul(_tasks_locker);
-  _tasks.emplace_back<mock_cluster::message_t>({from, to, m});
-  _cond.notify_all();
+  std::shared_lock<std::shared_mutex> ul(_cluster_locker);
+  _workers[to]->add_task(message_t{from, to, m});
 }
 
 void mock_cluster::send_all(const rft::cluster_node &from, const rft::append_entries &m) {
-  std::unique_lock<std::mutex> lg(_tasks_locker);
+  std::shared_lock<std::shared_mutex> lg(_cluster_locker);
   for (const auto &kv : _cluster) {
     if (kv.first != from) {
-      _tasks.push_back({from, kv.first, m});
+      message_t me{from, kv.first, m};
+      _workers[kv.first]->add_task(me);
     }
   }
-  _cond.notify_all();
 }
 
 void mock_cluster::add_new(const rft::cluster_node &addr,
                            const std::shared_ptr<rft::consensus> &c) {
   std::lock_guard<std::shared_mutex> lg(_cluster_locker);
   // if (_worker_thread.size() < std::thread::hardware_concurrency())
-  if (_worker_thread.empty()) {
-    _worker_thread.emplace_back(std::thread([this]() { this->worker(); }));
-    _worker_thread_count++;
-  }
+  _workers[addr] = std::make_shared<worker_t>(c);
   c->set_cluster(this);
   _cluster[addr] = c;
 }
@@ -103,6 +164,7 @@ void mock_cluster::erase_if(
   if (it != _cluster.end()) {
     auto key = it->first;
     _cluster.erase(key);
+    std::deque<message_t> &_tasks = _workers[key]->_tasks;
     _tasks.erase(std::remove_if(_tasks.begin(), _tasks.end(),
                                 [key](const message_t &m) -> bool {
                                   return m.from == key || m.to == key;
@@ -131,51 +193,6 @@ std::vector<rft::cluster_node> mock_cluster::all_nodes() const {
     }
   }
   return result;
-}
-
-void mock_cluster::worker() {
-  _is_worker_active++;
-  try {
-
-    while (!_stop_flag) {
-      std::vector<message_t> local_copy;
-      {
-        std::unique_lock<std::mutex> ul(_tasks_locker);
-        _cond.wait(ul, [this] { return this->_stop_flag || !this->_tasks.empty(); });
-        if (_stop_flag) {
-          break;
-        }
-        if (_tasks.empty()) {
-          continue;
-        }
-        local_copy.reserve(_tasks.size());
-        std::copy(_tasks.begin(), _tasks.end(), std::back_inserter(local_copy));
-        _tasks.clear();
-      }
-      for (auto &&v : local_copy) {
-        std::shared_ptr<rft::consensus> target = nullptr;
-        {
-          std::shared_lock<std::shared_mutex> lg(_cluster_locker);
-          auto it = _cluster.find(v.to);
-
-          if (it == _cluster.cend()) {
-            continue;
-          } else {
-            target = it->second;
-          }
-        }
-        if (_stoped.find(v.to) == _stoped.end()) {
-          target->recv(v.from, v.m);
-        }
-      }
-      local_copy.clear();
-    }
-
-  } catch (std::exception &ex) {
-    utils::logging::logger_fatal("mock_cluster: worker error:", ex.what());
-    std::exit(1);
-  }
-  _is_worker_active--;
 }
 
 void mock_cluster::wait_leader_eletion(size_t max_leaders) {
@@ -233,6 +250,7 @@ std::shared_ptr<mock_cluster> mock_cluster::split(size_t count_to_move) {
     result->add_new(it->first, it->second);
 
     _cluster.erase(it);
+    std::deque<message_t> &_tasks = _workers[it->first]->_tasks;
     _tasks.erase(std::remove_if(_tasks.begin(), _tasks.end(),
                                 [it](const message_t &m) -> bool {
                                   return m.from == it->first || m.to == it->first;
