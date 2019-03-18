@@ -34,7 +34,7 @@ logger_manager *logger_manager::instance() noexcept {
   return tmp;
 }
 
-abstract_logger *logger_manager::logger() noexcept {
+abstract_logger *logger_manager::get_logger() noexcept {
   return _logger.get();
 }
 
