@@ -86,9 +86,9 @@ TEST_CASE("consensus") {
     SECTION("consensus.append.5") { nodes_count = 5; }
     SECTION("consensus.append.7") { nodes_count = 7; }
     SECTION("consensus.append.10") { nodes_count = 10; }
-#if !defined(DEBUG)
-    SECTION("consensus.append.15") { nodes_count = 15; }
-#endif
+//#if !defined(DEBUG)
+//    SECTION("consensus.append.15") { nodes_count = 15; }
+//#endif
   }
 
   SECTION("consensus.election.election") {
@@ -97,9 +97,9 @@ TEST_CASE("consensus") {
     SECTION("consensus.election.5") { nodes_count = 5; }
     SECTION("consensus.election.7") { nodes_count = 7; }
     SECTION("consensus.election.10") { nodes_count = 10; }
-#if !defined(DEBUG)
-    SECTION("consensus.election.15") { nodes_count = 15; }
-#endif
+//#if !defined(DEBUG)
+//    SECTION("consensus.election.15") { nodes_count = 15; }
+//#endif
   }
 
   std::vector<std::shared_ptr<mock_consumer>> consumers;
@@ -161,6 +161,10 @@ TEST_CASE("consensus") {
     } else {
 
       for (int i = 0; i < 10; ++i) {
+        leaders = cluster->by_filter(is_leader_pred);
+        if (leaders.size() != size_t(1)) {
+          cluster->wait_leader_eletion();
+        }
         cmd.data[0]++;
         leaders[0]->add_command(cmd);
         while (true) {
