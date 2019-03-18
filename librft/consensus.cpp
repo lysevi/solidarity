@@ -51,24 +51,37 @@ void consensus::set_cluster(abstract_cluster *cluster) {
 
 void consensus::update_next_heartbeat_interval() {
   const auto total_mls = _settings.election_timeout().count();
-  double k1 = 1.5, k2 = 2.0;
-  if (_state.node_kind == NODE_KIND::LEADER) {
-    k1 = 0.5;
-    k2 = 1;
+  uint64_t hbi = 0;
+  switch (_state.node_kind) {
+  case NODE_KIND::LEADER: {
+    hbi = uint64_t(total_mls / 2.0);
+    break;
   }
-  if (_state.node_kind == NODE_KIND::ELECTION) {
-    k1 = 0.5;
-    k2 = 1.0;
+  case NODE_KIND::FOLLOWER: {
+    hbi = uint64_t(total_mls * 1.5);
+    break;
   }
-  if (_state.node_kind == NODE_KIND::CANDIDATE) {
-    k1 = 1.0;
-    k2 = 1.0 * _state.election_round;
+  case NODE_KIND::ELECTION: {
+    auto k1 = 0.5;
+    auto k2 = 1.0;
+    std::uniform_int_distribution<uint64_t> distr(uint64_t(total_mls * k1),
+                                                  uint64_t(total_mls * k2));
+    hbi = distr(_rnd_eng);
+    break;
+  }
+  case NODE_KIND::CANDIDATE: {
+    auto k1 = 1.0;
+    auto k2 = 1.0 * _state.election_round;
+    std::uniform_int_distribution<uint64_t> distr(uint64_t(total_mls * k1),
+                                                  uint64_t(total_mls * k2));
+    hbi = distr(_rnd_eng);
+    break;
+  }
+  default:
+    NOT_IMPLEMENTED;
   }
 
-  std::uniform_int_distribution<uint64_t> distr(uint64_t(total_mls * k1),
-                                                uint64_t(total_mls * k2));
-
-  _state.next_heartbeat_interval = std::chrono::milliseconds(distr(_rnd_eng));
+  _state.next_heartbeat_interval = std::chrono::milliseconds(hbi);
   /*logger_info("node: ", _settings.name(), ": next heartbeat is ",
               _state.next_heartbeat_interval.count());*/
 }
