@@ -167,30 +167,25 @@ void mock_cluster::print_cluster() {
 void mock_cluster::erase_if(
     std::function<bool(const std::shared_ptr<rft::consensus>)> pred) {
 
-  std::shared_ptr<rft::consensus> target = nullptr;
+  rft::cluster_node target;
   {
     std::lock_guard<std::shared_mutex> lg(_cluster_locker);
     auto it = std::find_if(_cluster.begin(), _cluster.end(),
                            [pred](auto kv) { return pred(kv.second); });
     if (it != _cluster.end()) {
-      target = it->second;
-      auto key = it->first;
-      _cluster.erase(key);
+      target = it->first;
+      _cluster.erase(target);
       update_size();
-      std::deque<message_t> &_tasks = _workers[key]->_tasks;
-      _tasks.erase(std::remove_if(_tasks.begin(), _tasks.end(),
-                                  [key](const message_t &m) -> bool {
-                                    return m.from == key || m.to == key;
-                                  }),
-                   _tasks.end());
-      _workers[key]->stop();
-      _workers.erase(key);
+      _workers[target]->stop();
+      _workers.erase(target);
+    } else {
+      return;
     }
   }
-  if (target != nullptr) {
+  if (!target.is_empty()) {
     std::shared_lock<std::shared_mutex> lg(_cluster_locker);
     for (auto &kv : _cluster) {
-      kv.second->lost_connection_with(target->self_addr());
+      kv.second->lost_connection_with(target);
     }
   }
 }
