@@ -34,6 +34,10 @@ logger_manager *logger_manager::instance() noexcept {
   return tmp;
 }
 
+abstract_logger *logger_manager::logger() noexcept {
+  return _logger.get();
+}
+
 logger_manager::logger_manager(abstract_logger_ptr &logger) {
   _logger = logger;
 }
@@ -43,7 +47,7 @@ void console_logger::message(message_kind kind, const std::string &msg) noexcept
     return;
   }
   switch (kind) {
-  case message_kind::fatal: 
+  case message_kind::fatal:
     std::cerr << "[err] " << msg << std::endl;
     break;
   case message_kind::warn:

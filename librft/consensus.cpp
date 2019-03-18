@@ -4,7 +4,6 @@
 #include <sstream>
 
 using namespace rft;
-using namespace utils::logging;
 
 namespace {
 inline std::mt19937 make_seeded_engine() {
@@ -23,9 +22,14 @@ consensus::consensus(const node_settings &ns,
     , _cluster(cluster)
     , _jrn(jrn)
     , _rnd_eng(make_seeded_engine()) {
+  auto log_prefix = utils::strings::args_to_string("node ", ns.name(), ": ");
+  _logger = std::make_shared<utils::logging::prefix_logger>(
+      utils::logging::logger_manager::instance()->logger(), log_prefix);
+
   ENSURE(_consumer != nullptr);
-  logger_info("node ", ns.name(),
-              ": election_timeout(ms)=", ns.election_timeout().count());
+  _logger->logger_info("election_timeout(ms)=", ns.election_timeout().count());
+  _logger->logger_info("append_quorum(%)=", ns.append_quorum());
+  _logger->logger_info("vote_quorum(%)=", ns.vote_quorum());
 
   _self_addr.set_name(_settings.name());
 
@@ -107,7 +111,7 @@ void consensus::send(const cluster_node &to, const entries_kind_t kind) {
 
 void consensus::lost_connection_with(const cluster_node &addr) {
   std::lock_guard<std::mutex> lg(_locker);
-  logger_info("node: ", _settings.name(), ": lost connection with ", addr);
+  _logger->logger_info("lost connection with ", addr);
   _log_state.erase(addr);
   _last_sended.erase(addr);
   _state.votes_to_me.erase(addr);
@@ -120,12 +124,11 @@ void consensus::on_heartbeat(const cluster_node &from, const append_entries &e) 
   _state.last_heartbeat_time = clock_t::now();
   if (old_s.leader.is_empty() || old_s.leader != _state.leader
       || old_s.node_kind != _state.node_kind) {
-    logger_info("node: ", _settings.name(),
-                ":on_heartbeat. change leader from: ", old_s.leader, " => ",
-                _state.leader);
+    _logger->logger_info("on_heartbeat. change leader from: ", old_s.leader, " => ",
+                         _state.leader);
     _log_state.clear();
     log_fsck(e);
-    logger_info("node: ", _settings.name(), ": send hello to ", from);
+    _logger->logger_info("send hello to ", from);
     send(from, entries_kind_t::HELLO);
   }
 }
@@ -136,16 +139,14 @@ void consensus::log_fsck(const append_entries &e) {
   bool reset = false;
   logdb::reccord_info to_erase{};
   if (e.prev.lsn != _jrn->prev_rec().lsn) {
-    logger_info("node: ", _settings.name(), ": erase prev ", _jrn->prev_rec(), " => ",
-                e.prev);
+    _logger->logger_info("erase prev ", _jrn->prev_rec(), " => ", e.prev);
     reset = true;
     to_erase = e.prev;
   }
   if (e.commited.lsn != _jrn->commited_rec().lsn) {
     reset = true;
     if (to_erase.is_empty() || e.commited.lsn < to_erase.lsn) {
-      logger_info("node: ", _settings.name(), ": erase commited ", _jrn->commited_rec(),
-                  " => ", e.commited);
+      _logger->logger_info("erase commited ", _jrn->commited_rec(), " => ", e.commited);
       to_erase = e.commited;
     }
   }
@@ -154,7 +155,7 @@ void consensus::log_fsck(const append_entries &e) {
     _consumer->reset();
     auto f = [this](const logdb::log_entry &le) { _consumer->apply_cmd(le.cmd); };
     _jrn->visit(f);
-    logger_info("node: ", _settings.name(), ": consumer restored ");
+    _logger->logger_info("consumer restored ");
   }
 }
 
@@ -173,13 +174,11 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
       for (auto &&v : ns.votes_to_me) {
         ss << v.name() << ", ";
       }
-      logger_info("node: ", _settings.name(), ": quorum. i'am new leader with ", sz,
-                  " voices - ", ss.str());
+      _logger->logger_info("quorum. i'am new leader with ", sz, " voices - ", ss.str());
       _state.votes_to_me.clear();
       _log_state[_self_addr] = _jrn->prev_rec();
     } else {
-      logger_info("node: ", _settings.name(), ":on_vote. change state ", old_s, " => ",
-                  _state);
+      _logger->logger_info("on_vote. change state ", old_s, " => ", _state);
     }
   }
 
@@ -212,11 +211,11 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
   /// but with new election term.
   if (e.kind != entries_kind_t::VOTE && _self_addr == _state.leader
       && e.term > _state.term && !e.leader.is_empty()) {
-    logger_info("node: ", _settings.name(), ": change state to follower");
+    _logger->logger_info("change state to follower");
     _state.leader.clear();
     _state.change_state(NODE_KIND::FOLLOWER, e.term, e.leader);
     log_fsck(e);
-    logger_info("node: ", _settings.name(), ": send hello to ", from);
+    _logger->logger_info("send hello to ", from);
     send(e.leader, entries_kind_t::HELLO);
     _log_state.clear();
     _state.votes_to_me.clear();
@@ -235,8 +234,8 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
     /// TODO what if the sender clean log and resend hello? it is possible?
     // if (it == _log_state.end() || it->second.is_empty())
     {
-      logger_info("node: ", _settings.name(), ": hello. update log_state[", from,
-                  "]:", _log_state[from], " => ", e.prev);
+      _logger->logger_info("hello. update log_state[", from, "]:", _log_state[from],
+                           " => ", e.prev);
       _log_state[from] = e.prev;
     }
     // replicate_log();
@@ -272,8 +271,7 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
 
   auto self_prev = _jrn->prev_rec();
   if (e.prev != self_prev && !self_prev.is_empty()) {
-    logger_fatal("node: ", _settings.name(), ": wrong entry from:", from, " ", e.prev,
-                 ", ", self_prev);
+    _logger->logger_fatal("wrong entry from:", from, " ", e.prev, ", ", self_prev);
     send(from, entries_kind_t::ANSWER_FAILED);
     return;
   }
@@ -281,13 +279,12 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
   // TODO add check prev,cur,commited
   if (!e.cmd.is_empty() && e.term == _state.term) {
     ENSURE(!e.current.is_empty());
-    logger_info("node: ", _settings.name(), ": new entry from:", from,
-                " cur:", e.current);
+    _logger->logger_info("new entry from:", from, " cur:", e.current);
 
     if (e.current == self_prev) {
-      logger_info("node: ", _settings.name(), ": duplicates");
+      _logger->logger_info("duplicates");
     } else {
-      logger_info("node: ", _settings.name(), ": write to journal ");
+      _logger->logger_info("write to journal ");
       logdb::log_entry le;
       le.term = _state.term;
       le.cmd = e.cmd;
@@ -310,8 +307,8 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
 }
 
 void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) {
-  logger_info("node: ", _settings.name(), ": answer from:", from, " cur:", e.current,
-              ", prev", e.prev, ", ci:", e.commited);
+  _logger->logger_info("answer from:", from, " cur:", e.current, ", prev", e.prev,
+                       ", ci:", e.commited);
 
   // TODO check for current>_last_for_cluster[from];
   if (!e.prev.is_empty()) {
@@ -338,10 +335,10 @@ void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) 
   for (auto &kv : count) {
     auto target = kv.first;
     auto cnt = kv.second;
-    logger_info("node: ", _settings.name(), ": append votes: ", cnt, " quorum: ", quorum);
+    _logger->logger_info("append votes: ", cnt, " quorum: ", quorum);
 
     if (size_t(cnt) >= quorum) {
-      logger_info("node: ", _settings.name(), ": append quorum.");
+      _logger->logger_info("append quorum.");
       commit_reccord(target);
       send_all(entries_kind_t::APPEND);
     }
@@ -355,7 +352,7 @@ void consensus::commit_reccord(const logdb::reccord_info &target) {
 
     auto i = to_commit.lsn;
     while (i <= target.lsn && i <= _jrn->prev_rec().lsn) {
-      logger_info("node: ", _settings.name(), ": commit entry lsv:", i);
+      _logger->logger_info("commit entry lsv:", i);
       _jrn->commit(i++);
       auto commited = _jrn->commited_rec();
       auto le = _jrn->get(commited.lsn);
@@ -373,8 +370,8 @@ void consensus::heartbeat() {
     const auto ns = node_state_t::heartbeat(_state, _self_addr, _cluster->size());
     _state = ns;
 
-    logger_info("node: ", _settings.name(), ":heartbeat. ", _state.node_kind, "=> ",
-                old_s.node_kind, " leader:", _state.leader);
+    _logger->logger_info("heartbeat. ", _state.node_kind, "=> ", old_s.node_kind,
+                         " leader:", _state.leader);
   }
 
   if (_state.node_kind == NODE_KIND::CANDIDATE || _state.node_kind == NODE_KIND::LEADER) {
@@ -390,7 +387,7 @@ void consensus::heartbeat() {
       _last_sended.clear();
       auto ae = make_append_entries();
       ae.kind = entries_kind_t::VOTE;
-      logger_info("node: ", _settings.name(), ":send all vote. ");
+      _logger->logger_info("send vote to all.");
       _cluster->send_all(_self_addr, ae);
     }
   }
@@ -398,7 +395,7 @@ void consensus::heartbeat() {
 }
 
 void consensus::replicate_log() {
-  logger_info("node: ", _settings.name(), ": log replication");
+  _logger->logger_info("log replication");
   // TODO check if log is empty.
   auto self_log_state = _log_state[_self_addr];
   auto all = _cluster->all_nodes();
@@ -415,9 +412,9 @@ void consensus::replicate_log() {
     }
     bool is_append = false;
     if (kv->second.is_empty() || kv->second.lsn < self_log_state.lsn) {
-      logger_info("node: ", _settings.name(), ": check replication for ", kv->first,
-                  " => lsn:", kv->second.lsn, " < self.lsn:", self_log_state.lsn,
-                  "==", kv->second.lsn < self_log_state.lsn);
+      _logger->logger_info("check replication for ", kv->first,
+                           " => lsn:", kv->second.lsn, " < self.lsn:", self_log_state.lsn,
+                           "==", kv->second.lsn < self_log_state.lsn);
 
       auto lsn_to_replicate = kv->second.lsn;
       if (kv->second.is_empty()) {
@@ -438,8 +435,8 @@ void consensus::replicate_log() {
           ae.prev.term = kv->second.term;
         }
         _last_sended[kv->first] = ae.current;
-        logger_info("node: ", _settings.name(), ": replicate cur:", ae.current,
-                    " prev:", ae.prev, " to ", kv->first);
+        _logger->logger_info("replicate cur:", ae.current, " prev:", ae.prev, " to ",
+                             kv->first);
         _cluster->send_to(_self_addr, kv->first, ae);
         is_append = true;
       }
@@ -466,7 +463,7 @@ void consensus::add_command(const command &cmd) {
   ENSURE(_jrn->size() != size_t(0));
 
   _log_state[_self_addr] = current;
-  logger_info("node: ", _settings.name(), ": add_command: ", current);
+  _logger->logger_info("add_command: ", current);
   if (_cluster->size() == size_t(1)) {
     commit_reccord(_jrn->first_uncommited_rec());
   }

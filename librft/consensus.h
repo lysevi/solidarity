@@ -4,6 +4,7 @@
 #include <librft/journal.h>
 #include <librft/settings.h>
 #include <librft/state.h>
+#include <libutils/logger.h>
 
 #include <memory>
 #include <random>
@@ -15,7 +16,7 @@ namespace rft {
 class abstract_consensus_consumer {
 public:
   virtual void apply_cmd(const command &cmd) = 0;
-  virtual void reset()=0;
+  virtual void reset() = 0;
 };
 
 class consensus {
@@ -27,7 +28,7 @@ public:
   NODE_KIND state() const { return _state.node_kind; }
   term_t term() const { return _state.term; }
   logdb::journal_ptr journal() const { return _jrn; }
-  const abstract_consensus_consumer *const consumer() {return _consumer;}
+  const abstract_consensus_consumer *const consumer() { return _consumer; }
 
   EXPORT void set_cluster(abstract_cluster *cluster);
   EXPORT void heartbeat();
@@ -75,6 +76,8 @@ private:
 
   std::unordered_map<cluster_node, logdb::reccord_info> _log_state;
   std::unordered_map<cluster_node, logdb::reccord_info> _last_sended;
+
+  utils::logging::abstract_logger_ptr _logger;
 };
 
 }; // namespace rft
