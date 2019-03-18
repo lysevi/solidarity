@@ -454,6 +454,9 @@ void consensus::replicate_log() {
 void consensus::add_command(const command &cmd) {
   // TODO global lock for this method. a while cmd not in consumer;
   std::lock_guard<std::mutex> lg(_locker);
+  if (_state.node_kind != NODE_KIND::LEADER) {
+    THROW_EXCEPTION("only leader-node have right to add commands to the cluster!");
+  }
   ENSURE(!cmd.is_empty());
   logdb::log_entry le;
   le.cmd = cmd;
