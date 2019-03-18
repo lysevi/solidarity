@@ -21,6 +21,41 @@ public:
     auto str_message = utils::strings::args_to_string(args...);
     this->message(kind, str_message);
   }
+
+  template <typename... T>
+  void dbg(T &&... args) noexcept {
+    variadic_message(utils::logging::message_kind::message, args...);
+  }
+
+  template <typename... T>
+  void info(T &&... args) noexcept {
+    variadic_message(utils::logging::message_kind::info, args...);
+  }
+
+  template <typename... T>
+  void warn(T &&... args) noexcept {
+    variadic_message(utils::logging::message_kind::warn, args...);
+  }
+
+  template <typename... T>
+  void fatal(T &&... args) noexcept {
+    variadic_message(utils::logging::message_kind::fatal, args...);
+  }
+};
+
+class prefix_logger : public abstract_logger {
+public:
+  prefix_logger(abstract_logger *target, const std::string &prefix)
+      : _prefix(prefix)
+      , _target(target) {}
+
+  void message(message_kind kind, const std::string &msg) noexcept {
+    _target->message(kind, utils::strings::args_to_string(_prefix, msg));
+  }
+
+private:
+  const std::string _prefix;
+  abstract_logger *const _target;
 };
 
 using abstract_logger_ptr = std::shared_ptr<abstract_logger>;
@@ -41,6 +76,7 @@ class logger_manager {
 public:
   EXPORT static verbose_kind verbose;
   logger_manager(abstract_logger_ptr &logger);
+  EXPORT abstract_logger *get_logger() noexcept;
 
   EXPORT static void start(abstract_logger_ptr &logger);
   EXPORT static void stop();
@@ -61,26 +97,22 @@ private:
 
 template <typename... T>
 void logger(T &&... args) noexcept {
-  utils::logging::logger_manager::instance()->variadic_message(
-      utils::logging::message_kind::message, args...);
+  utils::logging::logger_manager::instance()->get_logger()->dbg(args...);
 }
 
 template <typename... T>
 void logger_info(T &&... args) noexcept {
-  utils::logging::logger_manager::instance()->variadic_message(
-      utils::logging::message_kind::info, args...);
+  utils::logging::logger_manager::instance()->get_logger()->info(args...);
 }
 
 template <typename... T>
 void logger_warn(T &&... args) noexcept {
-  utils::logging::logger_manager::instance()->variadic_message(
-      utils::logging::message_kind::warn, args...);
+  utils::logging::logger_manager::instance()->get_logger()->warn(args...);
 }
 
 template <typename... T>
 void logger_fatal(T &&... args) noexcept {
-  utils::logging::logger_manager::instance()->variadic_message(
-      utils::logging::message_kind::fatal, args...);
+  utils::logging::logger_manager::instance()->get_logger()->fatal(args...);
 }
 } // namespace logging
 } // namespace utils
