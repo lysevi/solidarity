@@ -1,14 +1,12 @@
 #pragma once
 
 #include <atomic>
-#include <mutex> //for lock_guard
 #include <thread>
 
 namespace utils {
 namespace async {
-// using Locker=std::mutex;
-const size_t LOCKER_MAX_TRY = 10;
-class locker {
+template <size_t LOCKER_MAX_TRY>
+class spin_lock {
   std::atomic_flag locked = ATOMIC_FLAG_INIT;
 
 public:
@@ -30,6 +28,7 @@ public:
   void unlock() noexcept { locked.clear(std::memory_order_release); }
 };
 
-using Locker_ptr = std::shared_ptr<utils::async::locker>;
+using locker = spin_lock<10>;
+using locker_ptr = std::shared_ptr<utils::async::locker>;
 } // namespace async
 } // namespace utils
