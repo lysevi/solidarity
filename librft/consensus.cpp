@@ -220,8 +220,8 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
     auto it = _log_state.find(from);
 
     /// TODO what if the sender clean log and resend hello? it is possible?
-    //if (it == _log_state.end() || it->second.is_empty()) 
-	{
+    // if (it == _log_state.end() || it->second.is_empty())
+    {
       logger_info("node: ", _settings.name(), ": hello. update log_state[", from,
                   "]:", _log_state[from], " => ", e.prev);
       _log_state[from] = e.prev;
@@ -284,20 +284,8 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
 
   if (!e.commited.is_empty()) { /// commit uncommited
     if (_jrn->commited_rec() != e.commited) {
-      auto to_commit = _jrn->first_uncommited_rec();
-      // ENSURE(!to_commit.is_empty());
-      if (!to_commit.is_empty()) {
 
-        auto i = to_commit.lsn;
-        while (i <= e.commited.lsn && i <= _jrn->prev_rec().lsn) {
-          logger_info("node: ", _settings.name(), ": commit entry from ", from,
-                      " { lsn:", i, "}");
-          _jrn->commit(i++);
-          auto commited = _jrn->commited_rec();
-          auto le = _jrn->get(commited.lsn);
-          _consumer->apply_cmd(le.cmd);
-        }
-      }
+      commit_reccord(e.commited);
     }
   }
 
@@ -342,18 +330,25 @@ void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) 
     if (size_t(cnt) >= quorum) {
       logger_info("node: ", _settings.name(), ": append quorum.");
       commit_reccord(target);
+      send_all(entries_kind_t::APPEND);
     }
   }
   // replicate_log();
 }
 
 void consensus::commit_reccord(const logdb::reccord_info &target) {
-  _jrn->commit(target.lsn);
+  auto to_commit = _jrn->first_uncommited_rec();
+  if (!to_commit.is_empty()) {
 
-  auto ae = make_append_entries(entries_kind_t::APPEND);
-  _consumer->apply_cmd(_jrn->get(ae.commited.lsn).cmd);
-
-  _cluster->send_all(_self_addr, ae);
+    auto i = to_commit.lsn;
+    while (i <= target.lsn && i <= _jrn->prev_rec().lsn) {
+      logger_info("node: ", _settings.name(), ": commit entry lsv:", i);
+      _jrn->commit(i++);
+      auto commited = _jrn->commited_rec();
+      auto le = _jrn->get(commited.lsn);
+      _consumer->apply_cmd(le.cmd);
+    }
+  }
 }
 
 void consensus::heartbeat() {
