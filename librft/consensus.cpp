@@ -284,7 +284,7 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
     logger_info("node: ", _settings.name(), ": new entry from:", from,
                 " cur:", e.current);
 
-    if (e.current == _jrn->prev_rec()) {
+    if (e.current == self_prev) {
       logger_info("node: ", _settings.name(), ": duplicates");
     } else {
       logger_info("node: ", _settings.name(), ": write to journal ");
