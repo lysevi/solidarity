@@ -124,10 +124,10 @@ void consensus::on_heartbeat(const cluster_node &from, const append_entries &e) 
   _state.last_heartbeat_time = clock_t::now();
   if (old_s.leader.is_empty() || old_s.leader != _state.leader
       || old_s.node_kind != _state.node_kind) {
-    _logger->info("on_heartbeat. change leader from: ", old_s.leader, " => ",
-                  _state.leader);
+    _logger->info("on_heartbeat. change leader from: ", old_s, " => ", _state,
+                  " append_entries: ", e);
     _log_state.clear();
-    log_fsck(e);
+    // log_fsck(e);
     _logger->info("send hello to ", from);
     send(from, entries_kind_t::HELLO);
   }

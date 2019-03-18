@@ -86,9 +86,9 @@ TEST_CASE("consensus") {
     SECTION("consensus.append.5") { nodes_count = 5; }
     SECTION("consensus.append.7") { nodes_count = 7; }
     SECTION("consensus.append.10") { nodes_count = 10; }
-//#if !defined(DEBUG)
-//    SECTION("consensus.append.15") { nodes_count = 15; }
-//#endif
+    //#if !defined(DEBUG)
+    //    SECTION("consensus.append.15") { nodes_count = 15; }
+    //#endif
   }
 
   SECTION("consensus.election.election") {
@@ -97,9 +97,9 @@ TEST_CASE("consensus") {
     SECTION("consensus.election.5") { nodes_count = 5; }
     SECTION("consensus.election.7") { nodes_count = 7; }
     SECTION("consensus.election.10") { nodes_count = 10; }
-//#if !defined(DEBUG)
-//    SECTION("consensus.election.15") { nodes_count = 15; }
-//#endif
+    //#if !defined(DEBUG)
+    //    SECTION("consensus.election.15") { nodes_count = 15; }
+    //#endif
   }
 
   std::vector<std::shared_ptr<mock_consumer>> consumers;
@@ -222,7 +222,7 @@ TEST_CASE("consensus.replication") {
   std::vector<std::shared_ptr<mock_consumer>> consumers;
   consumers.reserve(exists_nodes_count);
 
-  auto et = std::chrono::milliseconds(300);
+  auto et = std::chrono::milliseconds(400);
 
   for (size_t i = 0; i < exists_nodes_count; ++i) {
     auto nname = "_" + std::to_string(i);
@@ -252,6 +252,7 @@ TEST_CASE("consensus.replication") {
     leaders[0]->add_command(cmd);
     while (true) {
       cluster->heartbeat();
+      cluster->print_cluster();
       auto replicated_on = std::count_if(consumers.cbegin(), consumers.cend(), data_eq);
       if (size_t(replicated_on) == consumers.size()) {
         break;
@@ -277,6 +278,7 @@ TEST_CASE("consensus.replication") {
     }
     utils::logging::logger_info("[test] replicated_on: ", replicated_on);
     cluster->heartbeat();
+    cluster->print_cluster();
   }
 
   cluster = nullptr;

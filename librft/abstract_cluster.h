@@ -60,4 +60,7 @@ struct hash<rft::cluster_node> {
     return std::hash<string>()(k.name());
   }
 };
+
+EXPORT std::string to_string(const rft::append_entries &e);
+EXPORT std::string to_string(const rft::entries_kind_t k);
 } // namespace std
