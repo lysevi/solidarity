@@ -76,6 +76,10 @@ mock_cluster::~mock_cluster() {
   stop_workers();
 }
 
+void mock_cluster::update_size() {
+  _size = _cluster.size() - _stoped.size();
+}
+
 void mock_cluster::start_workers() {
   std::lock_guard<std::shared_mutex> l(_cluster_locker);
   for (auto &kv : _cluster) {
@@ -98,7 +102,10 @@ void mock_cluster::send_to(const rft::cluster_node &from,
                            const rft::cluster_node &to,
                            const rft::append_entries &m) {
   std::shared_lock<std::shared_mutex> ul(_cluster_locker);
-  _workers[to]->add_task(message_t{from, to, m});
+  auto it = _workers.find(to);
+  if (it != _workers.end()) {
+    _workers[to]->add_task(message_t{from, to, m});
+  }
 }
 
 void mock_cluster::send_all(const rft::cluster_node &from, const rft::append_entries &m) {
@@ -118,6 +125,7 @@ void mock_cluster::add_new(const rft::cluster_node &addr,
   _workers[addr] = std::make_shared<worker_t>(c);
   c->set_cluster(this);
   _cluster[addr] = c;
+  _size++;
 }
 
 std::vector<std::shared_ptr<rft::consensus>>
@@ -158,27 +166,37 @@ void mock_cluster::print_cluster() {
 
 void mock_cluster::erase_if(
     std::function<bool(const std::shared_ptr<rft::consensus>)> pred) {
-  std::lock_guard<std::shared_mutex> lg(_cluster_locker);
-  auto it = std::find_if(_cluster.begin(), _cluster.end(),
-                         [pred](auto kv) { return pred(kv.second); });
-  if (it != _cluster.end()) {
-    auto key = it->first;
-    _cluster.erase(key);
-    std::deque<message_t> &_tasks = _workers[key]->_tasks;
-    _tasks.erase(std::remove_if(_tasks.begin(), _tasks.end(),
-                                [key](const message_t &m) -> bool {
-                                  return m.from == key || m.to == key;
-                                }),
-                 _tasks.end());
+
+  std::shared_ptr<rft::consensus> target = nullptr;
+  {
+    std::lock_guard<std::shared_mutex> lg(_cluster_locker);
+    auto it = std::find_if(_cluster.begin(), _cluster.end(),
+                           [pred](auto kv) { return pred(kv.second); });
+    if (it != _cluster.end()) {
+      target = it->second;
+      auto key = it->first;
+      _cluster.erase(key);
+      update_size();
+      std::deque<message_t> &_tasks = _workers[key]->_tasks;
+      _tasks.erase(std::remove_if(_tasks.begin(), _tasks.end(),
+                                  [key](const message_t &m) -> bool {
+                                    return m.from == key || m.to == key;
+                                  }),
+                   _tasks.end());
+      _workers[key]->stop();
+      _workers.erase(key);
+    }
+  }
+  if (target != nullptr) {
+    std::shared_lock<std::shared_mutex> lg(_cluster_locker);
     for (auto &kv : _cluster) {
-      kv.second->lost_connection_with(key);
+      kv.second->lost_connection_with(target->self_addr());
     }
   }
 }
 
 size_t mock_cluster::size() {
-  std::shared_lock<std::shared_mutex> lg(_cluster_locker);
-  return _cluster.size() - _stoped.size();
+  return _size;
 }
 
 std::vector<rft::cluster_node> mock_cluster::all_nodes() const {
@@ -228,11 +246,13 @@ bool mock_cluster::is_leader_eletion_complete(size_t max_leaders) {
 void mock_cluster::stop_node(const rft::cluster_node &addr) {
   std::lock_guard<std::shared_mutex> lg(_cluster_locker);
   _stoped.insert(addr);
+  update_size();
 }
 
 void mock_cluster::restart_node(const rft::cluster_node &addr) {
   std::lock_guard<std::shared_mutex> lg(_cluster_locker);
   _stoped.erase(addr);
+  update_size();
 }
 
 std::shared_ptr<mock_cluster> mock_cluster::split(size_t count_to_move) {
@@ -250,6 +270,8 @@ std::shared_ptr<mock_cluster> mock_cluster::split(size_t count_to_move) {
     result->add_new(it->first, it->second);
 
     _cluster.erase(it);
+    update_size();
+
     std::deque<message_t> &_tasks = _workers[it->first]->_tasks;
     _tasks.erase(std::remove_if(_tasks.begin(), _tasks.end(),
                                 [it](const message_t &m) -> bool {
@@ -276,6 +298,7 @@ void mock_cluster::union_with(std::shared_ptr<mock_cluster> other) {
     kv.second->set_cluster(this);
     _cluster.insert(std::move(kv));
   }
+  update_size();
   other->_cluster.clear();
   start_workers();
 }

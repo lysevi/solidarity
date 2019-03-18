@@ -75,12 +75,15 @@ public:
 protected:
   void stop_workers();
   void start_workers();
+  void update_size();
 
 private:
   mutable std::shared_mutex _cluster_locker;
   std::unordered_map<rft::cluster_node, std::shared_ptr<rft::consensus>> _cluster;
   std::unordered_map<rft::cluster_node, std::shared_ptr<worker_t>> _workers;
   std::unordered_set<rft::cluster_node> _stoped;
+
+  size_t _size=0;
 };
 
 inline bool is_leader_pred(const std::shared_ptr<rft::consensus> &v) {
