@@ -402,20 +402,19 @@ void consensus::replicate_log() {
   // TODO check if log is empty.
   auto self_log_state = _log_state[_self_addr];
   auto all = _cluster->all_nodes();
-  /*auto jrn_sz = _jrn->size();
-  auto jrn_is_empty = jrn_sz == size_t(0);*/
+  auto jrn_sz = _jrn->size();
+  auto jrn_is_empty = jrn_sz == size_t(0);
   for (const auto &naddr : all) {
     if (naddr == _self_addr) {
       continue;
     }
     auto kv = _log_state.find(naddr);
-    if (kv == _log_state.end()) {
+    if (jrn_is_empty || kv == _log_state.end()) {
       send(naddr, entries_kind_t::HEARTBEAT);
       continue;
     }
     bool is_append = false;
-    if (kv->second.is_empty()
-        || /*!self_log_state.is_empty() && */ kv->second.lsn < self_log_state.lsn) {
+    if (kv->second.is_empty() || kv->second.lsn < self_log_state.lsn) {
       logger_info("node: ", _settings.name(), ": check replication for ", kv->first,
                   " => lsn:", kv->second.lsn, " < self.lsn:", self_log_state.lsn,
                   "==", kv->second.lsn < self_log_state.lsn);
@@ -426,7 +425,8 @@ void consensus::replicate_log() {
       } else {
         ++lsn_to_replicate; // we need a next record;
       }
-      if (_last_sended[kv->first].lsn != lsn_to_replicate) {
+      auto ls_it = _last_sended.find(kv->first);
+      if (ls_it == _last_sended.end() || ls_it->second.lsn != lsn_to_replicate) {
         auto ae = make_append_entries(rft::entries_kind_t::APPEND);
         auto cur = _jrn->get(lsn_to_replicate);
         ae.current.lsn = lsn_to_replicate;
@@ -444,6 +444,7 @@ void consensus::replicate_log() {
         is_append = true;
       }
     }
+
     if (!is_append) {
       send(naddr, entries_kind_t::HEARTBEAT);
     }

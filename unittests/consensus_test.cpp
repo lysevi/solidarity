@@ -164,6 +164,7 @@ TEST_CASE("consensus") {
         cmd.data[0]++;
         leaders[0]->add_command(cmd);
         while (true) {
+          cluster->print_cluster();
           cluster->heartbeat();
           bool all_of = std::all_of(consumers.cbegin(), consumers.cend(), data_eq);
           if (all_of) {
@@ -278,7 +279,7 @@ TEST_CASE("consensus.replication") {
   consumers.clear();
 }
 
-//TEST_CASE("consensus.rollback") {
+// TEST_CASE("consensus.rollback") {
 //  using rft::cluster_node;
 //  using rft::consensus;
 //  using rft::logdb::memory_journal;
@@ -320,8 +321,8 @@ TEST_CASE("consensus.replication") {
 //      leaders[0]->add_command(cmd);
 //      while (true) {
 //        cluster->heartbeat();
-//        auto replicated_on = std::count_if(consumers.cbegin(), consumers.cend(), data_eq);
-//        if (size_t(replicated_on) == consumers.size()) {
+//        auto replicated_on = std::count_if(consumers.cbegin(), consumers.cend(),
+//        data_eq); if (size_t(replicated_on) == consumers.size()) {
 //          break;
 //        }
 //      }
@@ -338,7 +339,8 @@ TEST_CASE("consensus.replication") {
 //
 //    utils::logging::logger_info("[test] cluster 2:");
 //    cluster2->print_cluster();
-//    if (cluster->is_leader_eletion_complete() && cluster2->is_leader_eletion_complete()) {
+//    if (cluster->is_leader_eletion_complete() && cluster2->is_leader_eletion_complete())
+//    {
 //      break;
 //    }
 //  }
