@@ -23,9 +23,9 @@ struct reccord_info {
   }
 
   bool is_empty() const { return term == UNDEFINED_TERM && lsn == UNDEFINED_INDEX; }
+  bool lsn_is_empty() const { return lsn == UNDEFINED_INDEX; }
 
   bool operator==(const reccord_info &o) const { return term == o.term && lsn == o.lsn; }
-
   bool operator!=(const reccord_info &o) const { return !(*this == o); }
 
   term_t term;

@@ -87,11 +87,38 @@ SCENARIO("node_state.vote") {
         }
       }
 
-      WHEN("leader.commit.is_empty() && self.commit.is_empty()") {
+      WHEN("leader.commit.is_empty() && !self.commit.is_empty()") {
         rft::logdb::reccord_info ci_rec;
         ci_rec.lsn = rft::logdb::UNDEFINED_INDEX;
         ci_rec.term = 2;
         ae.commited.lsn = rft::logdb::UNDEFINED_INDEX;
+        ae.commited.term = 2;
+        auto c
+            = rft::node_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
+        THEN("vote to sender") {
+          EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
+          EXPECT_EQ(c.new_state.term, from_s.term);
+          EXPECT_EQ(c.notify, rft::NOTIFY_TARGET::SENDER);
+        }
+      }
+      WHEN("!leader.commit.is_empty() && self.commit.is_empty()") {
+        rft::logdb::reccord_info ci_rec;
+        ci_rec.lsn = 1;
+        ci_rec.term = 2;
+        ae.commited.lsn = rft::logdb::UNDEFINED_INDEX;
+        ae.commited.term = 2;
+        auto c
+            = rft::node_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
+        THEN("do nothing") {
+          EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
+          EXPECT_EQ(c.notify, rft::NOTIFY_TARGET::SENDER);
+        }
+      }
+      WHEN("leader.commit.is_empty() && !self.commit.is_empty()") {
+        rft::logdb::reccord_info ci_rec;
+        ci_rec.lsn = rft::logdb::UNDEFINED_INDEX;
+        ci_rec.term = 2;
+        ae.commited.lsn = 3;
         ae.commited.term = 2;
         auto c
             = rft::node_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);

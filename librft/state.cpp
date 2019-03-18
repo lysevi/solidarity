@@ -52,13 +52,14 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
     }
     case NODE_KIND::FOLLOWER: {
       // vote to biggest journal.
-      auto sender_log_is_empty = commited.is_empty() && !e.commited.is_empty();
-      auto above_not_empty = !commited.is_empty() && !e.commited.is_empty();
-      auto my_log_is_smallest = commited.lsn <= e.commited.lsn;
-      auto sender_is_biggest
-          = sender_log_is_empty || (above_not_empty && my_log_is_smallest);
+      auto logs_is_empty = commited.lsn_is_empty() && e.commited.lsn_is_empty();
+      auto empty_not_empty = commited.lsn_is_empty() && !e.commited.lsn_is_empty();
+      auto not_empty_not_empty = !commited.lsn_is_empty() && !e.commited.lsn_is_empty();
+      auto lsn_le = commited.lsn <= e.commited.lsn;
+      auto my_log_is_le = empty_not_empty || (not_empty_not_empty && lsn_le);
+      auto jrn_condition = logs_is_empty || my_log_is_le;
 
-      if (result.term <= e.term && sender_is_biggest) {
+      if (result.term <= e.term && jrn_condition) {
         result.node_kind = NODE_KIND::ELECTION;
         result.term = e.term;
         result.leader = e.leader;
