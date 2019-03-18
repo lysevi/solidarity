@@ -128,7 +128,7 @@ node_state_t node_state_t::on_append_entries(const node_state_t &self,
   node_state_t result = self;
   switch (result.node_kind) {
   case NODE_KIND::ELECTION: {
-    if (from == result.leader || (from == e.leader && e.term > result.term)) {
+    if (from == result.leader || (from == e.leader && e.term >= result.term)) {
       result.change_state(NODE_KIND::FOLLOWER, e.term, from);
       result.leader = e.leader;
       result.last_heartbeat_time = clock_t::now();

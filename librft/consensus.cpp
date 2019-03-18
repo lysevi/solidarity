@@ -51,24 +51,37 @@ void consensus::set_cluster(abstract_cluster *cluster) {
 
 void consensus::update_next_heartbeat_interval() {
   const auto total_mls = _settings.election_timeout().count();
-  double k1 = 1.5, k2 = 2.0;
-  if (_state.node_kind == NODE_KIND::LEADER) {
-    k1 = 0.5;
-    k2 = 1;
+  uint64_t hbi = 0;
+  switch (_state.node_kind) {
+  case NODE_KIND::LEADER: {
+    hbi = uint64_t(total_mls / 2.0);
+    break;
   }
-  if (_state.node_kind == NODE_KIND::ELECTION) {
-    k1 = 0.5;
-    k2 = 1.0;
+  case NODE_KIND::FOLLOWER: {
+    hbi = uint64_t(total_mls * 1.5);
+    break;
   }
-  if (_state.node_kind == NODE_KIND::CANDIDATE) {
-    k1 = 1.0;
-    k2 = 1.0 * _state.election_round;
+  case NODE_KIND::ELECTION: {
+    auto k1 = 0.5;
+    auto k2 = 1.0;
+    std::uniform_int_distribution<uint64_t> distr(uint64_t(total_mls * k1),
+                                                  uint64_t(total_mls * k2));
+    hbi = distr(_rnd_eng);
+    break;
+  }
+  case NODE_KIND::CANDIDATE: {
+    auto k1 = 1.0;
+    auto k2 = 1.0 * _state.election_round;
+    std::uniform_int_distribution<uint64_t> distr(uint64_t(total_mls * k1),
+                                                  uint64_t(total_mls * k2));
+    hbi = distr(_rnd_eng);
+    break;
+  }
+  default:
+    NOT_IMPLEMENTED;
   }
 
-  std::uniform_int_distribution<uint64_t> distr(uint64_t(total_mls * k1),
-                                                uint64_t(total_mls * k2));
-
-  _state.next_heartbeat_interval = std::chrono::milliseconds(distr(_rnd_eng));
+  _state.next_heartbeat_interval = std::chrono::milliseconds(hbi);
   /*logger_info("node: ", _settings.name(), ": next heartbeat is ",
               _state.next_heartbeat_interval.count());*/
 }
@@ -220,7 +233,8 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
     auto it = _log_state.find(from);
 
     /// TODO what if the sender clean log and resend hello? it is possible?
-    if (it == _log_state.end() || it->second.is_empty()) {
+    // if (it == _log_state.end() || it->second.is_empty())
+    {
       logger_info("node: ", _settings.name(), ": hello. update log_state[", from,
                   "]:", _log_state[from], " => ", e.prev);
       _log_state[from] = e.prev;
@@ -283,20 +297,8 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
 
   if (!e.commited.is_empty()) { /// commit uncommited
     if (_jrn->commited_rec() != e.commited) {
-      auto to_commit = _jrn->first_uncommited_rec();
-      // ENSURE(!to_commit.is_empty());
-      if (!to_commit.is_empty()) {
 
-        auto i = to_commit.lsn;
-        while (i <= e.commited.lsn && i <= _jrn->prev_rec().lsn) {
-          logger_info("node: ", _settings.name(), ": commit entry from ", from,
-                      " { lsn:", i, "}");
-          _jrn->commit(i++);
-          auto commited = _jrn->commited_rec();
-          auto le = _jrn->get(commited.lsn);
-          _consumer->apply_cmd(le.cmd);
-        }
-      }
+      commit_reccord(e.commited);
     }
   }
 
@@ -341,18 +343,25 @@ void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) 
     if (size_t(cnt) >= quorum) {
       logger_info("node: ", _settings.name(), ": append quorum.");
       commit_reccord(target);
+      send_all(entries_kind_t::APPEND);
     }
   }
   // replicate_log();
 }
 
 void consensus::commit_reccord(const logdb::reccord_info &target) {
-  _jrn->commit(target.lsn);
+  auto to_commit = _jrn->first_uncommited_rec();
+  if (!to_commit.is_empty()) {
 
-  auto ae = make_append_entries(entries_kind_t::APPEND);
-  _consumer->apply_cmd(_jrn->get(ae.commited.lsn).cmd);
-
-  _cluster->send_all(_self_addr, ae);
+    auto i = to_commit.lsn;
+    while (i <= target.lsn && i <= _jrn->prev_rec().lsn) {
+      logger_info("node: ", _settings.name(), ": commit entry lsv:", i);
+      _jrn->commit(i++);
+      auto commited = _jrn->commited_rec();
+      auto le = _jrn->get(commited.lsn);
+      _consumer->apply_cmd(le.cmd);
+    }
+  }
 }
 
 void consensus::heartbeat() {
@@ -393,20 +402,19 @@ void consensus::replicate_log() {
   // TODO check if log is empty.
   auto self_log_state = _log_state[_self_addr];
   auto all = _cluster->all_nodes();
-  /*auto jrn_sz = _jrn->size();
-  auto jrn_is_empty = jrn_sz == size_t(0);*/
+  auto jrn_sz = _jrn->size();
+  auto jrn_is_empty = jrn_sz == size_t(0);
   for (const auto &naddr : all) {
     if (naddr == _self_addr) {
       continue;
     }
     auto kv = _log_state.find(naddr);
-    if (kv == _log_state.end()) {
+    if (jrn_is_empty || kv == _log_state.end()) {
       send(naddr, entries_kind_t::HEARTBEAT);
       continue;
     }
     bool is_append = false;
-    if (kv->second.is_empty()
-        || /*!self_log_state.is_empty() && */ kv->second.lsn < self_log_state.lsn) {
+    if (kv->second.is_empty() || kv->second.lsn < self_log_state.lsn) {
       logger_info("node: ", _settings.name(), ": check replication for ", kv->first,
                   " => lsn:", kv->second.lsn, " < self.lsn:", self_log_state.lsn,
                   "==", kv->second.lsn < self_log_state.lsn);
@@ -417,7 +425,8 @@ void consensus::replicate_log() {
       } else {
         ++lsn_to_replicate; // we need a next record;
       }
-      if (_last_sended[kv->first].lsn != lsn_to_replicate) {
+      auto ls_it = _last_sended.find(kv->first);
+      if (ls_it == _last_sended.end() || ls_it->second.lsn != lsn_to_replicate) {
         auto ae = make_append_entries(rft::entries_kind_t::APPEND);
         auto cur = _jrn->get(lsn_to_replicate);
         ae.current.lsn = lsn_to_replicate;
@@ -435,6 +444,7 @@ void consensus::replicate_log() {
         is_append = true;
       }
     }
+
     if (!is_append) {
       send(naddr, entries_kind_t::HEARTBEAT);
     }
@@ -444,28 +454,20 @@ void consensus::replicate_log() {
 void consensus::add_command(const command &cmd) {
   // TODO global lock for this method. a while cmd not in consumer;
   std::lock_guard<std::mutex> lg(_locker);
+  if (_state.node_kind != NODE_KIND::LEADER) {
+    THROW_EXCEPTION("only leader-node have right to add commands to the cluster!");
+  }
   ENSURE(!cmd.is_empty());
   logdb::log_entry le;
   le.cmd = cmd;
   le.term = _state.term;
 
-  auto ae = make_append_entries(rft::entries_kind_t::APPEND);
   auto current = _jrn->put(le);
-  ae.current = current;
-  ae.cmd = cmd;
+  ENSURE(_jrn->size() != size_t(0));
 
   _log_state[_self_addr] = current;
   logger_info("node: ", _settings.name(), ": add_command: ", current);
-  if (_cluster->size() != size_t(1)) {
-    // for (auto &kv : _log_state) {
-    //  // we or not replicated yet
-    //  if (kv.first == _self_addr || (kv.second.lsn + 1) != ae.current.lsn) {
-    //    continue;
-    //  }
-    //  _last_sended[kv.first] = ae.current;
-    //  _cluster->send_to(_self_addr, kv.first, ae);
-    //}
-  } else {
+  if (_cluster->size() == size_t(1)) {
     commit_reccord(_jrn->first_uncommited_rec());
   }
 }

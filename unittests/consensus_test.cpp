@@ -86,9 +86,9 @@ TEST_CASE("consensus") {
     SECTION("consensus.append.5") { nodes_count = 5; }
     SECTION("consensus.append.7") { nodes_count = 7; }
     SECTION("consensus.append.10") { nodes_count = 10; }
-#if !defined(DEBUG)
-    SECTION("consensus.append.15") { nodes_count = 15; }
-#endif
+//#if !defined(DEBUG)
+//    SECTION("consensus.append.15") { nodes_count = 15; }
+//#endif
   }
 
   SECTION("consensus.election.election") {
@@ -97,9 +97,9 @@ TEST_CASE("consensus") {
     SECTION("consensus.election.5") { nodes_count = 5; }
     SECTION("consensus.election.7") { nodes_count = 7; }
     SECTION("consensus.election.10") { nodes_count = 10; }
-#if !defined(DEBUG)
-    SECTION("consensus.election.15") { nodes_count = 15; }
-#endif
+//#if !defined(DEBUG)
+//    SECTION("consensus.election.15") { nodes_count = 15; }
+//#endif
   }
 
   std::vector<std::shared_ptr<mock_consumer>> consumers;
@@ -161,9 +161,14 @@ TEST_CASE("consensus") {
     } else {
 
       for (int i = 0; i < 10; ++i) {
+        leaders = cluster->by_filter(is_leader_pred);
+        if (leaders.size() != size_t(1)) {
+          cluster->wait_leader_eletion();
+        }
         cmd.data[0]++;
         leaders[0]->add_command(cmd);
         while (true) {
+          cluster->print_cluster();
           cluster->heartbeat();
           bool all_of = std::all_of(consumers.cbegin(), consumers.cend(), data_eq);
           if (all_of) {
@@ -278,7 +283,7 @@ TEST_CASE("consensus.replication") {
   consumers.clear();
 }
 
-//TEST_CASE("consensus.rollback") {
+// TEST_CASE("consensus.rollback") {
 //  using rft::cluster_node;
 //  using rft::consensus;
 //  using rft::logdb::memory_journal;
@@ -320,8 +325,8 @@ TEST_CASE("consensus.replication") {
 //      leaders[0]->add_command(cmd);
 //      while (true) {
 //        cluster->heartbeat();
-//        auto replicated_on = std::count_if(consumers.cbegin(), consumers.cend(), data_eq);
-//        if (size_t(replicated_on) == consumers.size()) {
+//        auto replicated_on = std::count_if(consumers.cbegin(), consumers.cend(),
+//        data_eq); if (size_t(replicated_on) == consumers.size()) {
 //          break;
 //        }
 //      }
@@ -338,7 +343,8 @@ TEST_CASE("consensus.replication") {
 //
 //    utils::logging::logger_info("[test] cluster 2:");
 //    cluster2->print_cluster();
-//    if (cluster->is_leader_eletion_complete() && cluster2->is_leader_eletion_complete()) {
+//    if (cluster->is_leader_eletion_complete() && cluster2->is_leader_eletion_complete())
+//    {
 //      break;
 //    }
 //  }
