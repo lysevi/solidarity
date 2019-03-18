@@ -458,23 +458,12 @@ void consensus::add_command(const command &cmd) {
   le.cmd = cmd;
   le.term = _state.term;
 
-  auto ae = make_append_entries(rft::entries_kind_t::APPEND);
   auto current = _jrn->put(le);
-  ae.current = current;
-  ae.cmd = cmd;
+  ENSURE(_jrn->size() != size_t(0));
 
   _log_state[_self_addr] = current;
   logger_info("node: ", _settings.name(), ": add_command: ", current);
-  if (_cluster->size() != size_t(1)) {
-    // for (auto &kv : _log_state) {
-    //  // we or not replicated yet
-    //  if (kv.first == _self_addr || (kv.second.lsn + 1) != ae.current.lsn) {
-    //    continue;
-    //  }
-    //  _last_sended[kv.first] = ae.current;
-    //  _cluster->send_to(_self_addr, kv.first, ae);
-    //}
-  } else {
+  if (_cluster->size() == size_t(1)) {
     commit_reccord(_jrn->first_uncommited_rec());
   }
 }
