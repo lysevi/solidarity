@@ -125,7 +125,7 @@ void consensus::on_heartbeat(const cluster_node &from, const append_entries &e) 
   if (old_s.leader.is_empty() || old_s.leader != _state.leader
       || old_s.node_kind != _state.node_kind) {
     _logger->info("on_heartbeat. change leader from: ", old_s.leader, " => ",
-                         _state.leader);
+                  _state.leader);
     _log_state.clear();
     log_fsck(e);
     _logger->info("send hello to ", from);
@@ -234,8 +234,8 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
     /// TODO what if the sender clean log and resend hello? it is possible?
     // if (it == _log_state.end() || it->second.is_empty())
     {
-      _logger->info("hello. update log_state[", from, "]:", _log_state[from],
-                           " => ", e.prev);
+      _logger->info("hello. update log_state[", from, "]:", _log_state[from], " => ",
+                    e.prev);
       _log_state[from] = e.prev;
     }
     // replicate_log();
@@ -308,7 +308,7 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
 
 void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) {
   _logger->info("answer from:", from, " cur:", e.current, ", prev", e.prev,
-                       ", ci:", e.commited);
+                ", ci:", e.commited);
 
   // TODO check for current>_last_for_cluster[from];
   if (!e.prev.is_empty()) {
@@ -365,13 +365,12 @@ void consensus::heartbeat() {
   std::lock_guard<std::mutex> l(_locker);
 
   if (_state.node_kind != NODE_KIND::LEADER && _state.is_heartbeat_missed()) {
-    // logger_info("node: ", _settings.name(), ": heartbeat");
     const auto old_s = _state;
     const auto ns = node_state_t::heartbeat(_state, _self_addr, _cluster->size());
     _state = ns;
 
-    _logger->info("heartbeat. ", _state.node_kind, "=> ", old_s.node_kind,
-                         " leader:", _state.leader);
+    _logger->info("heartbeat. ", old_s.node_kind, "=> ", _state.node_kind,
+                  " leader:", _state.leader);
   }
 
   if (_state.node_kind == NODE_KIND::CANDIDATE || _state.node_kind == NODE_KIND::LEADER) {
@@ -396,11 +395,12 @@ void consensus::heartbeat() {
 
 void consensus::replicate_log() {
   _logger->info("log replication");
-  // TODO check if log is empty.
   auto self_log_state = _log_state[_self_addr];
   auto all = _cluster->all_nodes();
+
   auto jrn_sz = _jrn->size();
   auto jrn_is_empty = jrn_sz == size_t(0);
+
   for (const auto &naddr : all) {
     if (naddr == _self_addr) {
       continue;
@@ -412,9 +412,9 @@ void consensus::replicate_log() {
     }
     bool is_append = false;
     if (kv->second.is_empty() || kv->second.lsn < self_log_state.lsn) {
-      _logger->info("check replication for ", kv->first,
-                           " => lsn:", kv->second.lsn, " < self.lsn:", self_log_state.lsn,
-                           "==", kv->second.lsn < self_log_state.lsn);
+      _logger->info("try replication for ", kv->first, " => lsn:", kv->second.lsn,
+                    " < self.lsn:", self_log_state.lsn,
+                    "==", kv->second.lsn < self_log_state.lsn);
 
       auto lsn_to_replicate = kv->second.lsn;
       if (kv->second.is_empty()) {
@@ -435,8 +435,8 @@ void consensus::replicate_log() {
           ae.prev.term = kv->second.term;
         }
         _last_sended[kv->first] = ae.current;
-        _logger->info("replicate cur:", ae.current, " prev:", ae.prev, " to ",
-                             kv->first);
+        _logger->info("replicate cur:", ae.current, " prev:", ae.prev,
+                      " ci:", ae.commited, " to ", kv->first);
         _cluster->send_to(_self_addr, kv->first, ae);
         is_append = true;
       }
