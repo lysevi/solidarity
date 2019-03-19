@@ -32,6 +32,7 @@ consensus::consensus(const node_settings &ns,
   _logger->info("election_timeout(ms)=", ns.election_timeout().count());
   _logger->info("append_quorum(%)=", ns.append_quorum());
   _logger->info("vote_quorum(%)=", ns.vote_quorum());
+  _logger->info("cycle_for_replication=", ns.cycle_for_replication());
 
   _self_addr.set_name(_settings.name());
 
@@ -371,8 +372,7 @@ void consensus::heartbeat() {
     const auto ns = node_state_t::heartbeat(_state, _self_addr, _cluster->size());
     _state = ns;
 
-    _logger->info("heartbeat. ", old_s.node_kind, " => ", _state.node_kind,
-                  " leader:", _state.leader);
+    _logger->info("heartbeat. ", old_s, " => ", _state);
   }
 
   if (_state.node_kind == NODE_KIND::CANDIDATE || _state.node_kind == NODE_KIND::LEADER) {
@@ -424,12 +424,14 @@ void consensus::replicate_log() {
       } else {
         ++lsn_to_replicate; // we need a next record;
       }
-      auto ls_it = _last_sended.find(kv->first);
 
+      auto ls_it = _last_sended.find(kv->first);
       if (kv->second.cycle != 0
           && (ls_it != _last_sended.end() || ls_it->second.lsn == lsn_to_replicate)) {
         kv->second.cycle--;
+        /*_logger->info("flwr: ", kv->first, " cycle:", kv->second.cycle);*/
       } else {
+        /*_logger->info("replicate to flwr: ", kv->first, " cycle:", kv->second.cycle);*/
         kv->second.cycle = _settings.cycle_for_replication();
         auto ae = make_append_entries(rft::entries_kind_t::APPEND);
         auto cur = _jrn->get(lsn_to_replicate);
