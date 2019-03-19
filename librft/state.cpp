@@ -52,14 +52,7 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
     }
     case NODE_KIND::FOLLOWER: {
       // vote to biggest journal.
-      auto logs_is_empty = commited.lsn_is_empty() && e.commited.lsn_is_empty();
-      auto empty_not_empty = commited.lsn_is_empty() && !e.commited.lsn_is_empty();
-      auto not_empty_not_empty = !commited.lsn_is_empty() && !e.commited.lsn_is_empty();
-      auto lsn_le = commited.lsn <= e.commited.lsn;
-      auto my_log_is_le = empty_not_empty || (not_empty_not_empty && lsn_le);
-      auto jrn_condition = logs_is_empty || my_log_is_le;
-
-      if (result.term <= e.term && jrn_condition) {
+      if (result.term <= e.term && commited.lsn <= e.commited.lsn) {
         result.node_kind = NODE_KIND::ELECTION;
         result.term = e.term;
         result.leader = e.leader;

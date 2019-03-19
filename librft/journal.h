@@ -12,9 +12,9 @@ namespace rft {
 
 namespace logdb {
 /// log sequence numbder;
-using index_t = uint64_t;
+using index_t = int64_t;
 const term_t UNDEFINED_TERM = std::numeric_limits<term_t>::min();
-const index_t UNDEFINED_INDEX = std::numeric_limits<logdb::index_t>::max();
+const index_t UNDEFINED_INDEX = std::numeric_limits<logdb::index_t>::min();
 
 struct reccord_info {
   reccord_info() noexcept {
@@ -22,8 +22,9 @@ struct reccord_info {
     lsn = UNDEFINED_INDEX;
   }
 
-  bool is_empty() const { return term == UNDEFINED_TERM && lsn == UNDEFINED_INDEX; }
+  bool is_empty() const { return lsn_is_empty() && term_is_empty(); }
   bool lsn_is_empty() const { return lsn == UNDEFINED_INDEX; }
+  bool term_is_empty() const { return term == UNDEFINED_TERM; }
 
   bool operator==(const reccord_info &o) const { return term == o.term && lsn == o.lsn; }
   bool operator!=(const reccord_info &o) const { return !(*this == o); }
