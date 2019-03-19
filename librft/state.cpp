@@ -52,7 +52,7 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
     }
     case NODE_KIND::FOLLOWER: {
       // vote to biggest journal.
-      if (result.term <= e.term && commited.lsn <= e.commited.lsn) {
+      if (result.term < e.term && commited.lsn <= e.commited.lsn) {
         result.node_kind = NODE_KIND::ELECTION;
         result.term = e.term;
         result.leader = e.leader;
@@ -64,7 +64,6 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
       if (result.term < e.term) {
         result.change_state(NODE_KIND::ELECTION, e.term, e.leader);
         result.last_heartbeat_time = clock_t::now();
-        // TODO log replication
       }
       target = NOTIFY_TARGET::SENDER;
 
@@ -83,6 +82,7 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
   } else {
     switch (result.node_kind) {
     case NODE_KIND::ELECTION: {
+      // TODO ??
       result.last_heartbeat_time = clock_t::now();
       result.term = e.term;
       target = NOTIFY_TARGET::SENDER;
@@ -132,7 +132,7 @@ node_state_t node_state_t::on_append_entries(const node_state_t &self,
     break;
   }
   case NODE_KIND::FOLLOWER: {
-    if (e.term > result.term) {
+    if (/*self.leader.is_empty() ||*/ e.term > result.term) {
       result.leader = e.leader;
       result.term = e.term;
       result.last_heartbeat_time = clock_t::now();

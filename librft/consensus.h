@@ -20,6 +20,11 @@ public:
 };
 
 class consensus {
+  struct log_state_t {
+    logdb::reccord_info prev;
+    size_t cycle = 0;
+  };
+
 public:
   EXPORT consensus(const node_settings &ns,
                    abstract_cluster *cluster,
@@ -74,10 +79,10 @@ private:
 
   node_state_t _state;
 
-  std::unordered_map<cluster_node, logdb::reccord_info> _log_state;
+  std::unordered_map<cluster_node, log_state_t> _logs_state;
   std::unordered_map<cluster_node, logdb::reccord_info> _last_sended;
 
-  utils::logging::abstract_logger_ptr _logger;
+  utils::logging::abstract_logger_uptr _logger;
 };
 
 }; // namespace rft

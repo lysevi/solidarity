@@ -59,6 +59,7 @@ private:
 };
 
 using abstract_logger_ptr = std::shared_ptr<abstract_logger>;
+using abstract_logger_uptr = std::unique_ptr<abstract_logger>;
 
 class console_logger final : public abstract_logger {
 public:
