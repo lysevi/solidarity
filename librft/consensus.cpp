@@ -22,8 +22,10 @@ consensus::consensus(const node_settings &ns,
     , _cluster(cluster)
     , _jrn(jrn)
     , _rnd_eng(make_seeded_engine()) {
+
   auto log_prefix = utils::strings::args_to_string("node ", ns.name(), ": ");
-  _logger = std::make_shared<utils::logging::prefix_logger>(
+
+  _logger = std::make_unique<utils::logging::prefix_logger>(
       utils::logging::logger_manager::instance()->get_logger(), log_prefix);
 
   ENSURE(_consumer != nullptr);
@@ -369,7 +371,7 @@ void consensus::heartbeat() {
     const auto ns = node_state_t::heartbeat(_state, _self_addr, _cluster->size());
     _state = ns;
 
-    _logger->info("heartbeat. ", old_s.node_kind, "=> ", _state.node_kind,
+    _logger->info("heartbeat. ", old_s.node_kind, " => ", _state.node_kind,
                   " leader:", _state.leader);
   }
 
