@@ -124,7 +124,9 @@ void consensus::on_heartbeat(const cluster_node &from, const append_entries &e) 
   const auto old_s = _state;
   const auto ns = node_state_t::on_append_entries(_state, from, _jrn.get(), e);
   _state = ns;
-  _state.last_heartbeat_time = clock_t::now();
+  if (!_state.leader.is_empty()) {
+    _state.last_heartbeat_time = clock_t::now();
+  }
   if (old_s.leader.is_empty() || old_s.leader != _state.leader
       || old_s.node_kind != _state.node_kind) {
     _logger->info("on_heartbeat. change leader from: ", old_s, " => ", _state,
