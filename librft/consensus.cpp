@@ -124,9 +124,6 @@ void consensus::on_heartbeat(const cluster_node &from, const append_entries &e) 
   const auto old_s = _state;
   const auto ns = node_state_t::on_append_entries(_state, from, _jrn.get(), e);
   _state = ns;
-  if (!_state.leader.is_empty()) {
-    _state.last_heartbeat_time = clock_t::now();
-  }
   if (old_s.leader.is_empty() || old_s.leader != _state.leader
       || old_s.node_kind != _state.node_kind) {
     _logger->info("on_heartbeat. change leader from: ", old_s, " => ", _state,
@@ -227,6 +224,11 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
     return;
   }
 
+  if (from == _state.leader) {
+    _logger->dbg("update last_heartbeat from ", from);
+    _state.last_heartbeat_time = clock_t::now();
+  }
+
   switch (e.kind) {
   case entries_kind_t::HEARTBEAT: {
     on_heartbeat(from, e);
@@ -262,6 +264,12 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
   default:
     NOT_IMPLEMENTED;
   };
+
+  // TODO remove
+  if (from == _state.leader) {
+    _logger->dbg("2. update last_heartbeat from ", from);
+    _state.last_heartbeat_time = clock_t::now();
+  }
 }
 
 void consensus::on_append_entries(const cluster_node &from, const append_entries &e) {
@@ -272,7 +280,6 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
     _logs_state.clear();
     return;
   }
-  _state.last_heartbeat_time = clock_t::now();
 
   auto self_prev = _jrn->prev_rec();
   if (e.current != self_prev && e.prev != self_prev && !self_prev.is_empty()) {
@@ -307,8 +314,6 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
   /// Pong for "heartbeat"
   auto ae = make_append_entries(entries_kind_t::ANSWER_OK);
   _cluster->send_to(_self_addr, from, ae);
-
-  _state.last_heartbeat_time = clock_t::now();
 }
 
 void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) {
@@ -369,7 +374,11 @@ void consensus::commit_reccord(const logdb::reccord_info &target) {
 void consensus::heartbeat() {
   std::lock_guard<std::mutex> l(_locker);
 
-  if (_state.node_kind != NODE_KIND::LEADER && _state.is_heartbeat_missed()) {
+  if (!_state.is_heartbeat_missed()) {
+    return;
+  }
+
+  if (_state.node_kind != NODE_KIND::LEADER) {
     const auto old_s = _state;
     const auto ns = node_state_t::heartbeat(_state, _self_addr, _cluster->size());
     _state = ns;
