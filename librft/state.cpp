@@ -52,8 +52,16 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
     }
     case NODE_KIND::FOLLOWER: {
       // vote to biggest journal.
-      if (result.term < e.term && commited.lsn <= e.commited.lsn) {
+      /*if (result.term > e.term
+          || (result.term == e.term && commited.lsn > e.commited.lsn)) {
+      } else {
         result.node_kind = NODE_KIND::ELECTION;
+        result.term = e.term;
+        result.leader = e.leader;
+      }*/
+      if (result.term < e.term
+          || (result.term == e.term && commited.lsn <= e.commited.lsn)) {
+       result.node_kind = NODE_KIND::ELECTION;
         result.term = e.term;
         result.leader = e.leader;
       }

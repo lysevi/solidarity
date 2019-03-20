@@ -72,17 +72,17 @@ SCENARIO("node_state.vote") {
         }
       }
 
-      WHEN("leader.commit<self.commit") {
+      WHEN("leader.commit==self.commit || self.lsn<other.lsn") {
         rft::logdb::reccord_info ci_rec;
         ci_rec.lsn = 2;
         ci_rec.term = 2;
-        ae.commited.lsn = 1;
-        ae.commited.term = 2;
+        self.term = ae.term = 3;
+        ae.commited.lsn = 3;
         auto c
             = rft::node_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
-        THEN("vote to self.leader") {
-          EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
-          EXPECT_EQ(c.new_state.term, self.term);
+        THEN("vote to sender") {
+          EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
+          EXPECT_EQ(c.new_state.term, ae.term);
           EXPECT_EQ(c.notify, rft::NOTIFY_TARGET::SENDER);
         }
       }
@@ -109,8 +109,9 @@ SCENARIO("node_state.vote") {
         ae.commited.term = 2;
         auto c
             = rft::node_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
-        THEN("do nothing") {
-          EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
+        THEN("vote to sender") {
+          EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
+          EXPECT_EQ(c.new_state.term, from_s.term);
           EXPECT_EQ(c.notify, rft::NOTIFY_TARGET::SENDER);
         }
       }
