@@ -29,10 +29,8 @@ consensus::consensus(const node_settings &ns,
       utils::logging::logger_manager::instance()->get_logger(), log_prefix);
 
   ENSURE(_consumer != nullptr);
-  _logger->info("election_timeout(ms)=", ns.election_timeout().count());
-  _logger->info("append_quorum(%)=", ns.append_quorum());
-  _logger->info("vote_quorum(%)=", ns.vote_quorum());
-  _logger->info("cycle_for_replication=", ns.cycle_for_replication());
+
+  _settings.dump_to_log(_logger.get());
 
   _self_addr.set_name(_settings.name());
 
