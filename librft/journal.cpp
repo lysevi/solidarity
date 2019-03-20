@@ -139,6 +139,41 @@ void memory_journal::erase_all_after(const reccord_info &e) {
   }
 }
 
+void memory_journal::erase_all_to(const reccord_info &e) {
+  std::lock_guard<std::shared_mutex> lg(_locker);
+
+  using rmtype = std::map<index_t, log_entry>::reverse_iterator::value_type;
+  std::vector<rmtype> to_erase;
+  to_erase.reserve(_wal.size());
+
+  for (auto it = _wal.begin(); it != _wal.end(); ++it) {
+    if (it->first == e.lsn) {
+      break;
+    }
+    to_erase.push_back(*it);
+  }
+
+  for (auto &kv : to_erase) {
+    _wal.erase(kv.first);
+  }
+
+  if (!_wal.empty()) {
+    auto it = _wal.begin();
+
+    if (_commited.lsn < e.lsn) {
+      _commited.lsn = it->first;
+      _commited.term = it->second.term;
+    }
+  } else {
+    _prev = reccord_info{};
+    _commited = reccord_info{};
+  }
+
+  if (_prev.is_empty() && !_commited.is_empty()) {
+    _prev = _commited;
+  }
+}
+
 void memory_journal::visit(std::function<void(const log_entry &)> f) {
   std::shared_lock<std::shared_mutex> lg(_locker);
   for (const auto &kv : _wal) {

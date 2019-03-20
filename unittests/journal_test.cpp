@@ -37,7 +37,17 @@ TEST_CASE("journal.memory") {
   EXPECT_EQ(jrn->commited_rec().lsn, rft::logdb::index_t(2));
   EXPECT_EQ(jrn->first_uncommited_rec().lsn, rft::logdb::UNDEFINED_INDEX);
 
-  jrn->erase_all_after(first_rec);
-  EXPECT_EQ(jrn->commited_rec().lsn, first_rec.lsn);
-  EXPECT_EQ(jrn->prev_rec().lsn, first_rec.lsn);
+  SECTION("erase all after") {
+    jrn->erase_all_after(first_rec);
+    EXPECT_EQ(jrn->commited_rec().lsn, first_rec.lsn);
+    EXPECT_EQ(jrn->prev_rec().lsn, first_rec.lsn);
+  }
+
+  SECTION("erase all to") {
+    rft::logdb::reccord_info to_rm;
+    to_rm.lsn = 2;
+    jrn->erase_all_to(to_rm);
+    EXPECT_EQ(jrn->prev_rec().lsn, rft::logdb::index_t(2));
+    EXPECT_EQ(jrn->size(), size_t(1));
+  }
 }

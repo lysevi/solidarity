@@ -48,6 +48,7 @@ public:
   virtual log_entry get(const logdb::index_t lsn) = 0;
   virtual size_t size() const = 0;
   virtual void erase_all_after(const reccord_info &e) = 0;
+  virtual void erase_all_to(const reccord_info &e) = 0;
   virtual void visit(std::function<void(const log_entry &)>) = 0;
 
   virtual reccord_info prev_rec() const noexcept = 0;
@@ -67,6 +68,7 @@ public:
   EXPORT log_entry get(const logdb::index_t lsn) override;
   EXPORT size_t size() const override;
   EXPORT void erase_all_after(const reccord_info &e) override;
+  EXPORT void erase_all_to(const reccord_info &e) override;
   EXPORT void visit(std::function<void(const log_entry &)>) override;
 
   EXPORT reccord_info prev_rec() const noexcept override;
