@@ -102,6 +102,26 @@ append_entries consensus::make_append_entries(const entries_kind_t kind) const n
   return ae;
 }
 
+append_entries consensus::make_append_entries(const logdb::index_t lsn_to_replicate,
+                                              const logdb::index_t prev_lsn) {
+  auto ae = make_append_entries(rft::entries_kind_t::APPEND);
+  auto cur = _jrn->get(lsn_to_replicate);
+
+  if (cur.kind == logdb::log_entry_kind::APPEND) {
+    ae.cmd = cur.cmd;
+  }
+
+  ae.current.kind = cur.kind;
+  ae.current.lsn = lsn_to_replicate;
+  ae.current.term = cur.term;
+
+  if (prev_lsn != logdb::UNDEFINED_INDEX) {
+    auto prev = _jrn->get(prev_lsn);
+    ae.prev = logdb::reccord_info(prev, prev_lsn);
+  }
+  return ae;
+}
+
 void consensus::send_all(const entries_kind_t kind) {
   _cluster->send_all(_self_addr, make_append_entries(kind));
 }
@@ -435,11 +455,13 @@ void consensus::replicate_log() {
     if (naddr == _self_addr) {
       continue;
     }
-    auto kv = _logs_state.find(naddr);
+    
+	auto kv = _logs_state.find(naddr);
     if (jrn_is_empty || kv == _logs_state.end()) {
       send(naddr, entries_kind_t::HEARTBEAT);
       continue;
     }
+
     bool is_append = false;
     if (kv->second.prev.is_empty() || kv->second.prev.lsn < self_log_state.prev.lsn) {
       _logger->info("try replication for ", kv->first, " => lsn:", kv->second.prev.lsn,
@@ -457,26 +479,9 @@ void consensus::replicate_log() {
       if (kv->second.cycle != 0
           && (ls_it != _last_sended.end() || ls_it->second.lsn == lsn_to_replicate)) {
         kv->second.cycle--;
-        /*_logger->info("flwr: ", kv->first, " cycle:", kv->second.cycle);*/
       } else {
-        /*_logger->info("replicate to flwr: ", kv->first, " cycle:", kv->second.cycle);*/
         kv->second.cycle = _settings.cycle_for_replication();
-        auto ae = make_append_entries(rft::entries_kind_t::APPEND);
-        auto cur = _jrn->get(lsn_to_replicate);
-
-        if (cur.kind == logdb::log_entry_kind::APPEND) {
-          ae.cmd = cur.cmd;
-        }
-
-        ae.current.kind = cur.kind;
-        ae.current.lsn = lsn_to_replicate;
-        ae.current.term = cur.term;
-
-        if (!kv->second.prev.is_empty()) {
-          auto prev = _jrn->get(kv->second.prev.lsn);
-          ae.prev.lsn = kv->second.prev.lsn;
-          ae.prev.term = kv->second.prev.term;
-        }
+        auto ae = make_append_entries(lsn_to_replicate, kv->second.prev.lsn);
 
         _last_sended[kv->first] = ae.current;
         _logger->info("replicate cur:", ae.current, " prev:", ae.prev,

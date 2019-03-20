@@ -54,6 +54,8 @@ public:
 protected:
   append_entries make_append_entries(const entries_kind_t kind
                                      = entries_kind_t::APPEND) const noexcept;
+  append_entries make_append_entries(const logdb::index_t lsn_to_replicate,
+                                     const logdb::index_t prev_lsn);
   void send_all(const entries_kind_t kind);
   void send(const cluster_node &to, const entries_kind_t kind);
 
@@ -67,7 +69,6 @@ protected:
   void commit_reccord(const logdb::reccord_info &target);
   void replicate_log();
   void log_fsck(const append_entries &e);
-
 
   void add_command_impl(const command &cmd, logdb::log_entry_kind k);
 
