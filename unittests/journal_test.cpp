@@ -15,6 +15,9 @@ TEST_CASE("journal.memory") {
   EXPECT_EQ(jrn->prev_rec().lsn, rft::logdb::index_t(0));
   EXPECT_EQ(jrn->first_uncommited_rec().lsn, jrn->prev_rec().lsn);
   EXPECT_EQ(jrn->commited_rec().lsn, rft::logdb::UNDEFINED_INDEX);
+  EXPECT_EQ(jrn->info(rft::logdb::index_t(0)).lsn, rft::logdb::index_t(0));
+  EXPECT_EQ(jrn->info(rft::logdb::index_t(0)).term, en.term);
+  EXPECT_EQ(jrn->info(rft::logdb::index_t(0)).kind, en.kind);
 
   auto first_rec = jrn->prev_rec();
 
@@ -36,6 +39,9 @@ TEST_CASE("journal.memory") {
   EXPECT_EQ(jrn->get(jrn->prev_rec().lsn).term, en.term);
   EXPECT_EQ(jrn->commited_rec().lsn, rft::logdb::index_t(2));
   EXPECT_EQ(jrn->first_uncommited_rec().lsn, rft::logdb::UNDEFINED_INDEX);
+  EXPECT_EQ(jrn->info(rft::logdb::index_t(2)).lsn, rft::logdb::index_t(2));
+  EXPECT_EQ(jrn->info(rft::logdb::index_t(2)).term, en.term);
+  EXPECT_EQ(jrn->info(rft::logdb::index_t(2)).kind, en.kind);
 
   SECTION("erase all after") {
     jrn->erase_all_after(first_rec);
@@ -49,5 +55,8 @@ TEST_CASE("journal.memory") {
     jrn->erase_all_to(to_rm);
     EXPECT_EQ(jrn->prev_rec().lsn, rft::logdb::index_t(2));
     EXPECT_EQ(jrn->size(), size_t(1));
+
+    EXPECT_EQ(jrn->info(rft::logdb::index_t(0)).lsn, rft::logdb::UNDEFINED_INDEX);
+    EXPECT_EQ(jrn->info(rft::logdb::index_t(0)).term, rft::logdb::UNDEFINED_TERM);
   }
 }
