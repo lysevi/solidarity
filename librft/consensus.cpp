@@ -287,18 +287,29 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
   }
 
   // TODO add check prev,cur,commited
-  if (!e.cmd.is_empty() && e.term == _state.term) {
-    ENSURE(!e.current.is_empty());
+  if ((!e.current.is_empty() || e.current.kind == logdb::log_entry_kind::SNAPSHOT)
+      && e.term == _state.term) {
+    ENSURE(!e.current.is_empty() || e.current.kind == logdb::log_entry_kind::SNAPSHOT);
     _logger->info("new entry from:", from, " cur:", e.current);
 
     if (e.current == self_prev) {
       _logger->info("duplicates");
     } else {
-      _logger->info("write to journal ");
       logdb::log_entry le;
       le.term = _state.term;
-      le.cmd = e.cmd;
-      _jrn->put(le);
+      if (!e.cmd.is_empty()) {
+        le.cmd = e.cmd;
+      } else {
+        if (e.cmd.is_empty() && e.current.kind == logdb::log_entry_kind::SNAPSHOT) {
+          _logger->info("create snapshot");
+          le.cmd = _consumer->snapshot();
+          le.kind = logdb::log_entry_kind::SNAPSHOT;
+        }
+      }
+      if (!le.cmd.is_empty()) {
+        _logger->info("write to journal ");
+        _jrn->put(le);
+      }
     }
   }
 
@@ -361,10 +372,18 @@ void consensus::commit_reccord(const logdb::reccord_info &target) {
     auto i = to_commit.lsn;
     while (i <= target.lsn && i <= _jrn->prev_rec().lsn) {
       _logger->info("commit entry lsv:", i);
-      _jrn->commit(i++);
+      auto info = _jrn->info(i);
+      _jrn->commit(i);
       auto commited = _jrn->commited_rec();
       auto le = _jrn->get(commited.lsn);
-      _consumer->apply_cmd(le.cmd);
+      if (info.kind == logdb::log_entry_kind::APPEND) {
+        _consumer->apply_cmd(le.cmd);
+      } else {
+        auto erase_point = _jrn->info(i - 1);
+        _logger->info("erase all to ", erase_point);
+        _jrn->erase_all_to(erase_point);
+      }
+      ++i;
     }
   }
 }
@@ -444,17 +463,26 @@ void consensus::replicate_log() {
         kv->second.cycle = _settings.cycle_for_replication();
         auto ae = make_append_entries(rft::entries_kind_t::APPEND);
         auto cur = _jrn->get(lsn_to_replicate);
+
+        if (cur.kind == logdb::log_entry_kind::APPEND) {
+          ae.cmd = cur.cmd;
+        }
+
+        ae.current.kind = cur.kind;
         ae.current.lsn = lsn_to_replicate;
         ae.current.term = cur.term;
-        ae.cmd = cur.cmd;
+
         if (!kv->second.prev.is_empty()) {
           auto prev = _jrn->get(kv->second.prev.lsn);
           ae.prev.lsn = kv->second.prev.lsn;
           ae.prev.term = kv->second.prev.term;
         }
+
         _last_sended[kv->first] = ae.current;
         _logger->info("replicate cur:", ae.current, " prev:", ae.prev,
                       " ci:", ae.commited, " to ", kv->first);
+        ENSURE(!ae.current.is_empty()
+               || ae.current.kind == logdb::log_entry_kind::SNAPSHOT);
         _cluster->send_to(_self_addr, kv->first, ae);
         is_append = true;
       }
@@ -466,9 +494,7 @@ void consensus::replicate_log() {
   }
 }
 
-void consensus::add_command(const command &cmd) {
-  // TODO global lock for this method. a while cmd not in consumer;
-  std::lock_guard<std::mutex> lg(_locker);
+void consensus::add_command_impl(const command &cmd, logdb::log_entry_kind k) {
   if (_state.node_kind != NODE_KIND::LEADER) {
     THROW_EXCEPTION("only leader-node have right to add commands to the cluster!");
   }
@@ -476,13 +502,27 @@ void consensus::add_command(const command &cmd) {
   logdb::log_entry le;
   le.cmd = cmd;
   le.term = _state.term;
+  le.kind = k;
 
   auto current = _jrn->put(le);
   ENSURE(_jrn->size() != size_t(0));
 
   _logs_state[_self_addr].prev = current;
   _logger->info("add_command: ", current);
+
   if (_cluster->size() == size_t(1)) {
     commit_reccord(_jrn->first_uncommited_rec());
   }
+}
+
+void consensus::add_command(const command &cmd) {
+  // TODO global lock for this method. a while cmd not in consumer;
+  std::lock_guard<std::mutex> lg(_locker);
+
+  if (_jrn->size() >= _settings.max_log_size()) {
+    _logger->info("create snapshot");
+    add_command_impl(_consumer->snapshot(), logdb::log_entry_kind::SNAPSHOT);
+  }
+
+  add_command_impl(cmd, logdb::log_entry_kind::APPEND);
 }

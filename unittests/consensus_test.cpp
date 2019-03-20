@@ -286,6 +286,79 @@ TEST_CASE("consensus.replication") {
   consumers.clear();
 }
 
+TEST_CASE("consensus.log_compaction") {
+  using rft::node_settings;
+  auto cluster = std::make_shared<mock_cluster>();
+
+  size_t nodes_count = 4;
+  size_t max_log_size = 3;
+  std::vector<std::shared_ptr<mock_consumer>> consumers;
+  consumers.reserve(nodes_count);
+
+  auto et = std::chrono::milliseconds(300);
+  for (size_t i = 0; i < nodes_count; ++i) {
+    auto nname = "_" + std::to_string(i);
+    auto sett = node_settings().set_name(nname).set_election_timeout(et).set_max_log_size(
+        max_log_size);
+
+    auto c = std::make_shared<mock_consumer>();
+    consumers.push_back(c);
+    auto cons = std::make_shared<rft::consensus>(
+        sett, cluster.get(), rft::logdb::memory_journal::make_new(), c.get());
+    cluster->add_new(rft::cluster_node().set_name(sett.name()), cons);
+  }
+
+  cluster->wait_leader_eletion();
+
+  rft::cluster_node last_leader;
+  rft::command cmd;
+  cmd.data.resize(1);
+  cmd.data[0] = 0;
+
+  auto data_eq = [&cmd](const std::shared_ptr<mock_consumer> &c) -> bool {
+    return c->last_cmd.data == cmd.data;
+  };
+
+  std::vector<std::shared_ptr<rft::consensus>> leaders;
+  for (int i = 0; i < 10; ++i) {
+    leaders = cluster->by_filter(is_leader_pred);
+    if (leaders.size() != size_t(1)) {
+      cluster->wait_leader_eletion();
+    }
+    cmd.data[0]++;
+    leaders[0]->add_command(cmd);
+    while (true) {
+      cluster->print_cluster();
+      cluster->heartbeat();
+      bool all_of = std::all_of(consumers.cbegin(), consumers.cend(), data_eq);
+      if (all_of) {
+        break;
+      }
+    }
+  }
+
+  auto all_nodes = cluster->get_all();
+  std::vector<size_t> sizes;
+  sizes.resize(all_nodes.size());
+  while (true) {
+    cluster->print_cluster();
+    cluster->heartbeat();
+    std::transform(
+        all_nodes.cbegin(), all_nodes.cend(), sizes.begin(),
+        [](const std::shared_ptr<rft::consensus> &c) { return c->journal()->size(); });
+
+    size_t count_of
+        = std::count_if(sizes.cbegin(), sizes.cend(),
+                        [max_log_size](const size_t c) { return c <= max_log_size; });
+    if (count_of == all_nodes.size()) {
+      break;
+    }
+  }
+
+  cluster = nullptr;
+  consumers.clear();
+}
+
 // TEST_CASE("consensus.rollback") {
 //  using rft::cluster_node;
 //  using rft::consensus;

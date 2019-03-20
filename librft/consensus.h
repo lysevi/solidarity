@@ -68,6 +68,9 @@ protected:
   void replicate_log();
   void log_fsck(const append_entries &e);
 
+
+  void add_command_impl(const command &cmd, logdb::log_entry_kind k);
+
 private:
   abstract_consensus_consumer *const _consumer = nullptr;
   mutable std::mutex _locker;

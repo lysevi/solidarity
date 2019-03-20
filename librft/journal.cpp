@@ -22,8 +22,7 @@ std::shared_ptr<memory_journal> memory_journal::make_new() {
 reccord_info memory_journal::put(const log_entry &e) {
   std::lock_guard<std::shared_mutex> lg(_locker);
   _wal.insert(std::make_pair(_idx, e));
-  _prev.lsn = _idx;
-  _prev.term = e.term;
+  _prev = reccord_info(e, _idx);
   ++_idx;
   return _prev;
 }
@@ -38,8 +37,7 @@ void memory_journal::commit(const index_t lsn) {
     to_commit = last->first;
   }
 
-  _commited.lsn = last->first;
-  _commited.term = last->second.term;
+  _commited = reccord_info(last->second, last->first);
 }
 
 log_entry memory_journal::get(const logdb::index_t lsn) {
@@ -123,8 +121,7 @@ void memory_journal::erase_all_after(const reccord_info &e) {
 
   if (!_wal.empty()) {
     auto it = _wal.rbegin();
-    _prev.lsn = it->first;
-    _prev.term = it->second.term;
+    _prev = reccord_info(it->second, it->first);
 
     if (_commited.lsn > e.lsn) {
       _commited = _prev;
@@ -147,7 +144,7 @@ void memory_journal::erase_all_to(const reccord_info &e) {
   to_erase.reserve(_wal.size());
 
   for (auto it = _wal.begin(); it != _wal.end(); ++it) {
-    if (it->first == e.lsn) {
+    if (it->first >= e.lsn) {
       break;
     }
     to_erase.push_back(*it);
@@ -161,8 +158,7 @@ void memory_journal::erase_all_to(const reccord_info &e) {
     auto it = _wal.begin();
 
     if (_commited.lsn < e.lsn) {
-      _commited.lsn = it->first;
-      _commited.term = it->second.term;
+      _commited = reccord_info(it->second, it->first);
     }
   } else {
     _prev = reccord_info{};
@@ -179,4 +175,14 @@ void memory_journal::visit(std::function<void(const log_entry &)> f) {
   for (const auto &kv : _wal) {
     f(kv.second);
   }
+}
+
+reccord_info memory_journal::info(index_t lsn) const noexcept {
+  std::shared_lock<std::shared_mutex> lg(_locker);
+  auto it = _wal.find(lsn);
+  if (it == _wal.end()) {
+    return reccord_info{};
+  }
+
+  return reccord_info(it->second, lsn);
 }
