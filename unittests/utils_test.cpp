@@ -23,8 +23,8 @@ TEST_CASE("utils.split") {
 
   EXPECT_EQ(splitted.size(), size_t(8));
 
-  bool is_equal =
-      std::equal(tst_a.begin(), tst_a.end(), splitted.begin(), splitted.end());
+  bool is_equal
+      = std::equal(tst_a.begin(), tst_a.end(), splitted.begin(), splitted.end());
   EXPECT_TRUE(is_equal);
 }
 
@@ -139,8 +139,9 @@ TEST_CASE("utils.threads_manager") {
       }
       return CONTINUATION_STRATEGY::SINGLE;
     };
-    t_manager.post(tk1, wrap_task_with_priority(
-                            infinite_worker, utils::async::TASK_PRIORITY::WORKER));
+    t_manager.post(
+        tk1,
+        wrap_task_with_priority(infinite_worker, utils::async::TASK_PRIORITY::WORKER));
     auto at_while_res = t_manager.post(tk1, wrap_task(at_while));
     for (size_t i = 0; i < tasks_count; ++i) {
       t_manager.post(tk1, wrap_task(at1));
@@ -173,7 +174,7 @@ TEST_CASE("utils.timer(cyclic)") {
   t.start();
 
   while (calls < 3) {
-     utils::sleep_mls(100);
+    utils::sleep_mls(100);
   }
   t.stop();
   calls = 0;

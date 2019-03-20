@@ -65,17 +65,14 @@ SET(solidarity_PRIVATE_LIBRARIES  ${CMAKE_THREAD_LIBS_INIT})
 add_subdirectory(libutils)
 add_subdirectory(librft)
 
+if(solidarity_ENABLE_BENCHMARKS)
+   add_definitions(-DENABLE_BENCHMARKS)
+endif(solidarity_ENABLE_BENCHMARKS)
+
 if (solidarity_ENABLE_TESTS)
   enable_testing()
   add_subdirectory(unittests)
 endif()
 
-if(solidarity_ENABLE_BENCHMARKS)
-   set(BENCHMARK_ENABLE_TESTING OFF)
-   add_subdirectory(extern/benchmark)
-   include_directories(extern/benchmark/include)
-   set_target_properties(benchmark PROPERTIES FOLDER Extern)
-   set_target_properties(benchmark_main PROPERTIES FOLDER Extern)
-   add_subdirectory (microbenchmarks)
-endif(solidarity_ENABLE_BENCHMARKS)
+
 
