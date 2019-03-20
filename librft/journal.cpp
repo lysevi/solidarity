@@ -112,7 +112,7 @@ void memory_journal::erase_all_after(const reccord_info &e) {
   std::vector<rmtype> to_erase;
   to_erase.reserve(_wal.size());
   for (auto it = _wal.rbegin(); it != _wal.rend(); ++it) {
-    if (it->first == e.lsn && it->second.term == e.term) {
+    if (it->first == e.lsn /*&& it->second.term == e.term*/) {
       break;
     }
     to_erase.push_back(*it);
