@@ -100,6 +100,11 @@ reccord_info memory_journal::first_rec() const noexcept {
 }
 
 reccord_info memory_journal::restore_start_point() const noexcept {
+  for (auto &it = _wal.crbegin(); it != _wal.crend(); ++it) {
+    if (it->second.kind == log_entry_kind::SNAPSHOT) {
+      return reccord_info(it->second, it->first);
+    }
+  }
   return first_rec();
 }
 
