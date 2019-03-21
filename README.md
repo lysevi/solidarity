@@ -1,1 +1,1 @@
-# solidarity
+# SOLIDarity
