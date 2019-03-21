@@ -60,7 +60,7 @@ TEST_CASE("utils.threads_pool") {
     const size_t threads_count = 2;
     threads_pool tp(threads_pool::params_t(threads_count, tk));
     const size_t tasks_count = 100;
-    task at = [](const thread_info &ti) {
+    task at = [=](const thread_info &ti) {
       if (tk != ti.kind) {
         INFO("(tk != ti.kind)")
         throw MAKE_EXCEPTION("(tk != ti.kind)");
@@ -82,7 +82,7 @@ TEST_CASE("utils.threads_pool") {
     const size_t threads_count = 2;
     threads_pool tp(threads_pool::params_t(threads_count, tk));
     const size_t tasks_count = 100;
-    task at = [](const thread_info &ti) {
+    task at = [=](const thread_info &ti) {
       if (tk != ti.kind) {
         INFO("(tk != ti.kind)")
         throw MAKE_EXCEPTION("(tk != ti.kind)");
@@ -125,7 +125,7 @@ TEST_CASE("utils.threads_manager") {
       }
       return CONTINUATION_STRATEGY::SINGLE;
     };
-    task at1 = [](const thread_info &ti) {
+    task at1 = [=](const thread_info &ti) {
       if (tk1 != ti.kind) {
         INFO("(tk != ti.kind)")
         utils::sleep_mls(400);
@@ -133,7 +133,7 @@ TEST_CASE("utils.threads_manager") {
       }
       return CONTINUATION_STRATEGY::SINGLE;
     };
-    task at2 = [](const thread_info &ti) {
+    task at2 = [=](const thread_info &ti) {
       if (tk2 != ti.kind) {
         INFO("(tk != ti.kind)")
         utils::sleep_mls(400);

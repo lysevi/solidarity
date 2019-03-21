@@ -43,7 +43,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 else()
  include(cotire)
  macro(PRECOMPILED_HEADERS ARG)
-  cotire(ARG)
+  cotire(${ARG})
  endmacro()
 endif()
 
