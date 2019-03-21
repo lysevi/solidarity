@@ -16,10 +16,30 @@ using index_t = int64_t;
 const term_t UNDEFINED_TERM = std::numeric_limits<term_t>::min();
 const index_t UNDEFINED_INDEX = std::numeric_limits<logdb::index_t>::min();
 
+enum class log_entry_kind : uint8_t { APPEND, SNAPSHOT };
+
+struct log_entry {
+  log_entry()
+      : term(UNDEFINED_TERM)
+      , cmd()
+      , kind(log_entry_kind::APPEND) {}
+
+  term_t term;
+  command cmd;
+  log_entry_kind kind;
+};
+
 struct reccord_info {
+  reccord_info(const log_entry &e, index_t lsn_) {
+    lsn = lsn_;
+    term = e.term;
+    kind = e.kind;
+  }
+
   reccord_info() noexcept {
     term = UNDEFINED_TERM;
     lsn = UNDEFINED_INDEX;
+    kind = log_entry_kind::APPEND;
   }
 
   bool is_empty() const { return lsn_is_empty() && term_is_empty(); }
@@ -31,14 +51,10 @@ struct reccord_info {
 
   term_t term;
   logdb::index_t lsn;
+  log_entry_kind kind;
 };
 
 EXPORT std::string to_string(const reccord_info &ri);
-
-struct log_entry {
-  term_t term;
-  command cmd;
-};
 
 class abstract_journal {
 public:
@@ -48,13 +64,16 @@ public:
   virtual log_entry get(const logdb::index_t lsn) = 0;
   virtual size_t size() const = 0;
   virtual void erase_all_after(const reccord_info &e) = 0;
+  virtual void erase_all_to(const reccord_info &e) = 0;
   virtual void visit(std::function<void(const log_entry &)>) = 0;
+
 
   virtual reccord_info prev_rec() const noexcept = 0;
   virtual reccord_info first_uncommited_rec() const noexcept = 0;
   virtual reccord_info commited_rec() const noexcept = 0;
   virtual reccord_info first_rec() const noexcept = 0;
   virtual reccord_info restore_start_point() const noexcept = 0;
+  virtual reccord_info info(index_t lsn) const noexcept = 0;
 };
 
 using journal_ptr = std::shared_ptr<abstract_journal>;
@@ -67,6 +86,7 @@ public:
   EXPORT log_entry get(const logdb::index_t lsn) override;
   EXPORT size_t size() const override;
   EXPORT void erase_all_after(const reccord_info &e) override;
+  EXPORT void erase_all_to(const reccord_info &e) override;
   EXPORT void visit(std::function<void(const log_entry &)>) override;
 
   EXPORT reccord_info prev_rec() const noexcept override;
@@ -74,6 +94,7 @@ public:
   EXPORT reccord_info commited_rec() const noexcept override;
   EXPORT reccord_info first_rec() const noexcept override;
   EXPORT reccord_info restore_start_point() const noexcept override;
+  EXPORT reccord_info info(index_t lsn) const noexcept override;
 
 protected:
   mutable std::shared_mutex _locker;

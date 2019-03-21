@@ -141,6 +141,10 @@ mock_cluster::by_filter(std::function<bool(const std::shared_ptr<rft::consensus>
   return result;
 }
 
+std::vector<std::shared_ptr<rft::consensus>> mock_cluster::get_all() {
+  return by_filter([](auto) { return true; });
+}
+
 void mock_cluster::apply(std::function<void(const std::shared_ptr<rft::consensus>)> f) {
   std::shared_lock<std::shared_mutex> lg(_cluster_locker);
   for (const auto &kv : _cluster) {

@@ -19,12 +19,13 @@ class worker_t {
   volatile bool _stop_flag = false;
   std::shared_ptr<rft::consensus> _target;
   std::condition_variable _cond;
-  
-  std::thread _tread;
-  bool _is_node_stoped=false;
 
-  volatile bool _is_stoped=false;
+  std::thread _tread;
+  bool _is_node_stoped = false;
+
+  volatile bool _is_stoped = false;
   rft::cluster_node self_addr;
+
 public:
   worker_t(std::shared_ptr<rft::consensus> t);
   ~worker_t();
@@ -55,6 +56,8 @@ public:
   std::vector<std::shared_ptr<rft::consensus>>
   by_filter(std::function<bool(const std::shared_ptr<rft::consensus>)> pred);
 
+  std::vector<std::shared_ptr<rft::consensus>> get_all();
+
   void apply(std::function<void(const std::shared_ptr<rft::consensus>)> f);
 
   void heartbeat();
@@ -83,7 +86,7 @@ private:
   std::unordered_map<rft::cluster_node, std::shared_ptr<worker_t>> _workers;
   std::unordered_set<rft::cluster_node> _stoped;
 
-  size_t _size=0;
+  size_t _size = 0;
 };
 
 inline bool is_leader_pred(const std::shared_ptr<rft::consensus> &v) {

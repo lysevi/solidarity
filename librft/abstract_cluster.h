@@ -32,7 +32,6 @@ struct append_entries {
   uint64_t starttime = {};
   /// leader;
   cluster_node leader;
-
   /// cmd
   command cmd;
   logdb::reccord_info current;
