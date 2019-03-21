@@ -261,7 +261,7 @@ TEST_CASE("consensus.replication") {
     }
   }
 
-  for (int i = 0; i < new_nodes_count; ++i) {
+  for (size_t i = 0; i < new_nodes_count; ++i) {
     auto nname = "_" + std::to_string(i + 1 + exists_nodes_count);
     auto sett = rft::node_settings().set_name(nname).set_election_timeout(et);
     auto consumer = std::make_shared<mock_consumer>();

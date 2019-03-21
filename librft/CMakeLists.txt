@@ -31,7 +31,7 @@ add_library(rft ${SRC})
 TARGET_LINK_LIBRARIES(rft utils ${solidarity_PRIVATE_LIBRARIES})
 target_link_directories(rft PUBLIC ${solidarity_LIBRARY_DIR})
 target_include_directories(rft PUBLIC ${solidarity_INCLUDE_DIR})
-cotire(rft)
+PRECOMPILED_HEADERS(rft)
 
 SET(solidarity_LIBRARIES rft utils ${solidarity_PRIVATE_LIBRARIES} CACHE STRING "rft libs")
 

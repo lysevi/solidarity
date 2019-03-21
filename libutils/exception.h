@@ -20,11 +20,10 @@
 
 #ifdef DEBUG
 #define THROW_EXCEPTION(...)                                                             \
-  throw utils::exception_t::create_and_log(CODE_POS, __VA_ARGS__);                       \
-  // std::exit(1);
+  throw utils::exception_t::create_and_log(CODE_POS, __VA_ARGS__) // std::exit(1);
 #else
 #define THROW_EXCEPTION(...)                                                             \
-  throw utils::exception_t::create_and_log(CODE_POS, __VA_ARGS__);
+  throw utils::exception_t::create_and_log(CODE_POS, __VA_ARGS__)
 #endif
 
 namespace utils {

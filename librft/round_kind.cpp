@@ -1,4 +1,5 @@
 #include <librft/node_kind.h>
+#include <libutils/utils.h>
 
 namespace rft {
 std::string to_string(const rft::NODE_KIND s) {
@@ -11,9 +12,8 @@ std::string to_string(const rft::NODE_KIND s) {
     return "LEADER";
   case rft::NODE_KIND::ELECTION:
     return "ELECTION";
-  default:
-    return "!!! UNKNOW !!!";
   }
+  NOT_IMPLEMENTED
 }
 
 } // namespace rft

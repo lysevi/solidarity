@@ -58,7 +58,7 @@ EXPORT std::string to_string(const reccord_info &ri);
 
 class abstract_journal {
 public:
-  ~abstract_journal() {}
+  virtual ~abstract_journal() {}
   virtual reccord_info put(const log_entry &e) = 0;
   virtual void commit(const index_t lsn) = 0;
   virtual log_entry get(const logdb::index_t lsn) = 0;

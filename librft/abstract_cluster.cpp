@@ -17,9 +17,8 @@ std::string to_string(const rft::entries_kind_t k) {
     return "ANSWER_FAILED";
   case rft::entries_kind_t::HELLO:
     return "HELLO";
-  default:
-    NOT_IMPLEMENTED;
   }
+  NOT_IMPLEMENTED
 }
 
 std::string to_string(const rft::append_entries &e) {

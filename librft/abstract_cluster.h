@@ -7,7 +7,7 @@
 namespace rft {
 
 class cluster_node {
-  PROPERTY(std::string, name);
+  PROPERTY(std::string, name)
 
 public:
   bool is_empty() const { return name().empty(); }

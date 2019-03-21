@@ -22,11 +22,11 @@ public:
 
   void dump_to_log(utils::logging::abstract_logger *const l);
 
-  PROPERTY(std::string, name);
-  PROPERTY(std::chrono::milliseconds, election_timeout);
-  PROPERTY(float, vote_quorum);
-  PROPERTY(float, append_quorum);
-  PROPERTY(size_t, cycle_for_replication);
-  PROPERTY(size_t, max_log_size);
+  PROPERTY(std::string, name)
+  PROPERTY(std::chrono::milliseconds, election_timeout)
+  PROPERTY(float, vote_quorum)
+  PROPERTY(float, append_quorum)
+  PROPERTY(size_t, cycle_for_replication)
+  PROPERTY(size_t, max_log_size)
 };
 }; // namespace rft

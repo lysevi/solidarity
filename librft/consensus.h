@@ -15,6 +15,7 @@ namespace rft {
 
 class abstract_consensus_consumer {
 public:
+  virtual ~abstract_consensus_consumer() {}
   virtual void apply_cmd(const command &cmd) = 0;
   virtual void reset() = 0;
   virtual command snapshot() = 0;
@@ -34,7 +35,7 @@ public:
   NODE_KIND state() const { return _state.node_kind; }
   term_t term() const { return _state.term; }
   logdb::journal_ptr journal() const { return _jrn; }
-  const abstract_consensus_consumer *const consumer() { return _consumer; }
+  abstract_consensus_consumer *consumer() { return _consumer; }
 
   EXPORT void set_cluster(abstract_cluster *cluster);
   EXPORT void heartbeat();

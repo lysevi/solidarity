@@ -13,7 +13,7 @@ public:
           bool cyclic = true)
       : _duration(duration)
       , _callback(callback)
-      , _cyclic(cyclic){};
+      , _cyclic(cyclic) {}
 
   ~timer_t() { stop(); }
 

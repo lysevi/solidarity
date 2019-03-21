@@ -18,7 +18,9 @@ TEST_CASE("utils.split") {
   auto splitted_s = utils::strings::tokens(str);
 
   std::vector<int> splitted(splitted_s.size());
-  std::transform(splitted_s.begin(), splitted_s.end(), splitted.begin(),
+  std::transform(splitted_s.begin(),
+                 splitted_s.end(),
+                 splitted.begin(),
                  [](const std::string &s) { return std::stoi(s); });
 
   EXPECT_EQ(splitted.size(), size_t(8));
@@ -58,9 +60,9 @@ TEST_CASE("utils.threads_pool") {
     const size_t threads_count = 2;
     threads_pool tp(threads_pool::params_t(threads_count, tk));
     const size_t tasks_count = 100;
-    task at = [tk](const thread_info &ti) {
+    task at = [](const thread_info &ti) {
       if (tk != ti.kind) {
-        INFO("(tk != ti.kind)");
+        INFO("(tk != ti.kind)")
         throw MAKE_EXCEPTION("(tk != ti.kind)");
       }
       return CONTINUATION_STRATEGY::SINGLE;
@@ -80,9 +82,9 @@ TEST_CASE("utils.threads_pool") {
     const size_t threads_count = 2;
     threads_pool tp(threads_pool::params_t(threads_count, tk));
     const size_t tasks_count = 100;
-    task at = [tk](const thread_info &ti) {
+    task at = [](const thread_info &ti) {
       if (tk != ti.kind) {
-        INFO("(tk != ti.kind)");
+        INFO("(tk != ti.kind)")
         throw MAKE_EXCEPTION("(tk != ti.kind)");
       }
       return CONTINUATION_STRATEGY::SINGLE;
@@ -123,17 +125,17 @@ TEST_CASE("utils.threads_manager") {
       }
       return CONTINUATION_STRATEGY::SINGLE;
     };
-    task at1 = [tk1](const thread_info &ti) {
+    task at1 = [](const thread_info &ti) {
       if (tk1 != ti.kind) {
-        INFO("(tk != ti.kind)");
+        INFO("(tk != ti.kind)")
         utils::sleep_mls(400);
         throw MAKE_EXCEPTION("(tk1 != ti.kind)");
       }
       return CONTINUATION_STRATEGY::SINGLE;
     };
-    task at2 = [tk2](const thread_info &ti) {
+    task at2 = [](const thread_info &ti) {
       if (tk2 != ti.kind) {
-        INFO("(tk != ti.kind)");
+        INFO("(tk != ti.kind)")
         utils::sleep_mls(400);
         throw MAKE_EXCEPTION("(tk2 != ti.kind)");
       }
@@ -155,14 +157,14 @@ TEST_CASE("utils.threads_manager") {
 
 TEST_CASE("utils.property") {
   class test_struct {
-    PROPERTY(int, ivalue);
-    PROPERTY(double, dvalue);
-    PROPERTY(std::string, svalue);
+    PROPERTY(int, ivalue)
+    PROPERTY(double, dvalue)
+    PROPERTY(std::string, svalue)
   };
 
   test_struct p;
   p.set_dvalue(3.14).set_ivalue(3).set_svalue("string");
-  EXPECT_EQ(p.dvalue(), 3.14);
+  EXPECT_TRUE(std::fabs(p.dvalue() - 3.14) < 0.001);
   EXPECT_EQ(p.ivalue(), 3);
   EXPECT_EQ(p.svalue(), "string");
 }

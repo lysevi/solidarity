@@ -10,4 +10,4 @@ target_include_directories(solidarity_unittests PUBLIC ${solidarity_INCLUDE_DIR}
 
 add_test(NAME solidarity_unittests COMMAND solidarity_unittests) 
 set_target_properties(solidarity_unittests PROPERTIES FOLDER Tests)
-cotire(solidarity_unittests)
+PRECOMPILED_HEADERS(solidarity_unittests)

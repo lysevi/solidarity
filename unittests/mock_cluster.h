@@ -5,6 +5,7 @@
 #include <condition_variable>
 #include <shared_mutex>
 #include <tuple>
+#include <deque>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -41,7 +42,7 @@ class mock_cluster final : public rft::abstract_cluster {
 public:
   mock_cluster();
 
-  ~mock_cluster();
+  ~mock_cluster() override;
 
   void send_to(const rft::cluster_node &from,
                const rft::cluster_node &to,

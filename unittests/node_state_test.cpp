@@ -212,7 +212,7 @@ SCENARIO("node_state.vote") {
 
       WHEN("not a quorum") {
         self.votes_to_me.clear();
-        auto c = rft::node_state_t::on_vote(self, s, self_addr, self_ci_rec, 2,
+        auto c = rft::node_state_t::on_vote(self, s, self_addr, self_ci_rec, 3,
                                             from_s_addr, ae);
         THEN("wait") {
           EXPECT_EQ(c.new_state.leader.name(), self.leader.name());

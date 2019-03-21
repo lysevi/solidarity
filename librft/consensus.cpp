@@ -18,10 +18,10 @@ consensus::consensus(const node_settings &ns,
                      const logdb::journal_ptr &jrn,
                      abstract_consensus_consumer *consumer)
     : _consumer(consumer)
+    , _rnd_eng(make_seeded_engine())
     , _settings(ns)
     , _cluster(cluster)
-    , _jrn(jrn)
-    , _rnd_eng(make_seeded_engine()) {
+    , _jrn(jrn) {
 
   auto log_prefix = utils::strings::args_to_string("node ", ns.name(), ": ");
 
@@ -82,8 +82,6 @@ void consensus::update_next_heartbeat_interval() {
     hbi = distr(_rnd_eng);
     break;
   }
-  default:
-    NOT_IMPLEMENTED;
   }
 
   _state.next_heartbeat_interval = std::chrono::milliseconds(hbi);
@@ -144,12 +142,20 @@ void consensus::on_heartbeat(const cluster_node &from, const append_entries &e) 
   _state = ns;
   if (old_s.leader.is_empty() || old_s.leader != _state.leader
       || old_s.node_kind != _state.node_kind) {
-    _logger->info("on_heartbeat. change leader from: ", old_s, " => ", _state,
-                  " append_entries: ", e);
+    _logger->info("on_heartbeat. change leader from: ",
+                  old_s,
+                  " => ",
+                  _state,
+                  " append_entries: ",
+                  e);
     _logs_state.clear();
     // log_fsck(e);
     _logger->info("send hello to ", from);
     send(from, entries_kind_t::HELLO);
+  }
+  if (from == _state.leader) {
+    _logger->dbg("update last_heartbeat from ", from);
+    _state.last_heartbeat_time = clock_t::now();
   }
 }
 
@@ -199,6 +205,10 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
       _logs_state[_self_addr].prev = _jrn->prev_rec();
     } else {
       _logger->info("on_vote. change state ", old_s, " => ", _state);
+      if (from == _state.leader) {
+        _logger->dbg("update last_heartbeat from ", from);
+        _state.last_heartbeat_time = clock_t::now();
+      }
     }
   }
 
@@ -214,12 +224,7 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
   case NOTIFY_TARGET::NOBODY: {
     break;
   }
-  default: {
-    NOT_IMPLEMENTED;
-    break;
   }
-  }
-  return;
 }
 
 void consensus::recv(const cluster_node &from, const append_entries &e) {
@@ -242,11 +247,6 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
     return;
   }
 
-  if (from == _state.leader) {
-    _logger->dbg("update last_heartbeat from ", from);
-    _state.last_heartbeat_time = clock_t::now();
-  }
-
   switch (e.kind) {
   case entries_kind_t::HEARTBEAT: {
     on_heartbeat(from, e);
@@ -259,8 +259,8 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
     /// TODO what if the sender clean log and resend hello? it is possible?
     // if (it == _log_state.end() || it->second.is_empty())
     {
-      _logger->info("hello. update log_state[", from, "]:", _logs_state[from].prev,
-                    " => ", e.prev);
+      _logger->info(
+          "hello. update log_state[", from, "]:", _logs_state[from].prev, " => ", e.prev);
       _logs_state[from].prev = e.prev;
     }
     // replicate_log();
@@ -279,14 +279,9 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
     on_answer_ok(from, e);
     break;
   }
-  default:
-    NOT_IMPLEMENTED;
-  };
-
-  // TODO remove
-  if (from == _state.leader) {
-    _logger->dbg("2. update last_heartbeat from ", from);
-    _state.last_heartbeat_time = clock_t::now();
+  case entries_kind_t::ANSWER_FAILED: {
+    NOT_IMPLEMENTED
+  }
   }
 }
 
@@ -346,8 +341,8 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
 }
 
 void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) {
-  _logger->info("answer from:", from, " cur:", e.current, ", prev", e.prev,
-                ", ci:", e.commited);
+  _logger->info(
+      "answer from:", from, " cur:", e.current, ", prev", e.prev, ", ci:", e.commited);
 
   // TODO check for current>_last_for_cluster[from];
   if (!e.prev.is_empty()) {
@@ -455,8 +450,8 @@ void consensus::replicate_log() {
     if (naddr == _self_addr) {
       continue;
     }
-    
-	auto kv = _logs_state.find(naddr);
+
+    auto kv = _logs_state.find(naddr);
     if (jrn_is_empty || kv == _logs_state.end()) {
       send(naddr, entries_kind_t::HEARTBEAT);
       continue;
@@ -464,9 +459,14 @@ void consensus::replicate_log() {
 
     bool is_append = false;
     if (kv->second.prev.is_empty() || kv->second.prev.lsn < self_log_state.prev.lsn) {
-      _logger->info("try replication for ", kv->first, " => lsn:", kv->second.prev.lsn,
-                    " < self.lsn:", self_log_state.prev.lsn,
-                    "==", kv->second.prev.lsn < self_log_state.prev.lsn);
+      _logger->info("try replication for ",
+                    kv->first,
+                    " => lsn:",
+                    kv->second.prev.lsn,
+                    " < self.lsn:",
+                    self_log_state.prev.lsn,
+                    "==",
+                    kv->second.prev.lsn < self_log_state.prev.lsn);
 
       auto lsn_to_replicate = kv->second.prev.lsn;
       if (kv->second.prev.is_empty()) {
@@ -484,8 +484,14 @@ void consensus::replicate_log() {
         auto ae = make_append_entries(lsn_to_replicate, kv->second.prev.lsn);
 
         _last_sended[kv->first] = ae.current;
-        _logger->info("replicate cur:", ae.current, " prev:", ae.prev,
-                      " ci:", ae.commited, " to ", kv->first);
+        _logger->info("replicate cur:",
+                      ae.current,
+                      " prev:",
+                      ae.prev,
+                      " ci:",
+                      ae.commited,
+                      " to ",
+                      kv->first);
         ENSURE(!ae.current.is_empty()
                || ae.current.kind == logdb::log_entry_kind::SNAPSHOT);
         _cluster->send_to(_self_addr, kv->first, ae);

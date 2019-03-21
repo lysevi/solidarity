@@ -36,7 +36,16 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cotire/CMake")
 
 include(AddCXXCompilerFlag)
 include(CompillerSettings)
-include(cotire)
+
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+ macro(PRECOMPILED_HEADERS ARG)
+ endmacro()
+else()
+ include(cotire)
+ macro(PRECOMPILED_HEADERS ARG)
+  cotire(ARG)
+ endmacro()
+endif()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

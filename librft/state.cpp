@@ -1,5 +1,7 @@
 #include <librft/state.h>
 #include <libutils/logger.h>
+#include <cmath>
+#include <sstream>
 
 using namespace rft;
 using namespace utils::logging;
@@ -105,9 +107,10 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
     }
     case NODE_KIND::CANDIDATE: {
       result.votes_to_me.insert(from);
-      auto quorum = (size_t(cluster_size * settings.vote_quorum()));
-      if (settings.vote_quorum() != 1.0) {
-        quorum += 1;
+      auto quorum = (cluster_size * settings.vote_quorum());
+      /// quorum = 50% +1
+      if (std::fabs(settings.vote_quorum() - float(1.0)) < float(0.00001)) {
+        quorum += float(1.0);
       }
       if (result.votes_to_me.size() >= quorum) {
         result.node_kind = NODE_KIND::LEADER;

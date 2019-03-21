@@ -1,6 +1,6 @@
 #include <librft/journal.h>
 #include <libutils/exception.h>
-
+#include <sstream>
 using namespace rft;
 using namespace logdb;
 
