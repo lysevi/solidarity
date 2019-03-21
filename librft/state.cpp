@@ -61,7 +61,7 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
       }*/
       if (result.term < e.term
           || (result.term == e.term && commited.lsn <= e.commited.lsn)) {
-       result.node_kind = NODE_KIND::ELECTION;
+        result.node_kind = NODE_KIND::ELECTION;
         result.term = e.term;
         result.leader = e.leader;
       }
@@ -89,6 +89,8 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
     }
   } else {
     switch (result.node_kind) {
+    case NODE_KIND::LEADER:
+      break;
     case NODE_KIND::ELECTION: {
       // TODO ??
       result.last_heartbeat_time = clock_t::now();
@@ -180,6 +182,8 @@ node_state_t node_state_t::heartbeat(const node_state_t &self,
   if (result.node_kind != NODE_KIND::LEADER && result.is_heartbeat_missed()) {
     result.leader.clear();
     switch (result.node_kind) {
+    case NODE_KIND::LEADER:
+      break;
     case NODE_KIND::ELECTION: {
       result.node_kind = NODE_KIND::FOLLOWER;
       break;
