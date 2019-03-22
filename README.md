@@ -1,1 +1,2 @@
+![logo](logo.svg)
 # SOLIDarity
