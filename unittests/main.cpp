@@ -112,7 +112,7 @@ struct LoggerControl : Catch::TestEventListenerBase {
 
 CATCH_REGISTER_LISTENER(LoggerControl);
 
-int main(int argc, char **argv) {
+std::tuple<int, char **> init_logger(int argc, char **argv) {
   int _argc = argc;
   char **_argv = argv;
   for (int i = 0; i < argc; ++i) {
@@ -132,10 +132,27 @@ int main(int argc, char **argv) {
       break;
     }
   }
+  return std::tuple(_argc, _argv);
+}
+
+int main(int argc, char **argv) {
+  size_t runs = 1;
+  auto[_argc, _argv] = init_logger(argc, argv);
 
   Catch::Session sesssion;
   sesssion.configData().showDurations = Catch::ShowDurations::OrNot::Always;
-  int result = sesssion.run(_argc, _argv);
+  int result = 0;
+  for (size_t i = 0; i < runs; ++i) {
+    result = sesssion.run(_argc, _argv);
+    
+	if (runs > 1) {
+      std::cout << "result: " << result << std::endl;
+      std::cout << "iteration: " << i << std::endl;
+    }
+    if (result != 0) {
+      break;
+    }
+  }
   if (UnitTestLogger::verbose) {
     delete[] _argv;
   }

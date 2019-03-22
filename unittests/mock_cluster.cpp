@@ -28,6 +28,8 @@ void worker_t::stop() {
 }
 
 void worker_t::add_task(const message_t &mt) {
+  ENSURE(!self_addr.is_empty());
+  ENSURE(mt.from != self_addr);
   {
     std::lock_guard<std::mutex> l(_tasks_locker);
     ENSURE(mt.to == self_addr);
@@ -62,8 +64,8 @@ void worker_t::worker() {
     }
 
   } catch (std::exception &ex) {
-    utils::logging::logger_fatal("mock_cluster: worker ", _target->self_addr(),
-                                 " error:", ex.what());
+    utils::logging::logger_fatal(
+        "mock_cluster: worker ", _target->self_addr(), " error:", ex.what());
     std::exit(1);
   }
   _is_stoped = true;
@@ -110,6 +112,7 @@ void mock_cluster::send_to(const rft::cluster_node &from,
 
 void mock_cluster::send_all(const rft::cluster_node &from, const rft::append_entries &m) {
   std::shared_lock<std::shared_mutex> lg(_cluster_locker);
+  ENSURE(!from.is_empty());
   for (const auto &kv : _cluster) {
     if (kv.first != from) {
       message_t me{from, kv.first, m};
@@ -160,11 +163,18 @@ void mock_cluster::print_cluster() {
   utils::logging::logger_info("----------------------------");
   /*std::cout << "----------------------------\n";*/
   apply([](auto n) {
-    /*std::cout << utils::strings::args_to_string("?: ", n->self_addr(), "{", n->state(),
+    /*std::cout << utils::strings::args_to_string("?: ", n->self_addr(), "{", n->kind(),
                                                 ":", n->term(), "}", " => ",
                                                 n->get_leader(), "\n");*/
-    utils::logging::logger_info("?: ", n->self_addr(), "{", n->state(), ":", n->term(),
-                                "}", " => ", n->get_leader());
+    utils::logging::logger_info("?: ",
+                                n->self_addr(),
+                                "{",
+                                n->kind(),
+                                ":",
+                                n->term(),
+                                "}",
+                                " => ",
+                                n->get_leader());
   });
 }
 
@@ -174,8 +184,8 @@ void mock_cluster::erase_if(
   rft::cluster_node target;
   {
     std::lock_guard<std::shared_mutex> lg(_cluster_locker);
-    auto it = std::find_if(_cluster.begin(), _cluster.end(),
-                           [pred](auto kv) { return pred(kv.second); });
+    auto it = std::find_if(
+        _cluster.begin(), _cluster.end(), [pred](auto kv) { return pred(kv.second); });
     if (it != _cluster.end()) {
       target = it->first;
       _cluster.erase(target);
@@ -272,7 +282,8 @@ std::shared_ptr<mock_cluster> mock_cluster::split(size_t count_to_move) {
     update_size();
 
     std::deque<message_t> &_tasks = _workers[it->first]->_tasks;
-    _tasks.erase(std::remove_if(_tasks.begin(), _tasks.end(),
+    _tasks.erase(std::remove_if(_tasks.begin(),
+                                _tasks.end(),
                                 [it](const message_t &m) -> bool {
                                   return m.from == it->first || m.to == it->first;
                                 }),

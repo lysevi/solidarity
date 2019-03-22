@@ -75,7 +75,6 @@ public:
 
   std::shared_ptr<mock_cluster> split(size_t count_to_move);
   void union_with(std::shared_ptr<mock_cluster> other);
-
 protected:
   void stop_workers();
   void start_workers();
@@ -91,9 +90,9 @@ private:
 };
 
 inline bool is_leader_pred(const std::shared_ptr<rft::consensus> &v) {
-  return v->state() == rft::NODE_KIND::LEADER;
+  return v->kind() == rft::NODE_KIND::LEADER;
 };
 
 inline bool is_follower_pred(const std::shared_ptr<rft::consensus> &v) {
-  return v->state() == rft::NODE_KIND::FOLLOWER;
+  return v->kind() == rft::NODE_KIND::FOLLOWER;
 };

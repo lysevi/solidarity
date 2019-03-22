@@ -25,8 +25,8 @@ SCENARIO("node_state.vote") {
 
       WHEN("leader.is_empty") {
         self.leader.clear();
-        auto c = rft::node_state_t::on_vote(self, s, self_addr, self_ci_rec, 2,
-                                            from_s_addr, ae);
+        auto c = rft::node_state_t::on_vote(
+            self, s, self_addr, self_ci_rec, 2, from_s_addr, ae);
         THEN("vote to sender") {
           EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
           EXPECT_EQ(c.new_state.term, from_s.term);
@@ -36,8 +36,8 @@ SCENARIO("node_state.vote") {
 
       WHEN("!leader.is_empty") {
         self.leader.set_name("some name");
-        auto c = rft::node_state_t::on_vote(self, s, self_addr, self_ci_rec, 2,
-                                            from_s_addr, ae);
+        auto c = rft::node_state_t::on_vote(
+            self, s, self_addr, self_ci_rec, 2, from_s_addr, ae);
         THEN("vote to sender") {
           EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
           EXPECT_EQ(c.new_state.term, self.term);
@@ -137,8 +137,8 @@ SCENARIO("node_state.vote") {
         self.leader.set_name(self_addr.name());
         self.term = 0;
         from_s.term = 1;
-        auto c = rft::node_state_t::on_vote(self, s, self_addr, self_ci_rec, 2,
-                                            from_s_addr, ae);
+        auto c = rft::node_state_t::on_vote(
+            self, s, self_addr, self_ci_rec, 2, from_s_addr, ae);
         THEN("vote to sender") {
           EXPECT_EQ(c.new_state.node_kind, rft::NODE_KIND::ELECTION);
           EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
@@ -151,8 +151,8 @@ SCENARIO("node_state.vote") {
         self.leader.set_name(self_addr.name());
         self.term = 1;
         from_s.term = 1;
-        auto c = rft::node_state_t::on_vote(self, s, self_addr, self_ci_rec, 2,
-                                            from_s_addr, ae);
+        auto c = rft::node_state_t::on_vote(
+            self, s, self_addr, self_ci_rec, 2, from_s_addr, ae);
         THEN("vote to self.leader") {
           EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
           EXPECT_EQ(c.new_state.term, self.term);
@@ -171,8 +171,8 @@ SCENARIO("node_state.vote") {
     WHEN("self == ELECTION") {
       self.node_kind = rft::NODE_KIND::ELECTION;
       self.term = from_s.term;
-      auto c = rft::node_state_t::on_vote(self, s, self_addr, self_ci_rec, 2, from_s_addr,
-                                          ae);
+      auto c = rft::node_state_t::on_vote(
+          self, s, self_addr, self_ci_rec, 2, from_s_addr, ae);
       THEN("vote to self.leader") {
         EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
         EXPECT_EQ(c.new_state.term, ae.term);
@@ -184,8 +184,8 @@ SCENARIO("node_state.vote") {
       self.node_kind = rft::NODE_KIND::FOLLOWER;
       self.term = from_s.term;
 
-      auto c = rft::node_state_t::on_vote(self, s, self_addr, self_ci_rec, 2, from_s_addr,
-                                          ae);
+      auto c = rft::node_state_t::on_vote(
+          self, s, self_addr, self_ci_rec, 2, from_s_addr, ae);
       THEN("vote to self.leader") {
         EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
         EXPECT_EQ(c.new_state.term, self.term);
@@ -200,8 +200,8 @@ SCENARIO("node_state.vote") {
       self.leader = self_addr;
       WHEN("quorum") {
         self.votes_to_me.insert(self_addr);
-        auto c = rft::node_state_t::on_vote(self, s, self_addr, self_ci_rec, 2,
-                                            from_s_addr, ae);
+        auto c = rft::node_state_t::on_vote(
+            self, s, self_addr, self_ci_rec, 2, from_s_addr, ae);
         THEN("make self a self.leader") {
           EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
           EXPECT_EQ(c.new_state.term, self.term + 1);
@@ -212,8 +212,8 @@ SCENARIO("node_state.vote") {
 
       WHEN("not a quorum") {
         self.votes_to_me.clear();
-        auto c = rft::node_state_t::on_vote(self, s, self_addr, self_ci_rec, 3,
-                                            from_s_addr, ae);
+        auto c = rft::node_state_t::on_vote(
+            self, s, self_addr, self_ci_rec, 3, from_s_addr, ae);
         THEN("wait") {
           EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
           EXPECT_EQ(c.new_state.term, self.term);
@@ -370,9 +370,10 @@ SCENARIO("node_state.on_heartbeat") {
 
     auto new_state = rft::node_state_t::heartbeat(self, self_addr, 2);
     THEN("be a follower") {
-      EXPECT_EQ(new_state.node_kind, rft::NODE_KIND::FOLLOWER);
-      EXPECT_TRUE(new_state.leader.is_empty());
-      EXPECT_EQ(new_state.term, self.term);
+      EXPECT_EQ(new_state.node_kind, rft::NODE_KIND::CANDIDATE);
+      EXPECT_EQ(new_state.leader, self_addr);
+      EXPECT_EQ(new_state.term, self.term + 1);
+      EXPECT_EQ(new_state.election_round, 1);
     }
   }
 

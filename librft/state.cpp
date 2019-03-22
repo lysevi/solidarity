@@ -44,7 +44,7 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
     switch (result.node_kind) {
     case NODE_KIND::ELECTION: {
       if (result.leader.is_empty()) {
-        result.last_heartbeat_time = clock_t::now();
+        // result.last_heartbeat_time = clock_t::now();
         result.leader = e.leader;
         result.term = e.term;
         target = NOTIFY_TARGET::SENDER;
@@ -62,10 +62,12 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
         result.leader = e.leader;
       }*/
       if (result.term < e.term
-          || (result.term == e.term && commited.lsn <= e.commited.lsn)) {
+          || (result.term == e.term && commited.lsn <= e.commited.lsn
+              && !commited.lsn_is_empty() && !e.commited.lsn_is_empty())) {
         result.node_kind = NODE_KIND::ELECTION;
         result.term = e.term;
         result.leader = e.leader;
+        result.last_heartbeat_time = clock_t::now();
       }
       target = NOTIFY_TARGET::SENDER;
       break;
@@ -73,7 +75,7 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
     case NODE_KIND::LEADER: {
       if (result.term < e.term) {
         result.change_state(NODE_KIND::ELECTION, e.term, e.leader);
-        result.last_heartbeat_time = clock_t::now();
+        // result.last_heartbeat_time = clock_t::now();
       }
       target = NOTIFY_TARGET::SENDER;
 
@@ -83,7 +85,7 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
       if (result.term < e.term && from == e.leader) {
         result.change_state(NODE_KIND::ELECTION, e.term, e.leader);
         result.election_round = 0;
-        result.last_heartbeat_time = clock_t::now();
+        // result.last_heartbeat_time = clock_t::now();
       }
       target = NOTIFY_TARGET::SENDER;
       break;
@@ -95,23 +97,23 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
       break;
     case NODE_KIND::ELECTION: {
       // TODO ??
-      result.last_heartbeat_time = clock_t::now();
+      // result.last_heartbeat_time = clock_t::now();
       result.term = e.term;
       target = NOTIFY_TARGET::SENDER;
       break;
     }
     case NODE_KIND::FOLLOWER: {
-      result.last_heartbeat_time = clock_t::now();
+      // result.last_heartbeat_time = clock_t::now();
       target = NOTIFY_TARGET::SENDER;
       break;
     }
     case NODE_KIND::CANDIDATE: {
       result.votes_to_me.insert(from);
-      auto quorum = (cluster_size * settings.vote_quorum());
+      size_t quorum = static_cast<size_t>((cluster_size * settings.vote_quorum()) + 1);
       /// quorum = 50% +1
-      if (std::fabs(settings.vote_quorum() - float(1.0)) < float(0.00001)) {
-        quorum += float(1.0);
-      }
+      /* if (std::fabs(settings.vote_quorum() - float(1.0)) < float(0.00001)) {
+         quorum += float(1.0);
+       }*/
       if (result.votes_to_me.size() >= quorum) {
         result.node_kind = NODE_KIND::LEADER;
         result.term++;
@@ -148,7 +150,7 @@ node_state_t node_state_t::on_append_entries(const node_state_t &self,
     if (/*self.leader.is_empty() ||*/ e.term > result.term) {
       result.leader = e.leader;
       result.term = e.term;
-      result.last_heartbeat_time = clock_t::now();
+      // result.last_heartbeat_time = clock_t::now();
     }
     break;
   }
@@ -166,8 +168,8 @@ node_state_t node_state_t::on_append_entries(const node_state_t &self,
   }
   case NODE_KIND::CANDIDATE: {
     if (result.term <= e.term && e.leader == from) {
-      result.election_round = 0;
       result.node_kind = NODE_KIND::FOLLOWER;
+      result.election_round = 0;
       result.term = e.term;
       result.leader = e.leader;
       result.votes_to_me.clear();
@@ -188,7 +190,10 @@ node_state_t node_state_t::heartbeat(const node_state_t &self,
     case NODE_KIND::LEADER:
       break;
     case NODE_KIND::ELECTION: {
-      result.node_kind = NODE_KIND::FOLLOWER;
+      result.node_kind = NODE_KIND::CANDIDATE;
+      result.leader = self_addr;
+      result.term += 1;
+      result.election_round = 1;
       break;
     }
     case NODE_KIND::FOLLOWER: {

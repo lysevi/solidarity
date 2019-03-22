@@ -32,7 +32,8 @@ public:
                    abstract_cluster *cluster,
                    const logdb::journal_ptr &jrn,
                    abstract_consensus_consumer *consumer);
-  NODE_KIND state() const { return _state.node_kind; }
+  node_state_t state() const { return _state; }
+  NODE_KIND kind() const { return _state.node_kind; }
   term_t term() const { return _state.term; }
   logdb::journal_ptr journal() const { return _jrn; }
   abstract_consensus_consumer *consumer() { return _consumer; }

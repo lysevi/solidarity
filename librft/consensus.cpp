@@ -75,6 +75,7 @@ void consensus::update_next_heartbeat_interval() {
     break;
   }
   case NODE_KIND::CANDIDATE: {
+    ENSURE(_state.election_round > 0);
     auto k1 = 1.0;
     auto k2 = 1.0 * _state.election_round;
     std::uniform_int_distribution<uint64_t> distr(uint64_t(total_mls * k1),
@@ -125,6 +126,7 @@ void consensus::send_all(const entries_kind_t kind) {
 }
 
 void consensus::send(const cluster_node &to, const entries_kind_t kind) {
+  ENSURE(to != _self_addr);
   _cluster->send_to(_self_addr, to, make_append_entries(kind));
 }
 
@@ -154,7 +156,7 @@ void consensus::on_heartbeat(const cluster_node &from, const append_entries &e) 
     send(from, entries_kind_t::HELLO);
   }
   if (from == _state.leader) {
-    _logger->dbg("update last_heartbeat from ", from);
+    _logger->dbg("on_heartbeat: update last_heartbeat from ", from);
     _state.last_heartbeat_time = clock_t::now();
   }
 }
@@ -204,9 +206,16 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
       _state.votes_to_me.clear();
       _logs_state[_self_addr].prev = _jrn->prev_rec();
     } else {
-      _logger->info("on_vote. change state ", old_s, " => ", _state);
+      _logger->info("on_vote. change state from:",
+                    from,
+                    ", ae: ",
+                    e,
+                    " state:",
+                    old_s,
+                    " => ",
+                    _state);
       if (from == _state.leader) {
-        _logger->dbg("update last_heartbeat from ", from);
+        _logger->dbg("on_vote: update last_heartbeat from ", from);
         _state.last_heartbeat_time = clock_t::now();
       }
     }
@@ -229,6 +238,12 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
 
 void consensus::recv(const cluster_node &from, const append_entries &e) {
   std::lock_guard<std::mutex> l(_locker);
+#ifdef DOUBLE_CHECKS
+  if (from == _self_addr) {
+    _logger->fatal("from==self!!! ", e);
+  }
+#endif
+
   if (e.term < _state.term) {
     return;
   }
@@ -506,7 +521,6 @@ void consensus::replicate_log() {
 }
 
 void consensus::add_command_impl(const command &cmd, logdb::log_entry_kind k) {
-
   ENSURE(!cmd.is_empty());
   logdb::log_entry le;
   le.cmd = cmd;

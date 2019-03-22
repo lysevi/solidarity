@@ -20,15 +20,16 @@ TEST_CASE("consensus.add_nodes") {
       std::chrono::milliseconds(300));
 
   auto c_0_consumer = std::make_shared<mock_consumer>();
-  auto c_0 = std::make_shared<rft::consensus>(settings_0, cluster.get(),
+  auto c_0 = std::make_shared<rft::consensus>(settings_0,
+                                              cluster.get(),
                                               rft::logdb::memory_journal::make_new(),
                                               c_0_consumer.get());
 
   cluster->add_new(rft::cluster_node().set_name("_0"), c_0);
   EXPECT_EQ(c_0->term(), rft::UNDEFINED_TERM);
-  EXPECT_EQ(c_0->state(), rft::NODE_KIND::FOLLOWER);
+  EXPECT_EQ(c_0->kind(), rft::NODE_KIND::FOLLOWER);
 
-  while (c_0->state() != rft::NODE_KIND::LEADER) {
+  while (c_0->kind() != rft::NODE_KIND::LEADER) {
     c_0->heartbeat();
     cluster->print_cluster();
   }
@@ -38,7 +39,8 @@ TEST_CASE("consensus.add_nodes") {
   auto settings_1 = rft::node_settings().set_name("_1").set_election_timeout(
       std::chrono::milliseconds(300));
   auto c_1_consumer = std::make_shared<mock_consumer>();
-  auto c_1 = std::make_shared<rft::consensus>(settings_1, cluster.get(),
+  auto c_1 = std::make_shared<rft::consensus>(settings_1,
+                                              cluster.get(),
                                               rft::logdb::memory_journal::make_new(),
                                               c_1_consumer.get());
   cluster->add_new(rft::cluster_node().set_name(settings_1.name()), c_1);
@@ -47,8 +49,8 @@ TEST_CASE("consensus.add_nodes") {
     cluster->heartbeat();
     cluster->print_cluster();
   }
-  EXPECT_EQ(c_0->state(), rft::NODE_KIND::LEADER);
-  EXPECT_EQ(c_1->state(), rft::NODE_KIND::FOLLOWER);
+  EXPECT_EQ(c_0->kind(), rft::NODE_KIND::LEADER);
+  EXPECT_EQ(c_1->kind(), rft::NODE_KIND::FOLLOWER);
   EXPECT_EQ(c_0->term(), c_1->term());
   EXPECT_EQ(c_1->get_leader(), c_0->get_leader());
 
@@ -56,7 +58,8 @@ TEST_CASE("consensus.add_nodes") {
   auto settings_2 = rft::node_settings().set_name("_2").set_election_timeout(
       std::chrono::milliseconds(300));
   auto c_2_consumer = std::make_shared<mock_consumer>();
-  auto c_2 = std::make_shared<rft::consensus>(settings_2, cluster.get(),
+  auto c_2 = std::make_shared<rft::consensus>(settings_2,
+                                              cluster.get(),
                                               rft::logdb::memory_journal::make_new(),
                                               c_2_consumer.get());
 
@@ -68,8 +71,8 @@ TEST_CASE("consensus.add_nodes") {
     cluster->print_cluster();
   }
 
-  EXPECT_EQ(c_0->state(), rft::NODE_KIND::LEADER);
-  EXPECT_EQ(c_1->state(), rft::NODE_KIND::FOLLOWER);
+  EXPECT_EQ(c_0->kind(), rft::NODE_KIND::LEADER);
+  EXPECT_EQ(c_1->kind(), rft::NODE_KIND::FOLLOWER);
   EXPECT_EQ(c_0->term(), c_1->term());
   EXPECT_EQ(c_2->term(), c_1->term());
   EXPECT_EQ(c_1->get_leader().name(), c_0->get_leader().name());
@@ -130,10 +133,16 @@ TEST_CASE("consensus") {
     while (true) {
       leaders = cluster->by_filter(is_leader_pred);
       if (leaders.size() > 1) {
-        utils::logging::logger_fatal("consensus error!!!");
-        cluster->print_cluster();
-        EXPECT_FALSE(true);
-        return;
+        std::unordered_set<rft::term_t> terms;
+        for (auto &c : leaders) {
+          terms.insert(c->state().term);
+        }
+        if (terms.size() == 1) {
+          utils::logging::logger_fatal("consensus error!!!");
+          cluster->print_cluster();
+          EXPECT_FALSE(true);
+          return;
+        }
       }
       if (leaders.size() == 1) {
         auto cur_leader = leaders.front()->self_addr();
@@ -160,20 +169,26 @@ TEST_CASE("consensus") {
       cluster->erase_if(is_leader_pred);
       utils::logging::logger_info("cluster size - ", cluster->size());
     } else {
-
+      const size_t attempts_to_add=500;
+      // TODO implement this method add_command in mock_cluster and use it in all testes
       for (int i = 0; i < 10; ++i) {
-        leaders = cluster->by_filter(is_leader_pred);
-        if (leaders.size() != size_t(1)) {
-          cluster->wait_leader_eletion();
-        }
-        cmd.data[0]++;
-        leaders[0]->add_command(cmd);
-        while (true) {
-          cluster->print_cluster();
-          cluster->heartbeat();
-          bool all_of = std::all_of(consumers.cbegin(), consumers.cend(), data_eq);
-          if (all_of) {
-            break;
+        bool cur_cmd_is_replicated = false;
+        while (!cur_cmd_is_replicated) {
+          leaders = cluster->by_filter(is_leader_pred);
+          if (leaders.size() != size_t(1)) {
+            cluster->wait_leader_eletion();
+            leaders = cluster->by_filter(is_leader_pred);
+          }
+          cmd.data[0]++;
+          leaders[0]->add_command(cmd);
+          for (size_t j = 0; j < attempts_to_add; ++j) {
+            cluster->print_cluster();
+            cluster->heartbeat();
+            bool all_of = std::all_of(consumers.cbegin(), consumers.cend(), data_eq);
+            if (all_of) {
+              cur_cmd_is_replicated = true;
+              break;
+            }
           }
         }
       }
@@ -230,8 +245,8 @@ TEST_CASE("consensus.replication") {
     auto sett = rft::node_settings().set_name(nname).set_election_timeout(et);
     auto consumer = std::make_shared<mock_consumer>();
     consumers.push_back(consumer);
-    auto cons = std::make_shared<consensus>(sett, cluster.get(),
-                                            memory_journal::make_new(), consumer.get());
+    auto cons = std::make_shared<consensus>(
+        sett, cluster.get(), memory_journal::make_new(), consumer.get());
     cluster->add_new(cluster_node().set_name(sett.name()), cons);
   }
   rft::command cmd;
@@ -266,8 +281,8 @@ TEST_CASE("consensus.replication") {
     auto sett = rft::node_settings().set_name(nname).set_election_timeout(et);
     auto consumer = std::make_shared<mock_consumer>();
     consumers.push_back(consumer);
-    auto cons = std::make_shared<consensus>(sett, cluster.get(),
-                                            memory_journal::make_new(), consumer.get());
+    auto cons = std::make_shared<consensus>(
+        sett, cluster.get(), memory_journal::make_new(), consumer.get());
     cluster->add_new(cluster_node().set_name(sett.name()), cons);
     cluster->wait_leader_eletion();
   }
@@ -344,12 +359,15 @@ TEST_CASE("consensus.log_compaction") {
     cluster->print_cluster();
     cluster->heartbeat();
     std::transform(
-        all_nodes.cbegin(), all_nodes.cend(), sizes.begin(),
+        all_nodes.cbegin(),
+        all_nodes.cend(),
+        sizes.begin(),
         [](const std::shared_ptr<rft::consensus> &c) { return c->journal()->size(); });
 
     size_t count_of
-        = std::count_if(sizes.cbegin(), sizes.cend(),
-                        [max_log_size](const size_t c) { return c <= max_log_size; });
+        = std::count_if(sizes.cbegin(), sizes.cend(), [max_log_size](const size_t c) {
+            return c <= max_log_size;
+          });
     if (count_of == all_nodes.size()) {
       break;
     }
