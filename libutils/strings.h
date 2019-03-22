@@ -4,8 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace utils {
-namespace strings {
+namespace utils::strings {
 
 /// split string by space.
 EXPORT std::vector<std::string> tokens(const std::string &str);
@@ -51,5 +50,4 @@ std::string args_to_string(Args &&... args) noexcept {
   }
   return result;
 }
-} // namespace strings
-} // namespace utils
+} // namespace utils::strings

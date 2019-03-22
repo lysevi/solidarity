@@ -7,12 +7,11 @@
 #include <deque>
 #include <shared_mutex>
 
-namespace utils {
-namespace async {
+namespace utils::async {
 
 using task_queue_t = std::deque<task_wrapper_ptr>;
 
-class threads_pool final: public utils::non_copy {
+class threads_pool final : public utils::non_copy {
 public:
   struct params_t {
     size_t threads_count;
@@ -52,5 +51,4 @@ protected:
   bool _is_stoped;                 // true - already stopped.
   std::atomic_size_t _task_runned; // count of runned tasks.
 };
-} // namespace async
-} // namespace utils
+} // namespace utils::async

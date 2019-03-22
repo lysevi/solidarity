@@ -4,9 +4,7 @@
 #include <libutils/utils.h>
 #include <libutils/utils_exports.h>
 
-namespace utils {
-namespace async {
-
+namespace utils::async {
 using thread_kind_t = uint16_t;
 
 enum class TASK_PRIORITY : uint8_t {
@@ -87,11 +85,10 @@ private:
 using task_wrapper_ptr = std::shared_ptr<task_wrapper>;
 
 #define wrap_task(t)                                                                     \
-  std::make_shared<task_wrapper>(t, std::string(__FUNCTION__), std::string(__FILE__),    \
-                                 __LINE__)
+  std::make_shared<task_wrapper>(                                                        \
+      t, std::string(__FUNCTION__), std::string(__FILE__), __LINE__)
 
 #define wrap_task_with_priority(t, pr)                                                   \
-  std::make_shared<task_wrapper>(t, std::string(__FUNCTION__), std::string(__FILE__),    \
-                                 __LINE__, pr)
-} // namespace async
-} // namespace utils
+  std::make_shared<task_wrapper>(                                                        \
+      t, std::string(__FUNCTION__), std::string(__FILE__), __LINE__, pr)
+} // namespace utils::async

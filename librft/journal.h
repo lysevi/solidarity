@@ -8,9 +8,7 @@
 #include <shared_mutex>
 #include <utility>
 
-namespace rft {
-
-namespace logdb {
+namespace rft::logdb {
 /// log sequence numbder;
 using index_t = int64_t;
 const term_t UNDEFINED_TERM = std::numeric_limits<term_t>::min();
@@ -67,7 +65,6 @@ public:
   virtual void erase_all_to(const reccord_info &e) = 0;
   virtual void visit(std::function<void(const log_entry &)>) = 0;
 
-
   virtual reccord_info prev_rec() const noexcept = 0;
   virtual reccord_info first_uncommited_rec() const noexcept = 0;
   virtual reccord_info commited_rec() const noexcept = 0;
@@ -104,8 +101,7 @@ protected:
   reccord_info _prev;
   reccord_info _commited;
 };
-} // namespace logdb
-} // namespace rft
+} // namespace rft::logdb
 
 namespace std {
 template <>
