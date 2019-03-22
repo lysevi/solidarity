@@ -183,18 +183,22 @@ void mock_cluster::erase_if(
 
   rft::cluster_node target;
   {
-    std::lock_guard<std::shared_mutex> lg(_cluster_locker);
+    _cluster_locker.lock_shared();
     auto it = std::find_if(
         _cluster.begin(), _cluster.end(), [pred](auto kv) { return pred(kv.second); });
-    if (it != _cluster.end()) {
-      target = it->first;
-      _cluster.erase(target);
-      update_size();
-      _workers[target]->stop();
-      _workers.erase(target);
-    } else {
+    if (it == _cluster.end()) {
+      _cluster_locker.unlock_shared();
       return;
     }
+    target = it->first;
+    _workers[target]->stop();
+    
+    _cluster_locker.unlock_shared();
+
+    std::lock_guard<std::shared_mutex> l(_cluster_locker);
+    _cluster.erase(target);
+    _workers.erase(target);
+    update_size();
   }
   if (!target.is_empty()) {
     std::shared_lock<std::shared_mutex> lg(_cluster_locker);
