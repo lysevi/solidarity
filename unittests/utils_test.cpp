@@ -172,7 +172,7 @@ TEST_CASE("utils.property") {
 TEST_CASE("utils.timer(cyclic)") {
   volatile size_t calls = 0;
   auto f = [&]() { calls++; };
-  utils::timer_t t(std::chrono::milliseconds(100), f);
+  utils::timer::timer_t t(std::chrono::milliseconds(100), f);
   t.start();
 
   while (calls < 3) {
@@ -189,7 +189,7 @@ TEST_CASE("utils.timer(cyclic)") {
 TEST_CASE("utils.timer(single)") {
   volatile size_t calls = 0;
   auto f = [&]() { calls++; };
-  utils::timer_t t(std::chrono::milliseconds(100), f, false);
+  utils::timer::timer_t t(std::chrono::milliseconds(100), f, false);
   t.start();
 
   while (calls == 0) {

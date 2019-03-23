@@ -5,7 +5,7 @@
 #include <functional>
 #include <thread>
 
-namespace utils {
+namespace utils::timer {
 class timer_t {
 public:
   timer_t(const std::chrono::milliseconds &duration,
@@ -33,4 +33,4 @@ protected:
   volatile bool _started = false;
   volatile bool _stoped = true;
 };
-} // namespace utils
+} // namespace utils::timer

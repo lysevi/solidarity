@@ -1,6 +1,6 @@
 #include <libutils/timer.h>
 #include <libutils/utils.h>
-using namespace utils;
+using namespace utils::timer;
 
 void timer_t::start() {
   if (!_started) {
