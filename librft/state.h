@@ -13,6 +13,14 @@ namespace rft {
 
 struct changed_state_t;
 
+inline size_t quorum_for_cluster(size_t cluster_size, float quorum) {
+  size_t quorum_size = static_cast<size_t>(cluster_size * quorum);
+  if (std::fabs(quorum - 1.0) > 0.0001) { // quorum!=1.0
+    quorum_size += 1;
+  }
+  return quorum_size;
+}
+
 struct node_state_t {
   term_t term = UNDEFINED_TERM;
   clock_t::time_point last_heartbeat_time;

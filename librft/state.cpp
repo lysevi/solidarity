@@ -1,5 +1,6 @@
 #include <librft/state.h>
 #include <libutils/logger.h>
+#include <libutils/utils.h>
 #include <cmath>
 #include <sstream>
 
@@ -109,7 +110,8 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
     }
     case NODE_KIND::CANDIDATE: {
       result.votes_to_me.insert(from);
-      size_t quorum = static_cast<size_t>((cluster_size * settings.vote_quorum()) + 1);
+      size_t quorum = quorum_for_cluster(cluster_size, settings.vote_quorum());
+      ENSURE(quorum <= cluster_size);
       /// quorum = 50% +1
       /* if (std::fabs(settings.vote_quorum() - float(1.0)) < float(0.00001)) {
          quorum += float(1.0);

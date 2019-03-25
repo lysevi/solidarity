@@ -12,6 +12,14 @@ public:
   rft::command last_cmd;
 };
 
+TEST_CASE("consensus.quorum calculation") {
+  EXPECT_EQ(rft::quorum_for_cluster(3, 0.5), 2);
+  EXPECT_EQ(rft::quorum_for_cluster(4, 0.5), 3);
+  EXPECT_EQ(rft::quorum_for_cluster(4, 1.0), 4);
+  EXPECT_EQ(rft::quorum_for_cluster(2, 0.5), 2);
+  EXPECT_EQ(rft::quorum_for_cluster(5, 0.5), 3);
+}
+
 TEST_CASE("consensus.add_nodes") {
   auto cluster = std::make_shared<mock_cluster>();
 
@@ -169,7 +177,7 @@ TEST_CASE("consensus") {
       cluster->erase_if(is_leader_pred);
       utils::logging::logger_info("cluster size - ", cluster->size());
     } else {
-      const size_t attempts_to_add=500;
+      const size_t attempts_to_add = 500;
       // TODO implement this method add_command in mock_cluster and use it in all testes
       for (int i = 0; i < 10; ++i) {
         bool cur_cmd_is_replicated = false;
@@ -190,6 +198,7 @@ TEST_CASE("consensus") {
               break;
             }
           }
+          EXPECT_TRUE(cur_cmd_is_replicated);
         }
       }
       break;
