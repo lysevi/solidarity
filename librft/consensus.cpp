@@ -363,7 +363,9 @@ void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) 
   if (!e.prev.is_empty()) {
     _logs_state[from].prev = e.prev;
   }
-  const auto quorum = _cluster->size() * _settings.append_quorum();
+  const size_t quorum = quorum_for_cluster(_cluster->size(), _settings.append_quorum());
+  
+  ENSURE(quorum<=_cluster->size());
 
   std::unordered_map<logdb::reccord_info, size_t> count(_logs_state.size());
 
