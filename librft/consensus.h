@@ -34,7 +34,10 @@ public:
                    abstract_cluster *cluster,
                    const logdb::journal_ptr &jrn,
                    abstract_consensus_consumer *consumer);
-  node_state_t state() const { return _state; }
+  node_state_t state() const {
+    std::lock_guard<std::mutex> l(_locker);
+    return _state;
+  }
   node_state_t &rw_state() { return _state; }
 
   NODE_KIND kind() const { return _state.node_kind; }
