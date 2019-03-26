@@ -108,14 +108,14 @@ reccord_info memory_journal::restore_start_point() const noexcept {
   return first_rec();
 }
 
-void memory_journal::erase_all_after(const reccord_info &e) {
+void memory_journal::erase_all_after(const index_t lsn) {
   std::lock_guard<std::shared_mutex> lg(_locker);
 
   using rmtype = std::map<index_t, log_entry>::reverse_iterator::value_type;
   std::vector<rmtype> to_erase;
   to_erase.reserve(_wal.size());
   for (auto it = _wal.rbegin(); it != _wal.rend(); ++it) {
-    if (it->first == e.lsn /*&& it->second.term == e.term*/) {
+    if (it->first == lsn /*&& it->second.term == e.term*/) {
       break;
     }
     to_erase.push_back(*it);
@@ -128,7 +128,7 @@ void memory_journal::erase_all_after(const reccord_info &e) {
     auto it = _wal.rbegin();
     _prev = reccord_info(it->second, it->first);
     _idx = it->first + 1;
-    if (_commited.lsn > e.lsn) {
+    if (_commited.lsn > lsn) {
       _commited = _prev;
     }
   } else {
@@ -142,7 +142,7 @@ void memory_journal::erase_all_after(const reccord_info &e) {
   }
 }
 
-void memory_journal::erase_all_to(const reccord_info &e) {
+void memory_journal::erase_all_to(const index_t lsn) {
   std::lock_guard<std::shared_mutex> lg(_locker);
 
   using rmtype = std::map<index_t, log_entry>::reverse_iterator::value_type;
@@ -150,7 +150,7 @@ void memory_journal::erase_all_to(const reccord_info &e) {
   to_erase.reserve(_wal.size());
 
   for (auto it = _wal.begin(); it != _wal.end(); ++it) {
-    if (it->first >= e.lsn) {
+    if (it->first >= lsn) {
       break;
     }
     to_erase.push_back(*it);
@@ -163,7 +163,7 @@ void memory_journal::erase_all_to(const reccord_info &e) {
   if (!_wal.empty()) {
     auto it = _wal.begin();
 
-    if (_commited.lsn < e.lsn) {
+    if (_commited.lsn < lsn) {
       _commited = reccord_info(it->second, it->first);
     }
   } else {

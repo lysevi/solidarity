@@ -13,7 +13,7 @@ namespace rft::logdb {
 /// log sequence numbder;
 using index_t = int64_t;
 const term_t UNDEFINED_TERM = std::numeric_limits<term_t>::min();
-const index_t UNDEFINED_INDEX = std::numeric_limits<logdb::index_t>::min();
+const index_t UNDEFINED_INDEX = {-1};
 
 enum class log_entry_kind : uint8_t { APPEND, SNAPSHOT };
 
@@ -62,8 +62,10 @@ public:
   virtual void commit(const index_t lsn) = 0;
   virtual log_entry get(const logdb::index_t lsn) = 0;
   virtual size_t size() const = 0;
-  virtual void erase_all_after(const reccord_info &e) = 0;
-  virtual void erase_all_to(const reccord_info &e) = 0;
+  
+  virtual void erase_all_after(const index_t lsn) = 0;
+  virtual void erase_all_to(const index_t lsn) = 0;
+
   virtual void visit(std::function<void(const log_entry &)>) = 0;
 
   virtual reccord_info prev_rec() const noexcept = 0;
@@ -85,8 +87,8 @@ public:
   EXPORT void commit(const index_t lsn) override;
   EXPORT log_entry get(const logdb::index_t lsn) override;
   EXPORT size_t size() const override;
-  EXPORT void erase_all_after(const reccord_info &e) override;
-  EXPORT void erase_all_to(const reccord_info &e) override;
+  EXPORT void erase_all_after(const index_t lsn) override;
+  EXPORT void erase_all_to(const index_t lsn) override;
   EXPORT void visit(std::function<void(const log_entry &)>) override;
 
   EXPORT reccord_info prev_rec() const noexcept override;

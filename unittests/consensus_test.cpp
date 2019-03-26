@@ -496,9 +496,7 @@ TEST_CASE("consensus.rollback") {
     n2->rw_state().term = 100500;
   }
 
-  SECTION("from equal journal") { 
-	  n2->rw_state().term = 100500; 
-  }
+  SECTION("from equal journal") { n2->rw_state().term = 100500; }
   SECTION("from big to small journal") {
     rft::logdb::log_entry le;
     le.kind = rft::logdb::log_entry_kind::APPEND;
@@ -521,6 +519,20 @@ TEST_CASE("consensus.rollback") {
       jrn1->put(le);
     }
     jrn1->commit(jrn1->prev_rec().lsn);
+  }
+
+  SECTION("rewrite all journal") {
+    n2->rw_state().term = 100500;
+    jrn1->erase_all_after(rft::logdb::index_t(-1));
+
+    rft::logdb::log_entry le;
+    le.kind = rft::logdb::log_entry_kind::APPEND;
+    le.cmd = cmd;
+    for (size_t i = 0; i < 2; ++i) {
+      le.cmd.data[0] = static_cast<uint8_t>(i);
+      le.term = 0;
+      jrn1->put(le);
+    }
   }
 
   cluster->add_new(n1->self_addr(), n1);

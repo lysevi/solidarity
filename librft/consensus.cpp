@@ -117,6 +117,8 @@ append_entries consensus::make_append_entries(const logdb::index_t lsn_to_replic
   if (prev_lsn != logdb::UNDEFINED_INDEX) {
     auto prev = _jrn->info(prev_lsn);
     ae.prev = prev;
+  } else {
+    ae.prev = logdb::reccord_info{};
   }
   return ae;
 }
@@ -179,7 +181,7 @@ void consensus::log_fsck(const append_entries &e) {
     }
   }
   if (reset) {
-    _jrn->erase_all_after(to_erase);
+    _jrn->erase_all_after(to_erase.lsn);
     _consumer->reset();
     auto f = [this](const logdb::log_entry &le) { _consumer->apply_cmd(le.cmd); };
     _jrn->visit(f);
@@ -312,17 +314,22 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
 
   auto self_prev = _jrn->prev_rec();
   if (e.current != self_prev && e.prev != self_prev && !self_prev.is_empty()) {
-    // TODO if e.prev.lsn==0 => rewrite journal;
-    auto info = _jrn->info(e.prev.lsn);
-    if (!info.is_empty() && info.term == e.prev.term && info.kind == e.prev.kind) {
-      _logger->info("erase all after ", info);
-      _jrn->erase_all_after(info);
+    if (e.current.lsn == 0) {
+      _logger->info("clear journal!");
+      _jrn->erase_all_after(logdb::index_t{-1});
+      ENSURE(_jrn->size() == size_t(0));
     } else {
-
-      _logger->info("wrong entry from:", from, " ", e.prev, ", ", self_prev);
-      send(from, entries_kind_t::ANSWER_FAILED);
-      return;
+      auto info = _jrn->info(e.prev.lsn);
+      if (!info.is_empty() && info.term == e.prev.term && info.kind == e.prev.kind) {
+        _logger->info("erase all after ", info);
+        _jrn->erase_all_after(info.lsn);
+      } else {
+        _logger->info("wrong entry from:", from, " ", e.prev, ", ", self_prev);
+        send(from, entries_kind_t::ANSWER_FAILED);
+        return;
+      }
     }
+    _consumer->reset();
   }
 
   // TODO add check prev,cur,commited
@@ -431,7 +438,7 @@ void consensus::on_answer_failed(const cluster_node &from, const append_entries 
   } else {
     it->second.direction = rdirection::BACKWARDS;
     it->second.cycle = 0;
-    if (it->second.prev.lsn != 0) { /// move replication log backward
+    if (it->second.prev.lsn != logdb::UNDEFINED_INDEX) { /// move replication log backward
       it->second.prev.lsn -= 1;
     }
   }
@@ -453,7 +460,7 @@ void consensus::commit_reccord(const logdb::reccord_info &target) {
       } else {
         auto erase_point = _jrn->info(i - 1);
         _logger->info("erase all to ", erase_point);
-        _jrn->erase_all_to(erase_point);
+        _jrn->erase_all_to(erase_point.lsn);
       }
       ++i;
     }
@@ -524,20 +531,24 @@ void consensus::replicate_log() {
                     self_log_state.prev);
 
       auto lsn_to_replicate = kv->second.prev.lsn;
-      if (kv->second.prev.is_empty() || kv->second.prev.lsn >= self_log_state.prev.lsn) {
+      if (kv->second.prev.is_empty()) {
         lsn_to_replicate = _jrn->first_rec().lsn;
       } else {
-        switch (kv->second.direction) {
-        case rdirection::FORWARDS:
-          if (lsn_to_replicate != _jrn->prev_rec().lsn) {
-            ++lsn_to_replicate; // we need a next record;
+        if (kv->second.prev.lsn >= self_log_state.prev.lsn) {
+          lsn_to_replicate = _jrn->prev_rec().lsn;
+        } else {
+          switch (kv->second.direction) {
+          case rdirection::FORWARDS:
+            if (lsn_to_replicate != _jrn->prev_rec().lsn) {
+              ++lsn_to_replicate; // we need a next record;
+            }
+            break;
+          case rdirection::BACKWARDS:
+            // if (lsn_to_replicate > 0) {
+            //  --lsn_to_replicate; // we need a prev record;
+            //}
+            break;
           }
-          break;
-        case rdirection::BACKWARDS:
-          // if (lsn_to_replicate > 0) {
-          //  --lsn_to_replicate; // we need a prev record;
-          //}
-          break;
         }
       }
 
