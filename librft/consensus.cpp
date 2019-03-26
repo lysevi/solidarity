@@ -295,24 +295,7 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
     break;
   }
   case entries_kind_t::ANSWER_FAILED: {
-    _logger->info("answer FAILED from:",
-                  from,
-                  " cur:",
-                  e.current,
-                  ", prev",
-                  e.prev,
-                  ", ci:",
-                  e.commited);
-    auto it = _logs_state.find(from);
-    if (it == _logs_state.end()) {
-      _logs_state[from].prev = e.prev;
-    } else {
-      it->second.direction = rdirection::BACKWARDS;
-      it->second.cycle = 0;
-      if (it->second.prev.lsn != 0) {
-        it->second.prev.lsn -= 1;
-      }
-    }
+    on_answer_failed(from, e);
     break;
   }
   }
@@ -336,7 +319,7 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
       _jrn->erase_all_after(info);
     } else {
 
-      _logger->fatal("wrong entry from:", from, " ", e.prev, ", ", self_prev);
+      _logger->info("wrong entry from:", from, " ", e.prev, ", ", self_prev);
       send(from, entries_kind_t::ANSWER_FAILED);
       return;
     }
@@ -382,8 +365,14 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
 }
 
 void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) {
-  _logger->info(
-      "answer from:", from, " cur:", e.current, ", prev", e.prev, ", ci:", e.commited);
+  _logger->info("answer 'OK' from:",
+                from,
+                " cur:",
+                e.current,
+                ", prev",
+                e.prev,
+                ", ci:",
+                e.commited);
 
   // TODO check for current>_last_for_cluster[from];
   if (!e.prev.is_empty()) {
@@ -425,6 +414,27 @@ void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) 
     }
   }
   // replicate_log();
+}
+
+void consensus::on_answer_failed(const cluster_node &from, const append_entries &e) {
+  _logger->warn("answer 'FAILED' from:",
+                from,
+                " cur:",
+                e.current,
+                ", prev",
+                e.prev,
+                ", ci:",
+                e.commited);
+  auto it = _logs_state.find(from);
+  if (it == _logs_state.end()) {
+    _logs_state[from].prev = e.prev;
+  } else {
+    it->second.direction = rdirection::BACKWARDS;
+    it->second.cycle = 0;
+    if (it->second.prev.lsn != 0) { /// move replication log backward
+      it->second.prev.lsn -= 1;
+    }
+  }
 }
 
 void consensus::commit_reccord(const logdb::reccord_info &target) {
@@ -533,9 +543,9 @@ void consensus::replicate_log() {
           }
           break;
         case rdirection::BACKWARDS:
-          if (lsn_to_replicate > 0) {
-            --lsn_to_replicate; // we need a prev record;
-          }
+          // if (lsn_to_replicate > 0) {
+          //  --lsn_to_replicate; // we need a prev record;
+          //}
           break;
         }
       }
