@@ -7,6 +7,7 @@
 #include <memory>
 #include <shared_mutex>
 #include <utility>
+#include <unordered_map>
 
 namespace rft::logdb {
 /// log sequence numbder;
@@ -71,6 +72,8 @@ public:
   virtual reccord_info first_rec() const noexcept = 0;
   virtual reccord_info restore_start_point() const noexcept = 0;
   virtual reccord_info info(index_t lsn) const noexcept = 0;
+
+  virtual std::unordered_map<index_t, log_entry> dump() const = 0;
 };
 
 using journal_ptr = std::shared_ptr<abstract_journal>;
@@ -92,6 +95,8 @@ public:
   EXPORT reccord_info first_rec() const noexcept override;
   EXPORT reccord_info restore_start_point() const noexcept override;
   EXPORT reccord_info info(index_t lsn) const noexcept override;
+
+  EXPORT std::unordered_map<index_t, log_entry> dump() const override;
 
 protected:
   mutable std::shared_mutex _locker;

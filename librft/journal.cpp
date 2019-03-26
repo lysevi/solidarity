@@ -127,11 +127,12 @@ void memory_journal::erase_all_after(const reccord_info &e) {
   if (!_wal.empty()) {
     auto it = _wal.rbegin();
     _prev = reccord_info(it->second, it->first);
-
+    _idx = it->first + 1;
     if (_commited.lsn > e.lsn) {
       _commited = _prev;
     }
   } else {
+    _idx = 0;
     _prev = reccord_info{};
     _commited = reccord_info{};
   }
@@ -190,4 +191,22 @@ reccord_info memory_journal::info(index_t lsn) const noexcept {
   }
 
   return reccord_info(it->second, lsn);
+}
+
+std::unordered_map<index_t, log_entry> memory_journal::dump() const {
+  std::shared_lock<std::shared_mutex> lg(_locker);
+  std::unordered_map<rft::logdb::index_t, rft::logdb::log_entry> result;
+
+  auto prev = prev_rec();
+  result.reserve(prev.lsn);
+
+  while (prev.lsn >= 0) {
+    auto it = _wal.find(prev.lsn);
+    if (it == _wal.cend()) {
+      break;
+    }
+    result.insert(std::pair(prev.lsn, it->second));
+    --prev.lsn;
+  }
+  return result;
 }

@@ -386,6 +386,15 @@ TEST_CASE("consensus.log_compaction") {
   consumers.clear();
 }
 
+bool operator==(const rft::logdb::log_entry &r, const rft::logdb::log_entry &l) {
+  return r.term == l.term && r.kind == l.kind && r.cmd.data.size() == l.cmd.data.size()
+         && std::equal(r.cmd.data.cbegin(), r.cmd.data.cend(), l.cmd.data.cbegin());
+}
+
+bool operator!=(const rft::logdb::log_entry &r, const rft::logdb::log_entry &l) {
+  return !(r == l);
+}
+
 TEST_CASE("consensus.apply_journal_on_start") {
   using rft::cluster_node;
   using rft::consensus;
@@ -491,6 +500,39 @@ TEST_CASE("consensus.rollback") {
   cluster->wait_leader_eletion();
   cluster->print_cluster();
   auto leaders = cluster->by_filter(is_leader_pred);
+  auto followers = cluster->by_filter(is_follower_pred);
+
+  EXPECT_EQ(leaders.front()->self_addr().name(), n2->self_addr().name());
+  EXPECT_EQ(followers.front()->self_addr().name(), n1->self_addr().name());
+
+  auto jrn1 = dynamic_cast<rft::logdb::memory_journal *>(n1->journal().get());
+  auto jrn2 = dynamic_cast<rft::logdb::memory_journal *>(n2->journal().get());
+
+  while (true) {
+    cluster->heartbeat();
+
+    auto content1 = jrn1->dump();
+    auto content2 = jrn2->dump();
+
+    if (content1.size() == content2.size()) {
+      bool contents_is_equal = true;
+      for (const auto &kv : content1) {
+        auto it = content2.find(kv.first);
+        if (it == content2.end()) {
+          contents_is_equal = false;
+          break;
+        } else {
+          if (it->second != kv.second) {
+            contents_is_equal = false;
+            break;
+          }
+        }
+      }
+      if (contents_is_equal) {
+        break;
+      }
+    }
+  }
 
   cluster = nullptr;
   consumers.clear();

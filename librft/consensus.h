@@ -22,9 +22,11 @@ public:
 };
 
 class consensus {
+  enum class rdirection { FORWARDS = 0, BACKWARDS };
   struct log_state_t {
     logdb::reccord_info prev;
     size_t cycle = 0;
+    rdirection direction = rdirection::FORWARDS;
   };
 
 public:
