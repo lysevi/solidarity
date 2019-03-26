@@ -31,6 +31,14 @@ void node_state_t::change_state(const cluster_node &leader_, const term_t r) {
   leader = leader_;
 }
 
+bool node_state_t::is_my_jrn_biggest(const node_state_t &self,
+                                     const logdb::reccord_info commited,
+                                     const append_entries &e) {
+  return self.term < e.term
+         || (self.term == e.term && commited.lsn <= e.commited.lsn
+             && !commited.lsn_is_empty() && !e.commited.lsn_is_empty());
+}
+
 changed_state_t node_state_t::on_vote(const node_state_t &self,
                                       const node_settings &settings,
                                       const cluster_node &self_addr,
@@ -55,16 +63,7 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
     }
     case NODE_KIND::FOLLOWER: {
       // vote to biggest journal.
-      /*if (result.term > e.term
-          || (result.term == e.term && commited.lsn > e.commited.lsn)) {
-      } else {
-        result.node_kind = NODE_KIND::ELECTION;
-        result.term = e.term;
-        result.leader = e.leader;
-      }*/
-      if (result.term < e.term
-          || (result.term == e.term && commited.lsn <= e.commited.lsn
-              && !commited.lsn_is_empty() && !e.commited.lsn_is_empty())) {
+      if (is_my_jrn_biggest(result, commited, e)) {
         result.node_kind = NODE_KIND::ELECTION;
         result.term = e.term;
         result.leader = e.leader;
@@ -83,10 +82,12 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
       break;
     }
     case NODE_KIND::CANDIDATE: {
-      if (result.term < e.term && from == e.leader) {
-        result.change_state(NODE_KIND::ELECTION, e.term, e.leader);
-        result.election_round = 0;
-        // result.last_heartbeat_time = clock_t::now();
+      // vote to biggest journal.
+      if (is_my_jrn_biggest(result, commited, e)) {
+        result.node_kind = NODE_KIND::ELECTION;
+        result.term = e.term;
+        result.leader = e.leader;
+        result.last_heartbeat_time = clock_t::now();
       }
       target = NOTIFY_TARGET::SENDER;
       break;
