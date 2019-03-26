@@ -524,7 +524,7 @@ void consensus::replicate_log() {
                     self_log_state.prev);
 
       auto lsn_to_replicate = kv->second.prev.lsn;
-      if (kv->second.prev.is_empty()) {
+      if (kv->second.prev.is_empty() || kv->second.prev.lsn >= self_log_state.prev.lsn) {
         lsn_to_replicate = _jrn->first_rec().lsn;
       } else {
         switch (kv->second.direction) {

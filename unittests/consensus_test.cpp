@@ -452,12 +452,13 @@ TEST_CASE("consensus.rollback") {
   cmd.data.resize(1);
 
   std::shared_ptr<rft::consensus> n1, n2;
+  std::shared_ptr<rft::logdb::memory_journal> jrn1, jrn2;
   {
     auto nname = "_0";
     auto sett = rft::node_settings().set_name(nname).set_election_timeout(et);
     auto consumer = std::make_shared<mock_consumer>();
     consumers.push_back(consumer);
-    auto jrn = memory_journal::make_new();
+    jrn1 = memory_journal::make_new();
 
     rft::logdb::log_entry le;
     le.kind = rft::logdb::log_entry_kind::APPEND;
@@ -466,9 +467,9 @@ TEST_CASE("consensus.rollback") {
     for (size_t i = 0; i < 10; ++i) {
       le.cmd.data[0] = static_cast<uint8_t>(i);
       le.term = 1;
-      jrn->put(le);
+      jrn1->put(le);
     }
-    n1 = std::make_shared<consensus>(sett, cluster.get(), jrn, consumer.get());
+    n1 = std::make_shared<consensus>(sett, cluster.get(), jrn1, consumer.get());
     n1->rw_state().term = 1;
   }
   {
@@ -476,7 +477,7 @@ TEST_CASE("consensus.rollback") {
     auto sett = rft::node_settings().set_name(nname).set_election_timeout(et);
     auto consumer = std::make_shared<mock_consumer>();
     consumers.push_back(consumer);
-    auto jrn = memory_journal::make_new();
+    jrn2 = memory_journal::make_new();
 
     rft::logdb::log_entry le;
     le.kind = rft::logdb::log_entry_kind::APPEND;
@@ -488,11 +489,38 @@ TEST_CASE("consensus.rollback") {
       } else {
         le.term = 1;
       }
-      jrn->put(le);
+      jrn2->put(le);
     }
-    jrn->commit(jrn->prev_rec().lsn);
-    n2 = std::make_shared<consensus>(sett, cluster.get(), jrn, consumer.get());
+    jrn2->commit(jrn2->prev_rec().lsn);
+    n2 = std::make_shared<consensus>(sett, cluster.get(), jrn2, consumer.get());
     n2->rw_state().term = 100500;
+  }
+
+  SECTION("from equal journal") { 
+	  n2->rw_state().term = 100500; 
+  }
+  SECTION("from big to small journal") {
+    rft::logdb::log_entry le;
+    le.kind = rft::logdb::log_entry_kind::APPEND;
+    le.cmd = cmd;
+    for (size_t i = 0; i < 20; ++i) {
+      le.cmd.data[0] = static_cast<uint8_t>(i);
+      le.term = n2->rw_state().term;
+      jrn2->put(le);
+    }
+    jrn2->commit(jrn2->prev_rec().lsn);
+  }
+
+  SECTION("from small to big journal") {
+    rft::logdb::log_entry le;
+    le.kind = rft::logdb::log_entry_kind::APPEND;
+    le.cmd = cmd;
+    for (size_t i = 11; i < 15; ++i) {
+      le.cmd.data[0] = static_cast<uint8_t>(i);
+      le.term = 1;
+      jrn1->put(le);
+    }
+    jrn1->commit(jrn1->prev_rec().lsn);
   }
 
   cluster->add_new(n1->self_addr(), n1);
@@ -505,9 +533,6 @@ TEST_CASE("consensus.rollback") {
 
   EXPECT_EQ(leaders.front()->self_addr().name(), n2->self_addr().name());
   EXPECT_EQ(followers.front()->self_addr().name(), n1->self_addr().name());
-
-  auto jrn1 = dynamic_cast<rft::logdb::memory_journal *>(n1->journal().get());
-  auto jrn2 = dynamic_cast<rft::logdb::memory_journal *>(n2->journal().get());
 
   while (true) {
     cluster->heartbeat();

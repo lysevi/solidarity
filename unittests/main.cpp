@@ -144,8 +144,8 @@ int main(int argc, char **argv) {
   int result = 0;
   for (size_t i = 0; i < runs; ++i) {
     result = sesssion.run(_argc, _argv);
-    
-	if (runs > 1) {
+
+    if (runs > 1) {
       std::cout << "result: " << result << std::endl;
       std::cout << "iteration: " << i << std::endl;
     }
