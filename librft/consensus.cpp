@@ -515,22 +515,13 @@ void consensus::replicate_log() {
     }
 
     bool is_append = false;
-    if (kv->second.prev.is_empty() || kv->second.prev.lsn != self_log_state.prev.lsn
-        || kv->second.prev.term != self_log_state.prev.term) {
+    if (kv->second.prev.is_empty() || kv->second.prev != self_log_state.prev) {
       _logger->info("try replication for ",
                     kv->first,
-                    " => lsn:",
-                    kv->second.prev.lsn,
-                    " != self.lsn:",
-                    self_log_state.prev.lsn,
-                    "==",
-                    kv->second.prev.lsn != self_log_state.prev.lsn,
-                    " => term:",
-                    kv->second.prev.term,
-                    " != self.term:",
-                    self_log_state.prev.term,
-                    "==",
-                    kv->second.prev.term != self_log_state.prev.term);
+                    " => prev: ",
+                    kv->second.prev,
+                    " != self.prev:",
+                    self_log_state.prev);
 
       auto lsn_to_replicate = kv->second.prev.lsn;
       if (kv->second.prev.is_empty()) {
