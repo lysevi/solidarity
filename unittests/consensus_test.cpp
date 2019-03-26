@@ -490,8 +490,9 @@ TEST_CASE("consensus.rollback") {
       }
       jrn->put(le);
     }
+    jrn->commit(jrn->prev_rec().lsn);
     n2 = std::make_shared<consensus>(sett, cluster.get(), jrn, consumer.get());
-    n2->rw_state().term = 2;
+    n2->rw_state().term = 100500;
   }
 
   cluster->add_new(n1->self_addr(), n1);
