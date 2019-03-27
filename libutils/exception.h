@@ -1,17 +1,8 @@
 #pragma once
 #include <libutils/logger.h>
 #include <libutils/strings.h>
-
 #include <stdexcept>
 #include <string>
-
-#ifdef UNIX_OS
-#include <execinfo.h>
-#include <sstream>
-#include <stdlib.h>
-#include <unistd.h>
-#define BT_BUF_SIZE 512
-#endif
 
 #define CODE_POS (utils::exceptions::codepos(__FILE__, __LINE__, __FUNCTION__))
 
@@ -41,7 +32,7 @@ struct codepos {
 
   std::string toString() const {
     auto ss = std::string(_file) + " line: " + std::to_string(_line)
-        + " function: " + std::string(_func) + "\n";
+              + " function: " + std::string(_func) + "\n";
     return ss;
   }
   codepos &operator=(const codepos &) = delete;
@@ -52,37 +43,10 @@ public:
   template <typename... T>
   static exception_t create_and_log(const codepos &pos, T... message) {
 
-    auto expanded_message = utils::strings::args_to_string(message...);
-    auto str_message = std::string("FATAL ERROR. The Exception will be thrown! ")
-        + pos.toString() + " Message: " + expanded_message;
-
-#ifdef UNIX_OS
-    std::stringstream sstr;
-    sstr << str_message;
-    int j, nptrs;
-    void *buffer[BT_BUF_SIZE];
-    char **strings;
-
-    nptrs = backtrace(buffer, BT_BUF_SIZE);
-    sstr << "\nbacktrace() returned " << nptrs << " addresses" << std::endl;
-
-    /* The call backtrace_symbols_fd(buffer, nptrs, STDOUT_FILENO)
-    would produce similar output to the following: */
-
-    strings = backtrace_symbols(buffer, nptrs);
-    if (strings == NULL) {
-      sstr << "backtrace_symbols" << std::endl;
-    } else {
-      sstr << "trace:" << std::endl;
-      for (j = 0; j < nptrs; j++) {
-        sstr << strings[j] << std::endl;
-      }
-    }
-    free(strings);
-    str_message = sstr.str();
-#endif
-
-    logging::logger_fatal(str_message);
+    auto expanded_message = utils::strings::args_to_string(
+        std::string("FATAL ERROR. The Exception will be thrown! "),
+        pos.toString() + " Message: ",
+        message...);
     return exception_t(expanded_message);
   }
 
@@ -90,12 +54,12 @@ public:
   virtual const char *what() const noexcept { return _msg.c_str(); }
   const std::string &message() const { return _msg; }
 
+  exception_t();
+  exception_t(const char *&message);
+  exception_t(const std::string &message);
+
 protected:
-  exception_t() {}
-  exception_t(const char *&message)
-      : _msg(std::string(message)) {}
-  exception_t(const std::string &message)
-      : _msg(message) {}
+  void init_msg(const std::string &msg_);
 
 private:
   std::string _msg;

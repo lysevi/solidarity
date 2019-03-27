@@ -203,3 +203,15 @@ TEST_CASE("utils.timer(single)") {
     utils::sleep_mls(100);
   }
 }
+
+void f_throw() {
+  throw utils::exceptions::exception_t("error");
+}
+
+TEST_CASE("utils.exception") {
+  try {
+    f_throw();
+  } catch (utils::exceptions::exception_t &e) {
+    utils::logging::logger_info(e.what());
+  }
+}

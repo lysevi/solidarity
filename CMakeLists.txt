@@ -13,7 +13,6 @@ if (WIN32)
 endif ()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-add_definitions(-DBOOST_ASIO_NO_DEPRECATED)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
@@ -74,6 +73,7 @@ IF(NOT HEADER_ONLY)
 	endif()
 endif()
 
+add_definitions(-DBOOST_ASIO_NO_DEPRECATED)
 find_package(Boost 1.69.0 COMPONENTS system date_time REQUIRED)
 
 IF(Boost_FOUND)
