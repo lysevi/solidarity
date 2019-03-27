@@ -2,7 +2,7 @@
 #include "mock_cluster.h"
 #include <librft/consensus.h>
 #include <libutils/logger.h>
-#include <catch.hpp>
+#include <catch2/catch.hpp>
 
 class mock_consumer final : public rft::abstract_consensus_consumer {
 public:

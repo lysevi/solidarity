@@ -1,6 +1,6 @@
 #include "helpers.h"
 #include <librft/journal.h>
-#include <catch.hpp>
+#include <catch2/catch.hpp>
 
 TEST_CASE("journal.memory") {
   auto jrn = rft::logdb::memory_journal::make_new();
