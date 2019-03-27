@@ -22,9 +22,11 @@ public:
 };
 
 class consensus {
+  enum class rdirection { FORWARDS = 0, BACKWARDS };
   struct log_state_t {
     logdb::reccord_info prev;
     size_t cycle = 0;
+    rdirection direction = rdirection::FORWARDS;
   };
 
 public:
@@ -32,7 +34,12 @@ public:
                    abstract_cluster *cluster,
                    const logdb::journal_ptr &jrn,
                    abstract_consensus_consumer *consumer);
-  node_state_t state() const { return _state; }
+  node_state_t state() const {
+    std::lock_guard<std::mutex> l(_locker);
+    return _state;
+  }
+  node_state_t &rw_state() { return _state; }
+
   NODE_KIND kind() const { return _state.node_kind; }
   term_t term() const { return _state.term; }
   logdb::journal_ptr journal() const { return _jrn; }
@@ -65,6 +72,7 @@ protected:
   void on_vote(const cluster_node &from, const append_entries &e);
   void on_append_entries(const cluster_node &from, const append_entries &e);
   void on_answer_ok(const cluster_node &from, const append_entries &e);
+  void on_answer_failed(const cluster_node &from, const append_entries &e);
 
   void update_next_heartbeat_interval();
 

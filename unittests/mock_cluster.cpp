@@ -124,7 +124,9 @@ void mock_cluster::send_all(const rft::cluster_node &from, const rft::append_ent
 void mock_cluster::add_new(const rft::cluster_node &addr,
                            const std::shared_ptr<rft::consensus> &c) {
   std::lock_guard<std::shared_mutex> lg(_cluster_locker);
-  // if (_worker_thread.size() < std::thread::hardware_concurrency())
+  if (_workers.find(addr) != _workers.end()) {
+    THROW_EXCEPTION("_workers.find(addr) != _workers.end()");
+  }
   _workers[addr] = std::make_shared<worker_t>(c);
   c->set_cluster(this);
   _cluster[addr] = c;
@@ -192,7 +194,7 @@ void mock_cluster::erase_if(
     }
     target = it->first;
     _workers[target]->stop();
-    
+
     _cluster_locker.unlock_shared();
 
     std::lock_guard<std::shared_mutex> l(_cluster_locker);
@@ -237,7 +239,7 @@ void mock_cluster::wait_leader_eletion(size_t max_leaders) {
 }
 
 bool mock_cluster::is_leader_eletion_complete(size_t max_leaders) {
-  auto leaders = by_filter(is_leader_pred);
+  const auto leaders = by_filter(is_leader_pred);
   if (leaders.size() > max_leaders) {
     utils::logging::logger_fatal("consensus error!!!");
     print_cluster();
@@ -247,7 +249,9 @@ bool mock_cluster::is_leader_eletion_complete(size_t max_leaders) {
     auto cur_leader = leaders.front()->self_addr();
     auto followers
         = by_filter([cur_leader](const std::shared_ptr<rft::consensus> &v) -> bool {
-            return v->get_leader() == cur_leader;
+            auto nkind = v->state().node_kind;
+            return v->get_leader() == cur_leader
+                && (nkind == rft::NODE_KIND::LEADER || nkind == rft::NODE_KIND::FOLLOWER);
           });
     if (followers.size() == size()) {
       return true;
@@ -269,7 +273,6 @@ void mock_cluster::restart_node(const rft::cluster_node &addr) {
 }
 
 std::shared_ptr<mock_cluster> mock_cluster::split(size_t count_to_move) {
-
   auto result = std::make_shared<mock_cluster>();
   // std::lock_guard<std::shared_mutex> lg_res(result->_cluster_locker);
   stop_workers();

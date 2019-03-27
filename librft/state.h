@@ -47,9 +47,9 @@ struct node_state_t {
 
   bool operator==(const node_state_t &o) const {
     return term == o.term && last_heartbeat_time == o.last_heartbeat_time
-        && next_heartbeat_interval == o.next_heartbeat_interval && leader == o.leader
-        && node_kind == o.node_kind && election_round == o.election_round
-        && votes_to_me == o.votes_to_me && start_time == o.start_time;
+           && next_heartbeat_interval == o.next_heartbeat_interval && leader == o.leader
+           && node_kind == o.node_kind && election_round == o.election_round
+           && votes_to_me == o.votes_to_me && start_time == o.start_time;
   }
 
   bool operator!=(const node_state_t &o) const { return !(*this == o); }
@@ -84,6 +84,10 @@ struct node_state_t {
   EXPORT static node_state_t heartbeat(const node_state_t &self,
                                        const cluster_node &self_addr,
                                        const size_t cluster_size);
+
+  EXPORT static bool is_my_jrn_biggest(const node_state_t &self,
+                                       const logdb::reccord_info commited,
+                                       const append_entries &e);
 };
 
 EXPORT std::string to_string(const node_state_t &s);

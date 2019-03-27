@@ -115,8 +115,10 @@ append_entries consensus::make_append_entries(const logdb::index_t lsn_to_replic
   ae.current.term = cur.term;
 
   if (prev_lsn != logdb::UNDEFINED_INDEX) {
-    auto prev = _jrn->get(prev_lsn);
-    ae.prev = logdb::reccord_info(prev, prev_lsn);
+    auto prev = _jrn->info(prev_lsn);
+    ae.prev = prev;
+  } else {
+    ae.prev = logdb::reccord_info{};
   }
   return ae;
 }
@@ -179,7 +181,7 @@ void consensus::log_fsck(const append_entries &e) {
     }
   }
   if (reset) {
-    _jrn->erase_all_after(to_erase);
+    _jrn->erase_all_after(to_erase.lsn);
     _consumer->reset();
     auto f = [this](const logdb::log_entry &le) { _consumer->apply_cmd(le.cmd); };
     _jrn->visit(f);
@@ -295,7 +297,8 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
     break;
   }
   case entries_kind_t::ANSWER_FAILED: {
-    NOT_IMPLEMENTED
+    on_answer_failed(from, e);
+    break;
   }
   }
 }
@@ -311,9 +314,22 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
 
   auto self_prev = _jrn->prev_rec();
   if (e.current != self_prev && e.prev != self_prev && !self_prev.is_empty()) {
-    _logger->fatal("wrong entry from:", from, " ", e.prev, ", ", self_prev);
-    send(from, entries_kind_t::ANSWER_FAILED);
-    return;
+    if (e.current.lsn == 0) {
+      _logger->info("clear journal!");
+      _jrn->erase_all_after(logdb::index_t{-1});
+      ENSURE(_jrn->size() == size_t(0));
+    } else {
+      auto info = _jrn->info(e.prev.lsn);
+      if (!info.is_empty() && info.term == e.prev.term && info.kind == e.prev.kind) {
+        _logger->info("erase all after ", info);
+        _jrn->erase_all_after(info.lsn);
+      } else {
+        _logger->info("wrong entry from:", from, " ", e.prev, ", ", self_prev);
+        send(from, entries_kind_t::ANSWER_FAILED);
+        return;
+      }
+    }
+    _consumer->reset();
   }
 
   // TODO add check prev,cur,commited
@@ -326,7 +342,7 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
       _logger->info("duplicates");
     } else {
       logdb::log_entry le;
-      le.term = _state.term;
+      le.term = e.current.term;
       if (!e.cmd.is_empty()) {
         le.cmd = e.cmd;
       } else {
@@ -356,16 +372,26 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
 }
 
 void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) {
-  _logger->info(
-      "answer from:", from, " cur:", e.current, ", prev", e.prev, ", ci:", e.commited);
+  _logger->info("answer 'OK' from:",
+                from,
+                " cur:",
+                e.current,
+                ", prev",
+                e.prev,
+                ", ci:",
+                e.commited);
 
   // TODO check for current>_last_for_cluster[from];
   if (!e.prev.is_empty()) {
     _logs_state[from].prev = e.prev;
+    if (_logs_state[from].direction == rdirection::BACKWARDS) {
+      _logs_state[from].direction = rdirection::FORWARDS;
+      _logs_state[from].cycle = _settings.cycle_for_replication();
+    }
   }
   const size_t quorum = quorum_for_cluster(_cluster->size(), _settings.append_quorum());
-  
-  ENSURE(quorum<=_cluster->size());
+
+  ENSURE(quorum <= _cluster->size());
 
   std::unordered_map<logdb::reccord_info, size_t> count(_logs_state.size());
 
@@ -397,6 +423,27 @@ void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) 
   // replicate_log();
 }
 
+void consensus::on_answer_failed(const cluster_node &from, const append_entries &e) {
+  _logger->warn("answer 'FAILED' from:",
+                from,
+                " cur:",
+                e.current,
+                ", prev",
+                e.prev,
+                ", ci:",
+                e.commited);
+  auto it = _logs_state.find(from);
+  if (it == _logs_state.end()) {
+    _logs_state[from].prev = e.prev;
+  } else {
+    it->second.direction = rdirection::BACKWARDS;
+    it->second.cycle = _settings.cycle_for_replication();
+    if (it->second.prev.lsn != logdb::UNDEFINED_INDEX) { /// move replication log backward
+      it->second.prev.lsn -= 1;
+    }
+  }
+}
+
 void consensus::commit_reccord(const logdb::reccord_info &target) {
   auto to_commit = _jrn->first_uncommited_rec();
   if (!to_commit.is_empty()) {
@@ -413,7 +460,7 @@ void consensus::commit_reccord(const logdb::reccord_info &target) {
       } else {
         auto erase_point = _jrn->info(i - 1);
         _logger->info("erase all to ", erase_point);
-        _jrn->erase_all_to(erase_point);
+        _jrn->erase_all_to(erase_point.lsn);
       }
       ++i;
     }
@@ -475,21 +522,31 @@ void consensus::replicate_log() {
     }
 
     bool is_append = false;
-    if (kv->second.prev.is_empty() || kv->second.prev.lsn < self_log_state.prev.lsn) {
+    if (kv->second.prev.is_empty() || kv->second.prev != self_log_state.prev) {
       _logger->info("try replication for ",
                     kv->first,
-                    " => lsn:",
-                    kv->second.prev.lsn,
-                    " < self.lsn:",
-                    self_log_state.prev.lsn,
-                    "==",
-                    kv->second.prev.lsn < self_log_state.prev.lsn);
+                    " => prev: ",
+                    kv->second.prev,
+                    " != self.prev:",
+                    self_log_state.prev);
 
       auto lsn_to_replicate = kv->second.prev.lsn;
       if (kv->second.prev.is_empty()) {
         lsn_to_replicate = _jrn->first_rec().lsn;
       } else {
-        ++lsn_to_replicate; // we need a next record;
+        if (kv->second.prev.lsn >= self_log_state.prev.lsn) {
+          lsn_to_replicate = _jrn->prev_rec().lsn;
+        } else {
+          switch (kv->second.direction) {
+          case rdirection::FORWARDS:
+            if (lsn_to_replicate != _jrn->prev_rec().lsn) {
+              ++lsn_to_replicate; // we need a next record;
+            }
+            break;
+          case rdirection::BACKWARDS:
+            break;
+          }
+        }
       }
 
       auto ls_it = _last_sended.find(kv->first);
@@ -498,7 +555,9 @@ void consensus::replicate_log() {
         kv->second.cycle--;
       } else {
         kv->second.cycle = _settings.cycle_for_replication();
-        auto ae = make_append_entries(lsn_to_replicate, kv->second.prev.lsn);
+        auto ae = make_append_entries(lsn_to_replicate,
+                                      lsn_to_replicate > 0 ? lsn_to_replicate - 1
+                                                           : logdb::UNDEFINED_INDEX);
 
         _last_sended[kv->first] = ae.current;
         _logger->info("replicate cur:",
