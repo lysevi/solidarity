@@ -7,7 +7,7 @@
 
 #include "helpers.h"
 #include <array>
-#include <catch2/catch.hpp>
+#include <catch.hpp>
 #include <numeric>
 
 TEST_CASE("utils.split") {

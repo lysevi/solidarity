@@ -1,6 +1,6 @@
 #include "helpers.h"
 #include <librft/state.h>
-#include <catch2/catch.hpp>
+#include <catch.hpp>
 
 SCENARIO("node_state.vote") {
   rft::node_state_t self;

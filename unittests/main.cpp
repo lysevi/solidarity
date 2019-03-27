@@ -1,6 +1,6 @@
 #define CATCH_CONFIG_RUNNER
 #include <libutils/logger.h>
-#include <catch2/catch.hpp>
+#include <catch.hpp>
 #include <chrono>
 #include <cstring>
 #include <ctime>

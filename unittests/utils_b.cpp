@@ -1,5 +1,5 @@
 #include <libutils/strings.h>
-#include <catch2/catch.hpp>
+#include <catch.hpp>
 
 #ifdef ENABLE_BENCHMARKS
 TEST_CASE("utils::strings", "[bench]") {
