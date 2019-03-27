@@ -386,7 +386,7 @@ void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) 
     _logs_state[from].prev = e.prev;
     if (_logs_state[from].direction == rdirection::BACKWARDS) {
       _logs_state[from].direction = rdirection::FORWARDS;
-      _logs_state[from].cycle = 0;
+      _logs_state[from].cycle = _settings.cycle_for_replication();
     }
   }
   const size_t quorum = quorum_for_cluster(_cluster->size(), _settings.append_quorum());
@@ -437,7 +437,7 @@ void consensus::on_answer_failed(const cluster_node &from, const append_entries 
     _logs_state[from].prev = e.prev;
   } else {
     it->second.direction = rdirection::BACKWARDS;
-    it->second.cycle = 0;
+    it->second.cycle = _settings.cycle_for_replication();
     if (it->second.prev.lsn != logdb::UNDEFINED_INDEX) { /// move replication log backward
       it->second.prev.lsn -= 1;
     }
@@ -544,9 +544,6 @@ void consensus::replicate_log() {
             }
             break;
           case rdirection::BACKWARDS:
-            // if (lsn_to_replicate > 0) {
-            //  --lsn_to_replicate; // we need a prev record;
-            //}
             break;
           }
         }
