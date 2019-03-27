@@ -81,7 +81,8 @@ else()
   MESSAGE(FATAL_ERROR "boost not found")
   EXIT()
 ENDIF()
-
+######### MSGPACK
+add_definitions(-DMSGPACK_CXX17=ON)
 
 IF(solidarity_ENABLE_DOUBLECHECKS)
  add_definitions(-DDOUBLE_CHECKS)
