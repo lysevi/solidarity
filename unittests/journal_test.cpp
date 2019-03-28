@@ -45,7 +45,7 @@ TEST_CASE("journal.memory") {
   EXPECT_EQ(jrn->info(rft::logdb::index_t(2)).kind, en.kind);
 
   EXPECT_EQ(jrn->restore_start_point().lsn, rft::logdb::index_t(0));
-  en.kind = rft::logdb::log_entry_kind::SNAPSHOT;
+  en.kind = rft::logdb::LOG_ENTRY_KIND::SNAPSHOT;
   auto snap_point = jrn->put(en);
   EXPECT_EQ(jrn->restore_start_point().lsn, snap_point.lsn);
 

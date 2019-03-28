@@ -461,7 +461,7 @@ TEST_CASE("consensus.rollback") {
     jrn1 = memory_journal::make_new();
 
     rft::logdb::log_entry le;
-    le.kind = rft::logdb::log_entry_kind::APPEND;
+    le.kind = rft::logdb::LOG_ENTRY_KIND::APPEND;
     le.cmd = cmd;
 
     for (size_t i = 0; i < 10; ++i) {
@@ -480,7 +480,7 @@ TEST_CASE("consensus.rollback") {
     jrn2 = memory_journal::make_new();
 
     rft::logdb::log_entry le;
-    le.kind = rft::logdb::log_entry_kind::APPEND;
+    le.kind = rft::logdb::LOG_ENTRY_KIND::APPEND;
     le.cmd = cmd;
     for (size_t i = 0; i < 10; ++i) {
       le.cmd.data[0] = static_cast<uint8_t>(i);
@@ -499,7 +499,7 @@ TEST_CASE("consensus.rollback") {
   SECTION("from equal journal") { n2->rw_state().term = 100500; }
   SECTION("from big to small journal") {
     rft::logdb::log_entry le;
-    le.kind = rft::logdb::log_entry_kind::APPEND;
+    le.kind = rft::logdb::LOG_ENTRY_KIND::APPEND;
     le.cmd = cmd;
     for (size_t i = 0; i < 20; ++i) {
       le.cmd.data[0] = static_cast<uint8_t>(i);
@@ -511,7 +511,7 @@ TEST_CASE("consensus.rollback") {
 
   SECTION("from small to big journal") {
     rft::logdb::log_entry le;
-    le.kind = rft::logdb::log_entry_kind::APPEND;
+    le.kind = rft::logdb::LOG_ENTRY_KIND::APPEND;
     le.cmd = cmd;
     for (size_t i = 11; i < 15; ++i) {
       le.cmd.data[0] = static_cast<uint8_t>(i);
@@ -526,7 +526,7 @@ TEST_CASE("consensus.rollback") {
     jrn1->erase_all_after(rft::logdb::index_t(-1));
 
     rft::logdb::log_entry le;
-    le.kind = rft::logdb::log_entry_kind::APPEND;
+    le.kind = rft::logdb::LOG_ENTRY_KIND::APPEND;
     le.cmd = cmd;
     for (size_t i = 0; i < 2; ++i) {
       le.cmd.data[0] = static_cast<uint8_t>(i);

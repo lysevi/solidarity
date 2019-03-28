@@ -3,19 +3,19 @@
 #include <libutils/utils.h>
 
 namespace std {
-std::string to_string(const rft::entries_kind_t k) {
+std::string to_string(const rft::ENTRIES_KIND k) {
   switch (k) {
-  case rft::entries_kind_t::HEARTBEAT:
+  case rft::ENTRIES_KIND::HEARTBEAT:
     return "HEARTBEAT";
-  case rft::entries_kind_t::VOTE:
+  case rft::ENTRIES_KIND::VOTE:
     return "VOTE";
-  case rft::entries_kind_t::APPEND:
+  case rft::ENTRIES_KIND::APPEND:
     return "APPEND";
-  case rft::entries_kind_t::ANSWER_OK:
+  case rft::ENTRIES_KIND::ANSWER_OK:
     return "ANSWER_OK";
-  case rft::entries_kind_t::ANSWER_FAILED:
+  case rft::ENTRIES_KIND::ANSWER_FAILED:
     return "ANSWER_FAILED";
-  case rft::entries_kind_t::HELLO:
+  case rft::ENTRIES_KIND::HELLO:
     return "HELLO";
   }
   NOT_IMPLEMENTED

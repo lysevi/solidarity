@@ -8,37 +8,37 @@
 
 namespace utils::logging {
 
-enum class message_kind { message, info, warn, fatal };
+enum class MESSAGE_KIND { message, info, warn, fatal };
 
 class abstract_logger {
 public:
-  virtual void message(message_kind kind, const std::string &msg) noexcept = 0;
+  virtual void message(MESSAGE_KIND kind, const std::string &msg) noexcept = 0;
   virtual ~abstract_logger() {}
 
   template <typename... T>
-  void variadic_message(message_kind kind, T &&... args) noexcept {
+  void variadic_message(MESSAGE_KIND kind, T &&... args) noexcept {
     auto str_message = utils::strings::args_to_string(args...);
     this->message(kind, str_message);
   }
 
   template <typename... T>
   void dbg(T &&... args) noexcept {
-    variadic_message(utils::logging::message_kind::message, args...);
+    variadic_message(utils::logging::MESSAGE_KIND::message, args...);
   }
 
   template <typename... T>
   void info(T &&... args) noexcept {
-    variadic_message(utils::logging::message_kind::info, args...);
+    variadic_message(utils::logging::MESSAGE_KIND::info, args...);
   }
 
   template <typename... T>
   void warn(T &&... args) noexcept {
-    variadic_message(utils::logging::message_kind::warn, args...);
+    variadic_message(utils::logging::MESSAGE_KIND::warn, args...);
   }
 
   template <typename... T>
   void fatal(T &&... args) noexcept {
-    variadic_message(utils::logging::message_kind::fatal, args...);
+    variadic_message(utils::logging::MESSAGE_KIND::fatal, args...);
   }
 };
 
@@ -48,7 +48,7 @@ public:
       : _prefix(prefix)
       , _target(target) {}
 
-  void message(message_kind kind, const std::string &msg) noexcept {
+  void message(MESSAGE_KIND kind, const std::string &msg) noexcept {
     _target->message(kind, utils::strings::args_to_string(_prefix, msg));
   }
 
@@ -62,19 +62,19 @@ using abstract_logger_uptr = std::unique_ptr<abstract_logger>;
 
 class console_logger final : public abstract_logger {
 public:
-  EXPORT void message(message_kind kind, const std::string &msg) noexcept override;
+  EXPORT void message(MESSAGE_KIND kind, const std::string &msg) noexcept override;
 };
 
 class quiet_logger final : public abstract_logger {
 public:
-  EXPORT void message(message_kind kind, const std::string &msg) noexcept override;
+  EXPORT void message(MESSAGE_KIND kind, const std::string &msg) noexcept override;
 };
 
-enum class verbose_kind { verbose, debug, quiet };
+enum class VERBOSE_KIND { verbose, debug, quiet };
 
 class logger_manager {
 public:
-  EXPORT static verbose_kind verbose;
+  EXPORT static VERBOSE_KIND verbose;
   logger_manager(abstract_logger_ptr &logger);
   EXPORT abstract_logger *get_logger() noexcept;
 
@@ -83,7 +83,7 @@ public:
   EXPORT static logger_manager *instance() noexcept;
 
   template <typename... T>
-  void variadic_message(message_kind kind, T &&... args) noexcept {
+  void variadic_message(MESSAGE_KIND kind, T &&... args) noexcept {
     std::lock_guard<utils::async::locker> lg(_msg_locker);
     _logger->variadic_message(kind, std::forward<T>(args)...);
   }

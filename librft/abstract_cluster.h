@@ -21,11 +21,11 @@ inline std::string to_string(const cluster_node &s) {
   return std::string("node:://") + s.name();
 }
 
-enum class entries_kind_t { HEARTBEAT, VOTE, APPEND, ANSWER_OK, ANSWER_FAILED, HELLO };
+enum class ENTRIES_KIND { HEARTBEAT, VOTE, APPEND, ANSWER_OK, ANSWER_FAILED, HELLO };
 
 struct append_entries {
   /// on election;
-  entries_kind_t kind = {entries_kind_t::APPEND};
+  ENTRIES_KIND kind = {ENTRIES_KIND::APPEND};
   /// term number;
   term_t term;
   /// sender start time;
@@ -61,5 +61,5 @@ struct hash<rft::cluster_node> {
 };
 
 EXPORT std::string to_string(const rft::append_entries &e);
-EXPORT std::string to_string(const rft::entries_kind_t k);
+EXPORT std::string to_string(const rft::ENTRIES_KIND k);
 } // namespace std

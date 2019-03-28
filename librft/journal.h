@@ -15,17 +15,17 @@ using index_t = int64_t;
 const term_t UNDEFINED_TERM = std::numeric_limits<term_t>::min();
 const index_t UNDEFINED_INDEX = {-1};
 
-enum class log_entry_kind : uint8_t { APPEND, SNAPSHOT };
+enum class LOG_ENTRY_KIND : uint8_t { APPEND, SNAPSHOT };
 
 struct log_entry {
   log_entry()
       : term(UNDEFINED_TERM)
       , cmd()
-      , kind(log_entry_kind::APPEND) {}
+      , kind(LOG_ENTRY_KIND::APPEND) {}
 
   term_t term;
   command cmd;
-  log_entry_kind kind;
+  LOG_ENTRY_KIND kind;
 };
 
 struct reccord_info {
@@ -38,7 +38,7 @@ struct reccord_info {
   reccord_info() noexcept {
     term = UNDEFINED_TERM;
     lsn = UNDEFINED_INDEX;
-    kind = log_entry_kind::APPEND;
+    kind = LOG_ENTRY_KIND::APPEND;
   }
 
   bool is_empty() const { return lsn_is_empty() && term_is_empty(); }
@@ -50,7 +50,7 @@ struct reccord_info {
 
   term_t term;
   logdb::index_t lsn;
-  log_entry_kind kind;
+  LOG_ENTRY_KIND kind;
 };
 
 EXPORT std::string to_string(const reccord_info &ri);

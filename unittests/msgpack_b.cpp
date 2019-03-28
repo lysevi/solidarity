@@ -7,7 +7,7 @@
 class myclass {
 public:
   std::string m_str;
-  std::vector<int> m_vec;
+  std::vector<size_t> m_vec;
 
 public:
   MSGPACK_DEFINE(m_str, m_vec);

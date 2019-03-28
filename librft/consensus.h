@@ -22,11 +22,11 @@ public:
 };
 
 class consensus {
-  enum class rdirection { FORWARDS = 0, BACKWARDS };
+  enum class RDIRECTION { FORWARDS = 0, BACKWARDS };
   struct log_state_t {
     logdb::reccord_info prev;
     size_t cycle = 0;
-    rdirection direction = rdirection::FORWARDS;
+    RDIRECTION direction = RDIRECTION::FORWARDS;
   };
 
 public:
@@ -61,12 +61,12 @@ public:
   }
 
 protected:
-  append_entries make_append_entries(const entries_kind_t kind
-                                     = entries_kind_t::APPEND) const noexcept;
+  append_entries make_append_entries(const ENTRIES_KIND kind
+                                     = ENTRIES_KIND::APPEND) const noexcept;
   append_entries make_append_entries(const logdb::index_t lsn_to_replicate,
                                      const logdb::index_t prev_lsn);
-  void send_all(const entries_kind_t kind);
-  void send(const cluster_node &to, const entries_kind_t kind);
+  void send_all(const ENTRIES_KIND kind);
+  void send(const cluster_node &to, const ENTRIES_KIND kind);
 
   void on_heartbeat(const cluster_node &from, const append_entries &e);
   void on_vote(const cluster_node &from, const append_entries &e);
@@ -80,7 +80,7 @@ protected:
   void replicate_log();
   void log_fsck(const append_entries &e);
 
-  void add_command_impl(const command &cmd, logdb::log_entry_kind k);
+  void add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k);
 
 private:
   abstract_consensus_consumer *const _consumer = nullptr;
