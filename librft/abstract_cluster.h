@@ -21,7 +21,14 @@ inline std::string to_string(const cluster_node &s) {
   return std::string("node:://") + s.name();
 }
 
-enum class ENTRIES_KIND { HEARTBEAT, VOTE, APPEND, ANSWER_OK, ANSWER_FAILED, HELLO };
+enum class ENTRIES_KIND : uint8_t {
+  HEARTBEAT=0,
+  VOTE,
+  APPEND,
+  ANSWER_OK,
+  ANSWER_FAILED,
+  HELLO
+};
 
 struct append_entries {
   /// on election;
@@ -37,6 +44,9 @@ struct append_entries {
   logdb::reccord_info current;
   logdb::reccord_info prev;
   logdb::reccord_info commited;
+
+  EXPORT std::vector<uint8_t> to_byte_array() const;
+  EXPORT static append_entries from_byte_array(const std::vector<uint8_t>&bytes);
 };
 
 class abstract_cluster {
