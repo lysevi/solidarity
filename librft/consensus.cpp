@@ -251,8 +251,8 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
   }
   /// if leader receive message from follower with other leader,
   /// but with new election term.
-  if (e.kind != ENTRIES_KIND::VOTE && _self_addr == _state.leader
-      && e.term > _state.term && !e.leader.is_empty()) {
+  if (e.kind != ENTRIES_KIND::VOTE && _self_addr == _state.leader && e.term > _state.term
+      && !e.leader.is_empty()) {
     _logger->info("change state to follower");
     _state.leader.clear();
     _state.change_state(NODE_KIND::FOLLOWER, e.term, e.leader);
@@ -456,6 +456,7 @@ void consensus::commit_reccord(const logdb::reccord_info &target) {
       auto commited = _jrn->commited_rec();
       auto le = _jrn->get(commited.lsn);
       if (info.kind == logdb::LOG_ENTRY_KIND::APPEND) {
+        ENSURE(_consumer != nullptr);
         _consumer->apply_cmd(le.cmd);
       } else {
         auto erase_point = _jrn->info(i - 1);

@@ -534,7 +534,7 @@ TEST_CASE("consensus.rollback") {
       jrn1->put(le);
     }
   }
-
+  EXPECT_FALSE(consumers.empty());
   cluster->add_new(n1->self_addr(), n1);
   cluster->add_new(n2->self_addr(), n2);
 
@@ -547,6 +547,7 @@ TEST_CASE("consensus.rollback") {
   EXPECT_EQ(followers.front()->self_addr().name(), n1->self_addr().name());
 
   while (true) {
+    EXPECT_FALSE(consumers.empty());
     cluster->heartbeat();
 
     auto content1 = jrn1->dump();

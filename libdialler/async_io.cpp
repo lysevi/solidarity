@@ -1,5 +1,5 @@
 #include <libdialler/async_io.h>
-
+#include <libutils/utils.h>
 #include <cassert>
 #include <exception>
 
@@ -96,10 +96,12 @@ void async_io::readNextAsync() {
 
   auto on_read_message
       = [self](auto err, auto read_bytes, auto data_left, message_ptr d) {
+          UNUSED(data_left);
+          UNUSED(data_left);
           if (err) {
             self->_on_error_handler(d, err);
           } else {
-            assert(read_bytes == data_left);
+            ENSURE(read_bytes == data_left);
             bool cancel_flag = false;
             try {
               self->_on_recv_hadler(std::move(d), cancel_flag);
@@ -115,10 +117,11 @@ void async_io::readNextAsync() {
         };
 
   auto on_read_size = [self, on_read_message](auto err, auto read_bytes) {
+    UNUSED(read_bytes);
     if (err) {
       self->_on_error_handler(nullptr, err);
-    } else {
-      assert(read_bytes == message::SIZE_OF_SIZE);
+    } else {      
+      ENSURE(read_bytes == message::SIZE_OF_SIZE);
 
       auto data_left = self->next_message_size - message::SIZE_OF_SIZE;
       message_ptr d = std::make_shared<message>(data_left);

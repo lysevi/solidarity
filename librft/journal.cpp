@@ -198,15 +198,17 @@ std::unordered_map<index_t, log_entry> memory_journal::dump() const {
   std::unordered_map<rft::logdb::index_t, rft::logdb::log_entry> result;
 
   auto prev = prev_rec();
-  result.reserve(prev.lsn);
+  if (!prev.is_empty()) {
+    result.reserve(prev.lsn);
 
-  while (prev.lsn >= 0) {
-    auto it = _wal.find(prev.lsn);
-    if (it == _wal.cend()) {
-      break;
+    while (prev.lsn >= 0) {
+      auto it = _wal.find(prev.lsn);
+      if (it == _wal.cend()) {
+        break;
+      }
+      result.insert(std::pair(prev.lsn, it->second));
+      --prev.lsn;
     }
-    result.insert(std::pair(prev.lsn, it->second));
-    --prev.lsn;
   }
   return result;
 }
