@@ -12,8 +12,9 @@ add_library(dialler  ${SRC})
 target_INCLUDE_DIRECTORIES(dialler PUBLIC ${solidarity_INCLUDE_DIR} ${DIALLER_INCLUDE_DIR} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/lib)
 target_link_libraries(dialler PUBLIC ${DIALLER_PRIVATE_LIBRARIES})
 target_link_directories(dialler PUBLIC ${DIALLER_LIBRARY_DIR})
+add_library(solidarity::dialler ALIAS dialler)
 
-SET(DIALLER_LIBRARIES dialler ${DIALLER_PRIVATE_LIBRARIES} CACHE STRING "dialler libs")
+SET(DIALLER_LIBRARIES solidarity::dialler ${DIALLER_PRIVATE_LIBRARIES} CACHE STRING "dialler libs")
 
 GENERATE_EXPORT_HEADER(dialler
     BASE_NAME dialler
