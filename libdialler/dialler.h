@@ -24,7 +24,7 @@ public:
   EXPORT void add_connection(std::shared_ptr<dial> c);
   EXPORT bool is_connection_exists() const { return _connection != nullptr; }
 
-private:
+protected:
   std::shared_ptr<dial> _connection;
 };
 using abstract_connection_consumer_ptr = abstract_dial *;

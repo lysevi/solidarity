@@ -50,12 +50,16 @@ ForEachMacros:   [ foreach, Q_FOREACH, BOOST_FOREACH ]
 IncludeCategories: 
   - Regex:           '^"'
     Priority:        1
-  - Regex:           '^<lib.*'
+  - Regex:           '^<librft.*'
     Priority:        2
-  - Regex:           '^<boost.*'
+  - Regex:           '^<libdialler.*'
     Priority:        3
-  - Regex:           '.*'
+  - Regex:           '^<libutils.*'
     Priority:        4
+  - Regex:           '^<boost.*'
+    Priority:        5
+  - Regex:           '.*'
+    Priority:        6
 IndentCaseLabels: false
 IndentWidth:     2
 IndentWrappedFunctionNames: false

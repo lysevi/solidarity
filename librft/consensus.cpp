@@ -25,7 +25,7 @@ consensus::consensus(const node_settings &ns,
 
   auto log_prefix = utils::strings::args_to_string("node ", ns.name(), ": ");
 
-  _logger = std::make_unique<utils::logging::prefix_logger>(
+  _logger = std::make_shared<utils::logging::prefix_logger>(
       utils::logging::logger_manager::instance()->get_logger(), log_prefix);
 
   ENSURE(_consumer != nullptr);

@@ -1,9 +1,10 @@
 #include <librft/abstract_cluster.h>
+#include <librft/queries.h>
 
 #include "helpers.h"
 #include <catch.hpp>
 
-TEST_CASE("serialisation.append_entries") {
+TEST_CASE("serialisation.append_entries", "[network]") {
   rft::append_entries ae;
 
   rft::ENTRIES_KIND kind = rft::ENTRIES_KIND::HEARTBEAT;
@@ -65,4 +66,30 @@ TEST_CASE("serialisation.append_entries") {
 
   auto is_eq = std::equal(ae.cmd.data.begin(), ae.cmd.data.end(), res.cmd.data.begin());
   EXPECT_TRUE(is_eq);
+}
+
+TEST_CASE("serialisation.query_connect", "[network]") {
+  rft::queries::query_connect_t qc(777, "node id");
+  auto msg = qc.to_message();
+  rft::queries::query_connect_t qc_u(msg);
+  EXPECT_EQ(msg->get_header()->kind,
+            (dialler::message::kind_t)rft::queries::QUERY_KIND::CONNECT);
+  EXPECT_EQ(qc.protocol_version, qc_u.protocol_version);
+  EXPECT_EQ(qc.node_id, qc_u.node_id);
+}
+
+TEST_CASE("serialisation.connection_error", "[network]") {
+  rft::queries::connection_error_t qc(777, "");
+
+  SECTION("empty message") { qc.msg = std::string(); }
+  SECTION("long message") {
+    qc.msg = "long error message! long error message! long error message";
+  }
+
+  auto msg = qc.to_message();
+  rft::queries::connection_error_t qc_u(msg);
+  EXPECT_EQ(msg->get_header()->kind,
+            (dialler::message::kind_t)rft::queries::QUERY_KIND::CONNECTION_ERROR);
+  EXPECT_EQ(qc.protocol_version, qc_u.protocol_version);
+  EXPECT_EQ(qc.msg, qc_u.msg);
 }
