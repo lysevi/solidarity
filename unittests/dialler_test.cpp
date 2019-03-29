@@ -99,7 +99,7 @@ TEST_CASE("listener.client", "[network]") {
   for (size_t i = 0; i < clients_count; i++) {
     clients[i] = std::make_shared<dialler::dial>(context, p);
     consumers[i] = std::make_shared<Connection>();
-    clients[i]->add_consumer(consumers[i].get());
+    clients[i]->add_consumer(consumers[i]);
     clients[i]->start_async_connection();
   }
 

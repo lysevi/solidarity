@@ -57,12 +57,13 @@ public:
   struct params_t {
     dialler::listener::params_t listener_params;
     std::vector<dialler::dial::params_t> addrs;
-    size_t thread_count = 2;
+    size_t thread_count = 1;
   };
   EXPORT cluster_connection(cluster_node self_addr,
                             const utils::logging::abstract_logger_ptr &logger,
                             const params_t &params);
   EXPORT void start();
+  EXPORT void stop();
   EXPORT ~cluster_connection();
 
   EXPORT void send_to(const cluster_node &from,
@@ -79,21 +80,14 @@ public:
   cluster_node self_addr() const { return _self_addr; };
 
 protected:
-  void accept_out_connection(const cluster_node &name, const cluster_node &addr) {
-    std::lock_guard<std::recursive_mutex> l(_locker);
-    _accepted_out_connections.insert(std::make_pair(addr, name));
-  }
-
-  void accept_input_connection(const cluster_node &name, uint64_t id) {
-    std::lock_guard<std::recursive_mutex> l(_locker);
-    _accepted_input_connections.insert(std::make_pair(id, name));
-  }
+  void accept_out_connection(const cluster_node &name, const cluster_node &addr);
+  void accept_input_connection(const cluster_node &name, uint64_t id);
 
 private:
   utils::logging::abstract_logger_ptr _logger;
   cluster_node _self_addr;
 
-  mutable std::recursive_mutex _locker;
+  mutable std::shared_mutex _locker;
   bool _stoped;
   params_t _params;
   std::vector<std::thread> _threads;
@@ -102,7 +96,6 @@ private:
   std::shared_ptr<dialler::abstract_listener_consumer> _listener_consumer;
   std::shared_ptr<dialler::listener> _listener;
 
-  std::unordered_map<cluster_node, std::shared_ptr<dialler::abstract_dial>> _connections;
   std::unordered_map<cluster_node, std::shared_ptr<dialler::dial>> _diallers;
 
   std::unordered_map<cluster_node, cluster_node>

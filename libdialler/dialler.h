@@ -27,7 +27,7 @@ public:
 protected:
   std::shared_ptr<dial> _connection;
 };
-using abstract_connection_consumer_ptr = abstract_dial *;
+using abstract_connection_consumer_ptr = std::shared_ptr<abstract_dial>;
 
 class dial final : public std::enable_shared_from_this<dial>,
                    public initialized_resource {

@@ -59,8 +59,8 @@ void listener::on_new_message(dialler::listener_client_ptr i,
       dout = connection_error_t(protocol_version, "protocol version error").to_message();
     } else {
       dout = query_connect_t(protocol_version, _parent->_self_addr.name()).to_message();
-      _parent->_logger->info("accept connection from ", qc.node_id);
       _parent->accept_input_connection(cluster_node().set_name(qc.node_id), i->get_id());
+      _parent->_logger->info("accept connection from ", qc.node_id);
     }
     i->send_data(dout);
     break;
@@ -85,32 +85,11 @@ cluster_connection::cluster_connection(cluster_node self_addr,
 }
 
 cluster_connection::~cluster_connection() {
-  std::lock_guard<std::recursive_mutex> l(_locker);
-  for (auto &&kv : _diallers) {
-    kv.second->disconnect();
-    kv.second->wait_stoping();
-  }
-  _diallers.clear();
-
-  _connections.clear();
-
-  _listener->stop();
-  _listener->wait_stoping();
-  _listener = nullptr;
-  _listener_consumer = nullptr;
-
-  _stoped = true;
-
-  _io_context.stop();
-
-  for (auto &&t : _threads) {
-    t.join();
-  }
-  _threads.clear();
+  stop();
 }
 
 void cluster_connection::start() {
-  std::lock_guard<std::recursive_mutex> l(_locker);
+  std::lock_guard<std::shared_mutex> l(_locker);
   _stoped = false;
   _threads.resize(_params.thread_count);
   for (size_t i = 0; i < _params.thread_count; ++i) {
@@ -132,16 +111,41 @@ void cluster_connection::start() {
     auto cnaddr = cluster_node().set_name(p.host + ":" + std::to_string(p.port));
     auto c = std::make_shared<impl::out_connection>(self, cnaddr);
 
-    ENSURE(_connections.find(cnaddr) == _connections.end());
     ENSURE(_diallers.find(cnaddr) == _diallers.end());
     ENSURE(!cnaddr.is_empty());
 
     auto d = std::make_shared<dialler::dial>(&_io_context, p);
-    d->add_consumer(c.get());
-    _connections.insert(std::make_pair(cnaddr, c));
+    d->add_consumer(c);
     _diallers.insert(std::make_pair(cnaddr, d));
     d->start_async_connection();
   }
+}
+
+void cluster_connection::stop() {
+  std::lock_guard<std::shared_mutex> l(_locker);
+  _logger->info(" stoping...");
+  for (auto &&kv : _diallers) {
+    kv.second->disconnect();
+    kv.second->wait_stoping();
+  }
+  _diallers.clear();
+
+  if (_listener != nullptr) {
+    _listener->stop();
+    _listener->wait_stoping();
+    _listener = nullptr;
+    _listener_consumer = nullptr;
+  }
+
+  _stoped = true;
+
+  _io_context.stop();
+
+  for (auto &&t : _threads) {
+    t.join();
+  }
+  _threads.clear();
+  _logger->info(" stopped.");
 }
 
 void cluster_connection::send_to(const cluster_node &from,
@@ -155,16 +159,29 @@ void cluster_connection::send_all(const cluster_node &from, const append_entries
 }
 
 size_t cluster_connection::size() {
-  std::lock_guard<std::recursive_mutex> l(_locker);
-  return _connections.size();
+  std::shared_lock<std::shared_mutex> l(_locker);
+  return _diallers.size();
 }
 
 std::vector<cluster_node> cluster_connection::all_nodes() const {
-  std::lock_guard<std::recursive_mutex> l(_locker);
+  std::shared_lock<std::shared_mutex> l(_locker);
   std::vector<cluster_node> result;
   result.reserve(_accepted_input_connections.size());
   for (const auto &kv : _accepted_input_connections) {
     result.push_back(kv.second);
   }
   return result;
+}
+
+void cluster_connection::accept_out_connection(const cluster_node &name,
+                                               const cluster_node &addr) {
+  std::lock_guard<std::shared_mutex> l(_locker);
+  _accepted_out_connections.insert(std::make_pair(addr, name));
+  _logger->dbg("_accepted_out_connections: ", _accepted_out_connections.size());
+}
+
+void cluster_connection::accept_input_connection(const cluster_node &name, uint64_t id) {
+  std::lock_guard<std::shared_mutex> l(_locker);
+  _accepted_input_connections.insert(std::make_pair(id, name));
+  _logger->dbg("_accepted_input_connections: ", _accepted_input_connections.size());
 }
