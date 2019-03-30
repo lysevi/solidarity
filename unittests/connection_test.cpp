@@ -51,7 +51,8 @@ TEST_CASE("connection", "[network]") {
     auto clnt = std::make_shared<mock_cluster_client>();
     auto c = std::make_shared<rft::cluster_connection>(addr, clnt, logger, params);
     connections.push_back(c);
-    c->start();
+    clients.push_back(clnt);
+	c->start();
   }
 
   for (auto &v : connections) {

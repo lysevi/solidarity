@@ -48,8 +48,10 @@ public:
 
   EXPORT void set_cluster(abstract_cluster *cluster);
   EXPORT void heartbeat();
+  
   EXPORT void recv(const cluster_node &from, const append_entries &e) override;
   EXPORT void lost_connection_with(const cluster_node &addr) override;
+
   EXPORT void add_command(const command &cmd);
   
 
