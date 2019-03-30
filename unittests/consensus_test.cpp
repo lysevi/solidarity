@@ -549,8 +549,8 @@ TEST_CASE("consensus.rollback") {
     if (content1.size() == content2.size()) {
       bool contents_is_equal = true;
       for (const auto &kv : content1) {
-        auto it = content2.find(kv.first);
-        if (it == content2.end()) {
+        
+        if (auto it = content2.find(kv.first); it == content2.end()) {
           contents_is_equal = false;
           break;
         } else {

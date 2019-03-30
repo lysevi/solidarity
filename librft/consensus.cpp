@@ -400,8 +400,7 @@ void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) 
     auto recinfo = kv.second.prev;
     bool is_new = recinfo.lsn > commited.lsn || commited.is_empty();
     if (!recinfo.is_empty() && is_new) {
-      auto it = count.find(recinfo);
-      if (it == count.end()) {
+      if (auto it = count.find(recinfo); it == count.end()) {
         count.insert(std::make_pair(recinfo, size_t(1)));
       } else {
         it->second += 1;
@@ -432,8 +431,7 @@ void consensus::on_answer_failed(const cluster_node &from, const append_entries 
                 e.prev,
                 ", ci:",
                 e.commited);
-  auto it = _logs_state.find(from);
-  if (it == _logs_state.end()) {
+  if (auto it = _logs_state.find(from); it == _logs_state.end()) {
     _logs_state[from].prev = e.prev;
   } else {
     it->second.direction = RDIRECTION::BACKWARDS;

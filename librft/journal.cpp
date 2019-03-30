@@ -44,8 +44,7 @@ log_entry memory_journal::get(const logdb::index_t lsn) {
   std::shared_lock<std::shared_mutex> lg(_locker);
   // TODO check _prev and _commited for better speed;
 
-  const auto wal_it = _wal.find(lsn);
-  if (wal_it != _wal.end()) {
+  if (const auto wal_it = _wal.find(lsn);wal_it != _wal.end()) {
     return wal_it->second;
   }
 
@@ -185,12 +184,11 @@ void memory_journal::visit(std::function<void(const log_entry &)> f) {
 
 reccord_info memory_journal::info(index_t lsn) const noexcept {
   std::shared_lock<std::shared_mutex> lg(_locker);
-  auto it = _wal.find(lsn);
-  if (it == _wal.end()) {
-    return reccord_info{};
+  if (auto it = _wal.find(lsn); it != _wal.end()) {
+    return reccord_info(it->second, lsn);
+    
   }
-
-  return reccord_info(it->second, lsn);
+  return reccord_info{};
 }
 
 std::unordered_map<index_t, log_entry> memory_journal::dump() const {

@@ -97,7 +97,7 @@ void async_io::readNextAsync() {
   auto on_read_message
       = [self](auto err, auto read_bytes, auto data_left, message_ptr d) {
           UNUSED(data_left);
-          UNUSED(data_left);
+          UNUSED(read_bytes);
           if (err) {
             self->_on_error_handler(d, err);
           } else {

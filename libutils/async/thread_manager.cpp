@@ -24,11 +24,11 @@ task_result_ptr thread_manager::post(const thread_kind_t kind,
   if (_stoping_begin) {
     return nullptr;
   }
-  auto target = _pools.find(kind);
-  if (target == _pools.end()) {
-    throw MAKE_EXCEPTION("unknow kind.");
+
+  if (auto target = _pools.find(kind); target != _pools.end()) {
+    return target->second->post(task);
   }
-  return target->second->post(task);
+  throw MAKE_EXCEPTION("unknow kind.");
 }
 
 thread_manager::~thread_manager() {

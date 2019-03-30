@@ -104,8 +104,8 @@ void mock_cluster::send_to(const rft::cluster_node &from,
                            const rft::cluster_node &to,
                            const rft::append_entries &m) {
   std::shared_lock<std::shared_mutex> ul(_cluster_locker);
-  auto it = _workers.find(to);
-  if (it != _workers.end()) {
+
+  if (auto it = _workers.find(to); it != _workers.end()) {
     _workers[to]->add_task(message_t{from, to, m});
   }
 }
@@ -247,12 +247,12 @@ bool mock_cluster::is_leader_eletion_complete(size_t max_leaders) {
   }
   if (leaders.size() == 1) {
     auto cur_leader = leaders.front()->self_addr();
-    auto followers
-        = by_filter([cur_leader](const std::shared_ptr<rft::consensus> &v) -> bool {
-            auto nkind = v->state().node_kind;
-            return v->get_leader() == cur_leader
-                && (nkind == rft::NODE_KIND::LEADER || nkind == rft::NODE_KIND::FOLLOWER);
-          });
+    auto followers = by_filter([cur_leader](
+                                   const std::shared_ptr<rft::consensus> &v) -> bool {
+      auto nkind = v->state().node_kind;
+      return v->get_leader() == cur_leader
+             && (nkind == rft::NODE_KIND::LEADER || nkind == rft::NODE_KIND::FOLLOWER);
+    });
     if (followers.size() == size()) {
       return true;
     }
