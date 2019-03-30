@@ -1,6 +1,14 @@
 #include "helpers.h"
+#include "mock_consumer.h"
 #include <librft/connection.h>
 #include <catch.hpp>
+
+struct mock_cluster_client : rft::abstract_cluster_client {
+
+  void recv(const rft::cluster_node &from, const rft::append_entries &e) override {}
+
+  void lost_connection_with(const rft::cluster_node &addr) override{};
+};
 
 TEST_CASE("connection", "[network]") {
   size_t cluster_size = 0;
@@ -11,8 +19,10 @@ TEST_CASE("connection", "[network]") {
   std::vector<unsigned short> ports(cluster_size);
   std::iota(ports.begin(), ports.end(), unsigned short(8000));
 
-  std::vector<std::shared_ptr<rft::cluster_connection>> cons;
-  cons.reserve(cluster_size);
+  std::vector<std::shared_ptr<rft::cluster_connection>> connections;
+  std::vector<std::shared_ptr<mock_cluster_client>> clients;
+  connections.reserve(cluster_size);
+  clients.reserve(cluster_size);
 
   for (auto p : ports) {
     std::vector<unsigned short> out_ports;
@@ -38,12 +48,13 @@ TEST_CASE("connection", "[network]") {
         utils::logging::logger_manager::instance()->get_logger(), log_prefix);
 
     auto addr = rft::cluster_node().set_name(utils::strings::args_to_string("node_", p));
-    auto c = std::make_shared<rft::cluster_connection>(addr, logger, params);
-    cons.push_back(c);
+    auto clnt = std::make_shared<mock_cluster_client>();
+    auto c = std::make_shared<rft::cluster_connection>(addr, clnt, logger, params);
+    connections.push_back(c);
     c->start();
   }
 
-  for (auto &v : cons) {
+  for (auto &v : connections) {
 
     while (true) {
       auto nds = v->all_nodes();
@@ -55,8 +66,8 @@ TEST_CASE("connection", "[network]") {
       std::this_thread::sleep_for(std::chrono::milliseconds(300));
     }
   }
-  for (auto &&v : cons) {
+  for (auto &&v : connections) {
     v->stop();
   }
-  cons.clear();
+  connections.clear();
 }

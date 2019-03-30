@@ -1,16 +1,9 @@
 #include "helpers.h"
 #include "mock_cluster.h"
+#include "mock_consumer.h"
 #include <librft/consensus.h>
 #include <libutils/logger.h>
 #include <catch.hpp>
-
-class mock_consumer final : public rft::abstract_consensus_consumer {
-public:
-  void apply_cmd(const rft::command &cmd) override { last_cmd = cmd; }
-  void reset() override { last_cmd.data.clear(); }
-  rft::command snapshot() override { return last_cmd; }
-  rft::command last_cmd;
-};
 
 TEST_CASE("consensus.quorum calculation") {
   EXPECT_EQ(rft::quorum_for_cluster(3, 0.5), 2);

@@ -22,7 +22,7 @@ inline std::string to_string(const cluster_node &s) {
 }
 
 enum class ENTRIES_KIND : uint8_t {
-  HEARTBEAT=0,
+  HEARTBEAT = 0,
   VOTE,
   APPEND,
   ANSWER_OK,
@@ -46,7 +46,13 @@ struct append_entries {
   logdb::reccord_info commited;
 
   EXPORT std::vector<uint8_t> to_byte_array() const;
-  EXPORT static append_entries from_byte_array(const std::vector<uint8_t>&bytes);
+  EXPORT static append_entries from_byte_array(const std::vector<uint8_t> &bytes);
+};
+
+struct abstract_cluster_client {
+  virtual ~abstract_cluster_client() {}
+  virtual void recv(const cluster_node &from, const append_entries &e) = 0;
+  virtual void lost_connection_with(const cluster_node &addr) = 0;
 };
 
 class abstract_cluster {
@@ -60,6 +66,7 @@ public:
   virtual size_t size() = 0;
   virtual std::vector<cluster_node> all_nodes() const = 0;
 };
+
 }; // namespace rft
 
 namespace std {

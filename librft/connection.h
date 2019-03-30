@@ -2,14 +2,13 @@
 
 #include <librft/abstract_cluster.h>
 #include <librft/config.h>
+#include <librft/consensus.h>
 #include <libdialler/dialler.h>
 #include <libdialler/listener.h>
 #include <libdialler/message.h>
 #include <libutils/logger.h>
 
 #include <boost/asio.hpp>
-
-#include <atomic>
 
 namespace rft {
 class cluster_connection;
@@ -51,6 +50,7 @@ private:
 };
 
 } // namespace impl
+
 class cluster_connection : public abstract_cluster,
                            public std::enable_shared_from_this<cluster_connection> {
 public:
@@ -60,6 +60,7 @@ public:
     size_t thread_count = 1;
   };
   EXPORT cluster_connection(cluster_node self_addr,
+                            const std::shared_ptr<abstract_cluster_client> &client,
                             const utils::logging::abstract_logger_ptr &logger,
                             const params_t &params);
   EXPORT void start();
@@ -102,5 +103,7 @@ private:
       _accepted_out_connections; // addr -> loigcal_name
   std::unordered_map<uint64_t, cluster_node>
       _accepted_input_connections; // id -> loigcal_name
+
+  std::shared_ptr<abstract_cluster_client> _client;
 };
 } // namespace rft

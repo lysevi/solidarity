@@ -21,7 +21,8 @@ public:
   virtual command snapshot() = 0;
 };
 
-class consensus {
+
+class consensus : public abstract_cluster_client {
   enum class RDIRECTION { FORWARDS = 0, BACKWARDS };
   struct log_state_t {
     logdb::reccord_info prev;
@@ -47,9 +48,10 @@ public:
 
   EXPORT void set_cluster(abstract_cluster *cluster);
   EXPORT void heartbeat();
-  EXPORT void recv(const cluster_node &from, const append_entries &e);
+  EXPORT void recv(const cluster_node &from, const append_entries &e) override;
+  EXPORT void lost_connection_with(const cluster_node &addr) override;
   EXPORT void add_command(const command &cmd);
-  EXPORT void lost_connection_with(const cluster_node &addr);
+  
 
   cluster_node get_leader() const {
     std::lock_guard<std::mutex> l(_locker);

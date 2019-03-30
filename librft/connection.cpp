@@ -76,10 +76,13 @@ void listener::on_disconnect(const dialler::listener_client_ptr &i) {}
 
 } // namespace rft::impl
 
-cluster_connection::cluster_connection(cluster_node self_addr,
-                                       const utils::logging::abstract_logger_ptr &logger,
-                                       const cluster_connection::params_t &params) {
+cluster_connection::cluster_connection(
+    cluster_node self_addr,
+    const std::shared_ptr<abstract_cluster_client> &client,
+    const utils::logging::abstract_logger_ptr &logger,
+    const cluster_connection::params_t &params) {
   _logger = logger;
+  _client = client;
   _params = params;
   _self_addr = self_addr;
 }
