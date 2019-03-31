@@ -1,8 +1,15 @@
 #include <librft/exports.h>
+#include <librft/abstract_cluster.h>
 #include <libdialler/message.h>
 
+#include <vector>
+
 namespace rft::queries {
-enum class QUERY_KIND : dialler::message::kind_t { CONNECT = 0, CONNECTION_ERROR };
+enum class QUERY_KIND : dialler::message::kind_t {
+  CONNECT = 0,
+  CONNECTION_ERROR,
+  COMMAND
+};
 
 struct query_connect_t {
   uint16_t protocol_version;
@@ -23,6 +30,14 @@ struct connection_error_t {
     msg = m;
   }
   EXPORT connection_error_t(const dialler::message_ptr &mptr);
+
+  dialler::message_ptr to_message() const;
+};
+
+struct command_t {
+  append_entries cmd;
+  EXPORT command_t(append_entries cmd_) { cmd = cmd_; }
+  EXPORT command_t(const dialler::message_ptr &mptr);
 
   dialler::message_ptr to_message() const;
 };

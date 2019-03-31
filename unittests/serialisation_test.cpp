@@ -4,6 +4,23 @@
 #include "helpers.h"
 #include <catch.hpp>
 
+void check_append_entries(const rft::append_entries &ae, const rft::append_entries &res) {
+  EXPECT_EQ(ae.term, res.term);
+  EXPECT_EQ(ae.kind, res.kind);
+  EXPECT_EQ(ae.starttime, res.starttime);
+  EXPECT_EQ(ae.leader.name(), res.leader.name());
+
+  EXPECT_EQ(ae.current, res.current);
+  EXPECT_EQ(ae.current.kind, res.current.kind);
+  EXPECT_EQ(ae.prev, res.prev);
+  EXPECT_EQ(ae.prev.kind, res.prev.kind);
+  EXPECT_EQ(ae.commited, res.commited);
+  EXPECT_EQ(ae.commited.kind, res.commited.kind);
+
+  auto is_eq = std::equal(ae.cmd.data.begin(), ae.cmd.data.end(), res.cmd.data.begin());
+  EXPECT_TRUE(is_eq);
+}
+
 TEST_CASE("serialisation.append_entries", "[network]") {
   rft::append_entries ae;
 
@@ -52,20 +69,7 @@ TEST_CASE("serialisation.append_entries", "[network]") {
 
   auto packed = ae.to_byte_array();
   auto res = rft::append_entries::from_byte_array(packed);
-  EXPECT_EQ(ae.term, res.term);
-  EXPECT_EQ(ae.kind, res.kind);
-  EXPECT_EQ(ae.starttime, res.starttime);
-  EXPECT_EQ(ae.leader.name(), res.leader.name());
-
-  EXPECT_EQ(ae.current, res.current);
-  EXPECT_EQ(ae.current.kind, res.current.kind);
-  EXPECT_EQ(ae.prev, res.prev);
-  EXPECT_EQ(ae.prev.kind, res.prev.kind);
-  EXPECT_EQ(ae.commited, res.commited);
-  EXPECT_EQ(ae.commited.kind, res.commited.kind);
-
-  auto is_eq = std::equal(ae.cmd.data.begin(), ae.cmd.data.end(), res.cmd.data.begin());
-  EXPECT_TRUE(is_eq);
+  check_append_entries(ae, res);
 }
 
 TEST_CASE("serialisation.query_connect", "[network]") {
@@ -92,4 +96,44 @@ TEST_CASE("serialisation.connection_error", "[network]") {
             (dialler::message::kind_t)rft::queries::QUERY_KIND::CONNECTION_ERROR);
   EXPECT_EQ(qc.protocol_version, qc_u.protocol_version);
   EXPECT_EQ(qc.msg, qc_u.msg);
+}
+
+TEST_CASE("serialisation.command", "[network]") {
+  rft::append_entries ae;
+
+  rft::ENTRIES_KIND kind = rft::ENTRIES_KIND::HEARTBEAT;
+  rft::cluster_node leader;
+  rft::logdb::LOG_ENTRY_KIND lk = rft::logdb::LOG_ENTRY_KIND::APPEND;
+
+  kind = rft::ENTRIES_KIND::HEARTBEAT;
+  leader.set_name("LEADER");
+  ae.cmd.data.resize(1000);
+  std::iota(ae.cmd.data.begin(), ae.cmd.data.end(), uint8_t(0));
+  lk = rft::logdb::LOG_ENTRY_KIND::APPEND;
+
+  ae.term = 777;
+  ae.kind = kind;
+  ae.starttime = 351;
+  ae.leader = leader;
+
+  ae.current.kind = lk;
+  ae.current.lsn = 77;
+  ae.current.term = 88;
+
+  ae.prev.kind = lk;
+  ae.prev.lsn = 66;
+  ae.prev.term = 99;
+
+  ae.commited.kind = lk;
+  ae.commited.lsn = 11;
+  ae.commited.term = 22;
+
+  rft::queries::command_t cmd(ae);
+
+ 
+  auto msg = cmd.to_message();
+  rft::queries::command_t cmd_u(msg);
+  EXPECT_EQ(msg->get_header()->kind,
+            (dialler::message::kind_t)rft::queries::QUERY_KIND::COMMAND);
+  check_append_entries(ae, cmd_u.cmd);
 }
