@@ -36,7 +36,7 @@ public:
                    const logdb::journal_ptr &jrn,
                    abstract_consensus_consumer *consumer);
   node_state_t state() const {
-    std::lock_guard<std::mutex> l(_locker);
+    std::lock_guard l(_locker);
     return _state;
   }
   node_state_t &rw_state() { return _state; }
@@ -56,11 +56,11 @@ public:
   
 
   cluster_node get_leader() const {
-    std::lock_guard<std::mutex> l(_locker);
+    std::lock_guard l(_locker);
     return _state.leader;
   }
   cluster_node self_addr() const {
-    std::lock_guard<std::mutex> l(_locker);
+    std::lock_guard l(_locker);
     return _self_addr;
   }
 

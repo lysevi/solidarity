@@ -83,7 +83,7 @@ void listener::OnAcceptHandler(std::shared_ptr<listener> self,
 
     std::shared_ptr<listener_client> new_client = nullptr;
     {
-      std::lock_guard<std::mutex> lg(self->_locker_connections);
+      std::lock_guard lg(self->_locker_connections);
       new_client = std::make_shared<listener_client>(self->_next_id.load(), aio, self);
 
       self->_next_id.fetch_add(1);
@@ -93,7 +93,7 @@ void listener::OnAcceptHandler(std::shared_ptr<listener> self,
       connectionAccepted = self->_consumer->on_new_connection(new_client);
     }
     if (true == connectionAccepted) {
-      std::lock_guard<std::mutex> lg(self->_locker_connections);
+      std::lock_guard lg(self->_locker_connections);
       new_client->start();
       self->_connections.push_back(new_client);
     } else {
@@ -118,7 +118,7 @@ void listener::stop() {
     }
 
     auto local_copy = [this]() {
-      std::lock_guard<std::mutex> lg(_locker_connections);
+      std::lock_guard lg(_locker_connections);
       return std::vector<std::shared_ptr<listener_client>>(_connections.begin(),
                                                            _connections.end());
     }();
@@ -160,7 +160,7 @@ void listener::send_to(listener_client_ptr i, message_ptr &d) {
 }
 
 void listener::send_to(uint64_t id, message_ptr &d) {
-  std::lock_guard<std::mutex> lg(this->_locker_connections);
+  std::lock_guard lg(this->_locker_connections);
   for (const auto &c : _connections) {
     if (c->get_id() == id) {
       send_to(c, d);

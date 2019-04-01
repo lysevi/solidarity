@@ -31,7 +31,7 @@ void worker_t::add_task(const message_t &mt) {
   ENSURE(!self_addr.is_empty());
   ENSURE(mt.from != self_addr);
   {
-    std::lock_guard<std::mutex> l(_tasks_locker);
+    std::lock_guard l(_tasks_locker);
     ENSURE(mt.to == self_addr);
     _tasks.push_back(mt);
   }
@@ -91,7 +91,7 @@ void mock_cluster::start_workers() {
 
 void mock_cluster::stop_workers() {
   {
-    std::shared_lock<std::shared_mutex> l(_cluster_locker);
+    std::shared_lock l(_cluster_locker);
     for (auto &v : _workers) {
       v.second->stop();
     }
@@ -103,7 +103,7 @@ void mock_cluster::stop_workers() {
 void mock_cluster::send_to(const rft::cluster_node &from,
                            const rft::cluster_node &to,
                            const rft::append_entries &m) {
-  std::shared_lock<std::shared_mutex> ul(_cluster_locker);
+  std::shared_lock ul(_cluster_locker);
 
   if (auto it = _workers.find(to); it != _workers.end()) {
     _workers[to]->add_task(message_t{from, to, m});
@@ -111,7 +111,7 @@ void mock_cluster::send_to(const rft::cluster_node &from,
 }
 
 void mock_cluster::send_all(const rft::cluster_node &from, const rft::append_entries &m) {
-  std::shared_lock<std::shared_mutex> lg(_cluster_locker);
+  std::shared_lock lg(_cluster_locker);
   ENSURE(!from.is_empty());
   for (const auto &kv : _cluster) {
     if (kv.first != from) {
@@ -135,7 +135,7 @@ void mock_cluster::add_new(const rft::cluster_node &addr,
 
 std::vector<std::shared_ptr<rft::consensus>>
 mock_cluster::by_filter(std::function<bool(const std::shared_ptr<rft::consensus>)> pred) {
-  std::shared_lock<std::shared_mutex> lg(_cluster_locker);
+  std::shared_lock lg(_cluster_locker);
   std::vector<std::shared_ptr<rft::consensus>> result;
   result.reserve(_cluster.size());
   for (const auto &kv : _cluster) {
@@ -151,7 +151,7 @@ std::vector<std::shared_ptr<rft::consensus>> mock_cluster::get_all() {
 }
 
 void mock_cluster::apply(std::function<void(const std::shared_ptr<rft::consensus>)> f) {
-  std::shared_lock<std::shared_mutex> lg(_cluster_locker);
+  std::shared_lock lg(_cluster_locker);
   for (const auto &kv : _cluster) {
     f(kv.second);
   }
@@ -203,7 +203,7 @@ void mock_cluster::erase_if(
     update_size();
   }
   if (!target.is_empty()) {
-    std::shared_lock<std::shared_mutex> lg(_cluster_locker);
+    std::shared_lock lg(_cluster_locker);
     for (auto &kv : _cluster) {
       kv.second->lost_connection_with(target);
     }
@@ -215,7 +215,7 @@ size_t mock_cluster::size() {
 }
 
 std::vector<rft::cluster_node> mock_cluster::all_nodes() const {
-  std::shared_lock<std::shared_mutex> lg(_cluster_locker);
+  std::shared_lock lg(_cluster_locker);
   std::vector<rft::cluster_node> result;
   if (_cluster.size() != _stoped.size()) {
     result.reserve(_cluster.size() - _stoped.size());

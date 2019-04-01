@@ -50,7 +50,7 @@ consensus::consensus(const node_settings &ns,
 }
 
 void consensus::set_cluster(abstract_cluster *cluster) {
-  std::lock_guard<std::mutex> lg(_locker);
+  std::lock_guard lg(_locker);
   _cluster = cluster;
 }
 
@@ -133,7 +133,7 @@ void consensus::send(const cluster_node &to, const ENTRIES_KIND kind) {
 }
 
 void consensus::lost_connection_with(const cluster_node &addr) {
-  std::lock_guard<std::mutex> lg(_locker);
+  std::lock_guard lg(_locker);
   _logger->info("lost connection with ", addr);
   _logs_state.erase(addr);
   _last_sended.erase(addr);
@@ -239,7 +239,7 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
 }
 
 void consensus::recv(const cluster_node &from, const append_entries &e) {
-  std::lock_guard<std::mutex> l(_locker);
+  std::lock_guard l(_locker);
 #ifdef DOUBLE_CHECKS
   if (from == _self_addr) {
     _logger->fatal("from==self!!! ", e);
@@ -467,7 +467,7 @@ void consensus::commit_reccord(const logdb::reccord_info &target) {
 }
 
 void consensus::heartbeat() {
-  std::lock_guard<std::mutex> l(_locker);
+  std::lock_guard l(_locker);
 
   if (!_state.is_heartbeat_missed()) {
     return;
@@ -600,7 +600,7 @@ void consensus::add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k) {
 
 void consensus::add_command(const command &cmd) {
   // TODO global lock for this method. a while cmd not in consumer;
-  std::lock_guard<std::mutex> lg(_locker);
+  std::lock_guard lg(_locker);
 
   if (_state.node_kind != NODE_KIND::LEADER) {
     THROW_EXCEPTION("only leader-node have rights to add commands into the cluster!");

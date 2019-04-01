@@ -40,7 +40,7 @@ public:
   ~UnitTestLogger() {}
 
   void message(utils::logging::MESSAGE_KIND kind, const std::string &msg) noexcept {
-    std::lock_guard<std::mutex> lg(_locker);
+    std::lock_guard lg(_locker);
 
     std::stringstream ss;
     switch (kind) {
