@@ -85,9 +85,10 @@ public:
 protected:
   void accept_out_connection(const cluster_node &name, const cluster_node &addr);
   void accept_input_connection(const cluster_node &name, uint64_t id);
-  void rm_out_connection(const cluster_node&name);
+  void rm_out_connection(const cluster_node &name);
   void rm_input_connection(const cluster_node &name);
-  void on_new_command(const dialler::message_ptr&m);
+  void on_new_command(const dialler::message_ptr &m);
+
 private:
   utils::logging::abstract_logger_ptr _logger;
   cluster_node _self_addr;
@@ -104,9 +105,9 @@ private:
   std::unordered_map<cluster_node, std::shared_ptr<dialler::dial>> _diallers;
 
   std::unordered_map<cluster_node, cluster_node>
-      _accepted_out_connections; // addr -> loigcal_name
-  std::unordered_map<uint64_t, cluster_node>
-      _accepted_input_connections; // id -> loigcal_name
+      _accepted_out_connections; //  loigcal_name->addr
+  std::unordered_map<cluster_node, uint64_t>
+      _accepted_input_connections; // loigcal_name->id
 
   std::shared_ptr<abstract_cluster_client> _client;
 };

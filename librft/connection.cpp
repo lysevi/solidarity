@@ -207,8 +207,8 @@ std::vector<cluster_node> cluster_connection::all_nodes() const {
   std::vector<cluster_node> result;
   result.reserve(_accepted_input_connections.size());
   for (const auto &kv : _accepted_input_connections) {
-    if (_accepted_out_connections.find(kv.second) != _accepted_out_connections.end()) {
-      result.push_back(kv.second);
+    if (_accepted_out_connections.find(kv.first) != _accepted_out_connections.end()) {
+      result.push_back(kv.first);
     }
   }
   return result;
@@ -217,13 +217,13 @@ std::vector<cluster_node> cluster_connection::all_nodes() const {
 void cluster_connection::accept_out_connection(const cluster_node &name,
                                                const cluster_node &addr) {
   std::lock_guard l(_locker);
-  _accepted_out_connections.insert(std::make_pair(name, addr));
+  _accepted_out_connections.insert({name, addr});
   _logger->dbg("_accepted_out_connections: ", _accepted_out_connections.size());
 }
 
 void cluster_connection::accept_input_connection(const cluster_node &name, uint64_t id) {
   std::lock_guard l(_locker);
-  _accepted_input_connections.insert(std::make_pair(id, name));
+  _accepted_input_connections.insert({name, id});
   _logger->dbg("_accepted_input_connections: ", _accepted_input_connections.size());
 }
 
@@ -235,15 +235,7 @@ void cluster_connection::rm_out_connection(const cluster_node &name) {
 
 void cluster_connection::rm_input_connection(const cluster_node &name) {
   std::lock_guard l(_locker);
-  uint64_t id = 0;
-  bool founded = false;
-  for (const auto &kv : _accepted_input_connections) {
-    if (kv.second == name) {
-      founded = true;
-      id = kv.first;
-    }
-  }
-  _accepted_input_connections.erase(id);
+  _accepted_input_connections.erase(name);
   _logger->dbg(name, " disconnected as input");
 }
 
