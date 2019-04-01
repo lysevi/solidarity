@@ -24,7 +24,8 @@ void out_connection::on_new_message(dialler::message_ptr &&d, bool &cancel) {
   switch (kind) {
   case QUERY_KIND::CONNECT: {
     query_connect_t qc(d);
-    _parent->accept_out_connection(cluster_node().set_name(qc.node_id), _target_addr);
+    _self_logical_addr.set_name(qc.node_id);
+    _parent->accept_out_connection(_self_logical_addr, _target_addr);
     break;
   }
   case QUERY_KIND::CONNECTION_ERROR: {
@@ -36,7 +37,9 @@ void out_connection::on_new_message(dialler::message_ptr &&d, bool &cancel) {
 }
 
 void out_connection::on_network_error(const dialler::message_ptr &d,
-                                      const boost::system::error_code &err) {}
+                                      const boost::system::error_code &err) {
+  _parent->rm_out_connection(_self_logical_addr);
+}
 
 listener::listener(const std::shared_ptr<cluster_connection> parent) {
   _parent = parent;
@@ -59,8 +62,9 @@ void listener::on_new_message(dialler::listener_client_ptr i,
       dout = connection_error_t(protocol_version, "protocol version error").to_message();
     } else {
       dout = query_connect_t(protocol_version, _parent->_self_addr.name()).to_message();
-      _parent->accept_input_connection(cluster_node().set_name(qc.node_id), i->get_id());
-      _parent->_logger->info("accept connection from ", qc.node_id);
+      _self_logical_addr.set_name(qc.node_id);
+      _parent->accept_input_connection(_self_logical_addr, i->get_id());
+      _parent->_logger->info("accept connection from ", _self_logical_addr);
     }
     i->send_data(dout);
     break;
@@ -72,7 +76,9 @@ bool listener::on_new_connection(dialler::listener_client_ptr i) {
   return true;
 }
 
-void listener::on_disconnect(const dialler::listener_client_ptr &i) {}
+void listener::on_disconnect(const dialler::listener_client_ptr &i) {
+  _parent->rm_input_connection(_self_logical_addr);
+}
 
 } // namespace rft::impl
 
@@ -125,13 +131,28 @@ void cluster_connection::start() {
 }
 
 void cluster_connection::stop() {
-  std::lock_guard<std::shared_mutex> l(_locker);
+
   _logger->info(" stoping...");
-  for (auto &&kv : _diallers) {
-    kv.second->disconnect();
-    kv.second->wait_stoping();
+  std::vector<std::shared_ptr<dialler::dial>> diallers_to_stop;
+  {
+    std::shared_lock<std::shared_mutex> l(_locker);
+    diallers_to_stop.reserve(_diallers.size());
+    for (auto &&kv : _diallers) {
+      diallers_to_stop.push_back(kv.second);
+      kv.second->disconnect();
+      kv.second->wait_stoping();
+    }
   }
-  _diallers.clear();
+
+  for (auto &&v : diallers_to_stop) {
+    v->disconnect();
+    v->wait_stoping();
+  }
+
+  {
+    std::lock_guard<std::shared_mutex> l(_locker);
+    _diallers.clear();
+  }
 
   if (_listener != nullptr) {
     _listener->stop();
@@ -162,8 +183,7 @@ void cluster_connection::send_all(const cluster_node &from, const append_entries
 }
 
 size_t cluster_connection::size() {
-  std::shared_lock<std::shared_mutex> l(_locker);
-  return _diallers.size();
+  return all_nodes().size();
 }
 
 std::vector<cluster_node> cluster_connection::all_nodes() const {
@@ -171,7 +191,9 @@ std::vector<cluster_node> cluster_connection::all_nodes() const {
   std::vector<cluster_node> result;
   result.reserve(_accepted_input_connections.size());
   for (const auto &kv : _accepted_input_connections) {
-    result.push_back(kv.second);
+    if (_accepted_input_connections.find(kv.first) != _accepted_input_connections.end()) {
+      result.push_back(kv.second);
+    }
   }
   return result;
 }
@@ -187,4 +209,24 @@ void cluster_connection::accept_input_connection(const cluster_node &name, uint6
   std::lock_guard<std::shared_mutex> l(_locker);
   _accepted_input_connections.insert(std::make_pair(id, name));
   _logger->dbg("_accepted_input_connections: ", _accepted_input_connections.size());
+}
+
+void cluster_connection::rm_out_connection(const cluster_node &name) {
+  std::lock_guard<std::shared_mutex> l(_locker);
+  _accepted_out_connections.erase(name);
+  _logger->dbg(name, " disconnected as output");
+}
+
+void cluster_connection::rm_input_connection(const cluster_node &name) {
+  std::lock_guard<std::shared_mutex> l(_locker);
+  uint64_t id = 0;
+  bool founded = false;
+  for (const auto &kv : _accepted_input_connections) {
+    if (kv.second == name) {
+      founded = true;
+      id = kv.first;
+    }
+  }
+  _accepted_input_connections.erase(id);
+  _logger->dbg(name, " disconnected as input");
 }

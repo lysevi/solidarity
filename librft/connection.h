@@ -27,6 +27,7 @@ public:
 private:
   std::shared_ptr<cluster_connection> _parent;
   cluster_node _target_addr;
+  cluster_node _self_logical_addr;
 };
 
 class listener : public dialler::abstract_listener_consumer {
@@ -47,6 +48,7 @@ public:
 
 private:
   std::shared_ptr<cluster_connection> _parent;
+  cluster_node _self_logical_addr;
 };
 
 } // namespace impl
@@ -83,6 +85,8 @@ public:
 protected:
   void accept_out_connection(const cluster_node &name, const cluster_node &addr);
   void accept_input_connection(const cluster_node &name, uint64_t id);
+  void rm_out_connection(const cluster_node&name);
+  void rm_input_connection(const cluster_node &name);
 
 private:
   utils::logging::abstract_logger_ptr _logger;
