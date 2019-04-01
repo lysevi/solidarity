@@ -128,11 +128,11 @@ TEST_CASE("serialisation.command", "[network]") {
   ae.commited.lsn = 11;
   ae.commited.term = 22;
 
-  rft::queries::command_t cmd(ae);
+  rft::queries::command_t cmd(rft::cluster_node("from node name"), ae);
 
- 
   auto msg = cmd.to_message();
   rft::queries::command_t cmd_u(msg);
+  EXPECT_EQ(cmd.from, cmd_u.from);
   EXPECT_EQ(msg->get_header()->kind,
             (dialler::message::kind_t)rft::queries::QUERY_KIND::COMMAND);
   check_append_entries(ae, cmd_u.cmd);

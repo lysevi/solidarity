@@ -1,5 +1,5 @@
-#include <librft/exports.h>
 #include <librft/abstract_cluster.h>
+#include <librft/exports.h>
 #include <libdialler/message.h>
 
 #include <vector>
@@ -36,7 +36,11 @@ struct connection_error_t {
 
 struct command_t {
   append_entries cmd;
-  EXPORT command_t(append_entries cmd_) { cmd = cmd_; }
+  cluster_node from;
+  EXPORT command_t(const cluster_node &from_, append_entries cmd_) {
+    cmd = cmd_;
+    from = from_;
+  }
   EXPORT command_t(const dialler::message_ptr &mptr);
 
   dialler::message_ptr to_message() const;

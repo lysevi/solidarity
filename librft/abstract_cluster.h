@@ -10,6 +10,14 @@ class cluster_node {
   PROPERTY(std::string, name)
 
 public:
+  cluster_node() = default;
+  cluster_node(const cluster_node &) = default;
+  cluster_node(cluster_node &&) = default;
+  cluster_node(const std::string_view &sv)
+      : _name(sv) {}
+
+  cluster_node &operator=(const cluster_node &) = default;
+
   bool is_empty() const { return name().empty(); }
   void clear() { _name = ""; }
   bool operator!=(const cluster_node &other) const { return _name != other._name; }

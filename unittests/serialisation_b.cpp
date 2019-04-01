@@ -33,7 +33,7 @@ TEST_CASE("serialisation", "[bench]") {
     rft::queries::connection_error_t unpacked(qcon_err_msg);
   }
 
-  rft::queries::command_t cmd(ae);
+  rft::queries::command_t cmd(rft::cluster_node("long cluster node name"), ae);
   BENCHMARK("command_t::to_message") { cmd.to_message(); }
 
   auto cmd_msg = cmd.to_message();

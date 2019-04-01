@@ -4,14 +4,21 @@
 #include <catch.hpp>
 
 struct mock_cluster_client : rft::abstract_cluster_client {
-
-  void recv(const rft::cluster_node &from, const rft::append_entries &e) override {}
+  void recv(const rft::cluster_node &, const rft::append_entries &e) override {
+    data = e.cmd.data;
+  }
 
   void lost_connection_with(const rft::cluster_node &addr) override{};
+
+  std::vector<std::uint8_t> data;
 };
 
 TEST_CASE("connection", "[network]") {
   size_t cluster_size = 0;
+  auto tst_log_prefix = utils::strings::args_to_string("test?> ");
+  auto tst_logger = std::make_shared<utils::logging::prefix_logger>(
+      utils::logging::logger_manager::instance()->get_logger(), tst_log_prefix);
+
   SECTION("connection.2") { cluster_size = 2; }
   SECTION("connection.3") { cluster_size = 3; }
   SECTION("connection.5") { cluster_size = 5; }
@@ -20,7 +27,7 @@ TEST_CASE("connection", "[network]") {
   std::iota(ports.begin(), ports.end(), unsigned short(8000));
 
   std::vector<std::shared_ptr<rft::cluster_connection>> connections;
-  std::vector<std::shared_ptr<mock_cluster_client>> clients;
+  std::unordered_map<rft::cluster_node, std::shared_ptr<mock_cluster_client>> clients;
   connections.reserve(cluster_size);
   clients.reserve(cluster_size);
 
@@ -51,20 +58,58 @@ TEST_CASE("connection", "[network]") {
     auto clnt = std::make_shared<mock_cluster_client>();
     auto c = std::make_shared<rft::cluster_connection>(addr, clnt, logger, params);
     connections.push_back(c);
-    clients.push_back(clnt);
-	c->start();
+    clients.insert({addr, clnt});
+    c->start();
   }
 
   for (auto &v : connections) {
 
     while (true) {
       auto nds = v->all_nodes();
-      utils::logging::logger_info("wait node: ", v->self_addr(), " --> ", nds.size());
+      tst_logger->info("wait node: ", v->self_addr(), " --> ", nds.size());
 
       if (nds.size() == cluster_size - 1) {
         break;
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    }
+  }
+
+  uint8_t i = 0;
+  rft::append_entries ae;
+  ae.cmd.data.resize(1);
+  for (auto &v : connections) {
+    auto other = v->all_nodes();
+    for (auto &node : other) {
+      tst_logger->info(v->self_addr(), " => ", node);
+      ae.cmd.data[0] = i;
+      i++;
+      v->send_to(v->self_addr(), node, ae);
+      auto target_clnt = dynamic_cast<mock_cluster_client *>(clients[node].get());
+      while (true) {
+        if (target_clnt->data.size() == ae.cmd.data.size()
+            && target_clnt->data[0] == ae.cmd.data[0]) {
+          break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      }
+    }
+  }
+  for (auto &v : connections) {
+    auto other = v->all_nodes();
+    tst_logger->info(v->self_addr(), " to all ");
+    ae.cmd.data[0] = i;
+    i++;
+    v->send_all(v->self_addr(), ae);
+    for (auto &node : other) {
+      auto target_clnt = dynamic_cast<mock_cluster_client *>(clients[node].get());
+      while (true) {
+        if (target_clnt->data.size() == ae.cmd.data.size()
+            && target_clnt->data[0] == ae.cmd.data[0]) {
+          break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      }
     }
   }
   for (auto &&v : connections) {

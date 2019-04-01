@@ -71,8 +71,11 @@ command_t::command_t(const dialler::message_ptr &mptr) {
   pac.next(oh);
   auto byte_array = oh.get().as<std::vector<uint8_t>>();
   cmd = append_entries::from_byte_array(byte_array);
+  pac.next(oh);
+  auto m = oh.get().as<std::string>();
+  from.set_name(m);
 }
 
 dialler::message_ptr command_t::to_message() const {
-  return pack_to_message(queries::QUERY_KIND::COMMAND, cmd.to_byte_array());
+  return pack_to_message(queries::QUERY_KIND::COMMAND, cmd.to_byte_array(), from.name());
 }
