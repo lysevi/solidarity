@@ -31,7 +31,7 @@ TEST_CASE("connection", "[network]") {
     cluster_size = 2;
     SECTION("connection.small_data") { data_size = 1; }
     SECTION("connection.big_data") {
-      data_size = dialler::message::MAX_BUFFER_SIZE * cluster_size;
+      data_size = size_t(dialler::message::MAX_BUFFER_SIZE * cluster_size * 2);
     }
   }
 
@@ -39,14 +39,14 @@ TEST_CASE("connection", "[network]") {
     cluster_size = 3;
     SECTION("connection.small_data") { data_size = 1; }
     SECTION("connection.big_data") {
-      data_size = dialler::message::MAX_BUFFER_SIZE * cluster_size;
+      data_size = size_t(dialler::message::MAX_BUFFER_SIZE * cluster_size * 3.75);
     }
   }
   SECTION("connection.5") {
     cluster_size = 5;
     SECTION("connection.small_data") { data_size = 1; }
     SECTION("connection.big_data") {
-      data_size = dialler::message::MAX_BUFFER_SIZE * cluster_size;
+      data_size = size_t(dialler::message::MAX_BUFFER_SIZE * cluster_size * 1.75);
     }
   }
 
@@ -108,19 +108,23 @@ TEST_CASE("connection", "[network]") {
   for (auto &v : connections) {
     auto other = v->all_nodes();
     for (auto &node : other) {
-      tst_logger->info(v->self_addr(), " => ", node);
-      std::fill(ae.cmd.data.begin(), ae.cmd.data.end(), i);
-      i++;
-      v->send_to(v->self_addr(), node, ae);
-      auto target_clnt = dynamic_cast<mock_cluster_client *>(clients[node].get());
-      while (true) {
-        if (target_clnt->data_equal_to(ae.cmd.data)) {
-          break;
+      for (size_t i = 0; i < 3; ++i) {
+        tst_logger->info(v->self_addr(), " => ", node);
+        std::fill(ae.cmd.data.begin(), ae.cmd.data.end(), (unsigned char)i);
+        i++;
+        v->send_to(v->self_addr(), node, ae);
+        auto target_clnt = dynamic_cast<mock_cluster_client *>(clients[node].get());
+        while (true) {
+          if (target_clnt->data_equal_to(ae.cmd.data)) {
+            break;
+          }
+          std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
       }
     }
   }
+
+  // send to all
   for (auto &v : connections) {
     auto other = v->all_nodes();
     tst_logger->info(v->self_addr(), " to all ");
