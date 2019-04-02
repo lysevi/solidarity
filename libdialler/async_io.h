@@ -6,6 +6,7 @@
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <mutex>
 
 namespace dialler {
 
@@ -20,6 +21,7 @@ public:
   EXPORT async_io(boost::asio::io_context *context);
   EXPORT ~async_io() noexcept;
   EXPORT void send(const message_ptr d);
+  EXPORT void send(const std::vector<message_ptr> &d);
   EXPORT void start(data_handler_t onRecv, error_handler_t onErr);
   EXPORT void fullStop(bool waitAllMessages = false); /// stop thread, clean queue
 
@@ -30,6 +32,7 @@ private:
   void readNextAsync();
 
 private:
+  std::recursive_mutex _send_locker;
   std::atomic_int _messages_to_send;
   boost::asio::io_context *_context = nullptr;
 

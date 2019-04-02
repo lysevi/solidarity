@@ -23,6 +23,10 @@ public:
     uint8_t is_start_block : 1;
     uint8_t is_piece_block : 1;
     uint8_t is_end_block : 1;
+
+    bool is_single_message() {
+      return is_start_block == 0 && is_piece_block == 0 && is_end_block == 0;
+    }
   };
 
   static const size_t MAX_MESSAGE_SIZE = 1024 * 4;
@@ -30,7 +34,11 @@ public:
   static const size_t SIZE_OF_HEADER = sizeof(header_t);
   static const size_t MAX_BUFFER_SIZE = MAX_MESSAGE_SIZE - SIZE_OF_HEADER - SIZE_OF_SIZE;
 
-  message(message &&other) = default;
+  message(message &&other)
+      : _data(std::move(other._data)) {
+    _size = (size_t *)_data.data();
+    *_size = *other._size;
+  }
 
   message(const message &other)
       : _data(other._data) {
@@ -40,12 +48,8 @@ public:
 
   message(size_t sz) {
     assert((sz + SIZE_OF_SIZE + SIZE_OF_HEADER) <= MAX_MESSAGE_SIZE);
-    auto realSize = static_cast<size_t>(sz + SIZE_OF_SIZE + SIZE_OF_HEADER);
-    std::fill(std::begin(_data), std::end(_data), uint8_t(0));
-    _size = (size_t *)_data.data();
-    *_size = realSize;
-    auto hdr = get_header();
-    hdr->is_end_block = hdr->is_piece_block = hdr->is_start_block = uint8_t(0);
+    auto full_size = static_cast<size_t>(sz + SIZE_OF_SIZE + SIZE_OF_HEADER);
+    init_for_size(full_size);
   }
 
   message(size_t sz, const kind_t &kind_)
@@ -54,6 +58,14 @@ public:
   }
 
   ~message() {}
+
+  void init_for_size(size_t sz) {
+    std::fill(std::begin(_data), std::end(_data), uint8_t(0));
+    _size = (size_t *)_data.data();
+    *_size = sz;
+    auto hdr = get_header();
+    hdr->is_end_block = hdr->is_piece_block = hdr->is_start_block = uint8_t(0);
+  }
 
   uint8_t *value() { return (_data.data() + SIZE_OF_SIZE + sizeof(header_t)); }
   size_t values_size() const { return *_size - SIZE_OF_SIZE - SIZE_OF_HEADER; }

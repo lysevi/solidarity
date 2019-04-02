@@ -49,6 +49,8 @@ public:
 private:
   std::shared_ptr<cluster_connection> _parent;
   cluster_node _self_logical_addr;
+
+  std::vector<dialler::message_ptr> _recv_message_pool;
 };
 
 } // namespace impl

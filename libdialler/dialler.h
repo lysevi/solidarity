@@ -57,6 +57,7 @@ public:
                                 const boost::system::error_code &err);
   EXPORT void on_data_receive(message_ptr &&d, bool &cancel);
   EXPORT void send_async(const message_ptr &d);
+  EXPORT void send_async(const std::vector<message_ptr> &d);
 
   EXPORT void add_consumer(const abstract_connection_consumer_ptr &c);
   EXPORT void erase_consumer();

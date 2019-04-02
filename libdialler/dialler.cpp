@@ -104,6 +104,13 @@ void dial::send_async(const message_ptr &d) {
   }
 }
 
+void dial::send_async(const std::vector<message_ptr> &d) {
+  if (_async_io) {
+    _async_io->send(d);
+  }
+}
+
+
 void dial::add_consumer(const abstract_connection_consumer_ptr &c) {
   _consumers = c;
   c->add_connection(shared_from_this());

@@ -70,8 +70,16 @@ void listener::on_new_message(dialler::listener_client_ptr i,
     break;
   }
   case QUERY_KIND::COMMAND: {
-    std::vector<dialler::message_ptr> m({d});
-    _parent->on_new_command(m);
+    if (d->get_header()->is_single_message()) {
+      std::vector<dialler::message_ptr> m({d});
+      _parent->on_new_command(m);
+    } else {
+      _recv_message_pool.push_back(d);
+      if (d->get_header()->is_end_block) {
+        _parent->on_new_command(std::move(_recv_message_pool));
+        _recv_message_pool.clear();
+      }
+    }
     break;
   }
   }
@@ -186,7 +194,12 @@ void cluster_connection::send_to(const cluster_node &from,
       it != _accepted_out_connections.end()) {
     queries::command_t cmd(from, m);
     if (auto dl_it = _diallers.find(it->second); dl_it != _diallers.end()) {
-      dl_it->second->send_async(cmd.to_message().front());
+      auto messages = cmd.to_message();
+      if (messages.size() == 1) {
+        dl_it->second->send_async(messages.front());
+      } else {
+        dl_it->second->send_async(messages);
+      }
     }
   }
 }

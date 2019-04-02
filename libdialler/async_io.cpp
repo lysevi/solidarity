@@ -71,6 +71,7 @@ void async_io::fullStop(bool waitAllmessages) {
 }
 
 void async_io::send(const message_ptr d) {
+  std::lock_guard l(_send_locker);
   if (_begin_stoping_flag) {
     return;
   }
@@ -89,6 +90,16 @@ void async_io::send(const message_ptr d) {
   };
 
   async_write(_sock, buf, on_write);
+}
+
+void async_io::send(const std::vector<message_ptr> &d) {
+  std::lock_guard l(_send_locker);
+  for (auto &v : d) {
+    if (_begin_stoping_flag) {
+      return;
+    }
+    send(v);
+  }
 }
 
 void async_io::readNextAsync() {
@@ -120,11 +131,12 @@ void async_io::readNextAsync() {
     UNUSED(read_bytes);
     if (err) {
       self->_on_error_handler(nullptr, err);
-    } else {      
+    } else {
       ENSURE(read_bytes == message::SIZE_OF_SIZE);
 
       auto data_left = self->next_message_size - message::SIZE_OF_SIZE;
-      message_ptr d = std::make_shared<message>(data_left);
+      message_ptr d = std::make_shared<message>(0);
+	  d->init_for_size(self->next_message_size);
 
       auto buf_ptr = (uint8_t *)(d->get_header());
       auto buf = boost::asio::buffer(buf_ptr, data_left);
