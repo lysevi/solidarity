@@ -70,7 +70,8 @@ void listener::on_new_message(dialler::listener_client_ptr i,
     break;
   }
   case QUERY_KIND::COMMAND: {
-    _parent->on_new_command(std::move(d));
+    std::vector<dialler::message_ptr> m({d});
+    _parent->on_new_command(m);
     break;
   }
   }
@@ -185,7 +186,7 @@ void cluster_connection::send_to(const cluster_node &from,
       it != _accepted_out_connections.end()) {
     queries::command_t cmd(from, m);
     if (auto dl_it = _diallers.find(it->second); dl_it != _diallers.end()) {
-      dl_it->second->send_async(cmd.to_message());
+      dl_it->second->send_async(cmd.to_message().front());
     }
   }
 }
@@ -239,7 +240,7 @@ void cluster_connection::rm_input_connection(const cluster_node &name) {
   _logger->dbg(name, " disconnected as input");
 }
 
-void cluster_connection::on_new_command(const dialler::message_ptr &m) {
+void cluster_connection::on_new_command(const std::vector<dialler::message_ptr> &m) {
   std::shared_lock l(_locker);
   queries::command_t cmd_q(m);
   _logger->dbg("on_new_command: from=", cmd_q.from);

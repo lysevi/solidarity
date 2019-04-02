@@ -41,8 +41,8 @@ struct command_t {
     cmd = cmd_;
     from = from_;
   }
-  EXPORT command_t(const dialler::message_ptr &mptr);
+  EXPORT command_t(const std::vector<dialler::message_ptr> &mptr);
 
-  dialler::message_ptr to_message() const;
+  std::vector<dialler::message_ptr> to_message() const;
 };
 } // namespace rft::queries

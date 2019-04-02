@@ -87,7 +87,7 @@ protected:
   void accept_input_connection(const cluster_node &name, uint64_t id);
   void rm_out_connection(const cluster_node &name);
   void rm_input_connection(const cluster_node &name);
-  void on_new_command(const dialler::message_ptr &m);
+  void on_new_command(const std::vector<dialler::message_ptr> &m);
 
 private:
   utils::logging::abstract_logger_ptr _logger;

@@ -107,8 +107,14 @@ TEST_CASE("serialisation.command", "[network]") {
 
   kind = rft::ENTRIES_KIND::HEARTBEAT;
   leader.set_name("LEADER");
-  ae.cmd.data.resize(1000);
-  std::iota(ae.cmd.data.begin(), ae.cmd.data.end(), uint8_t(0));
+  SECTION("small cmd") {
+    ae.cmd.data.resize(100);
+    std::iota(ae.cmd.data.begin(), ae.cmd.data.end(), uint8_t(0));
+  }
+  SECTION("big cmd") {
+    ae.cmd.data.resize(dialler::message::MAX_BUFFER_SIZE * 11);
+    std::iota(ae.cmd.data.begin(), ae.cmd.data.end(), uint8_t(0));
+  }
   lk = rft::logdb::LOG_ENTRY_KIND::APPEND;
 
   ae.term = 777;
@@ -133,7 +139,7 @@ TEST_CASE("serialisation.command", "[network]") {
   auto msg = cmd.to_message();
   rft::queries::command_t cmd_u(msg);
   EXPECT_EQ(cmd.from, cmd_u.from);
-  EXPECT_EQ(msg->get_header()->kind,
+  EXPECT_EQ(msg.front()->get_header()->kind,
             (dialler::message::kind_t)rft::queries::QUERY_KIND::COMMAND);
   check_append_entries(ae, cmd_u.cmd);
 }
