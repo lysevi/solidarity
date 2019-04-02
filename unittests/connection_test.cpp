@@ -9,15 +9,24 @@ struct mock_cluster_client : rft::abstract_cluster_client {
     data = e.cmd.data;
   }
 
-  void lost_connection_with(const rft::cluster_node &addr) override{};
+  void lost_connection_with(const rft::cluster_node &addr) override {
+    std::lock_guard l(locker);
+    losted.insert(addr);
+  };
 
   bool data_equal_to(const std::vector<std::uint8_t> &o) const {
     std::lock_guard l(locker);
     return std::equal(data.cbegin(), data.cend(), o.cbegin(), o.cend());
   }
 
+  bool is_connection_losted(const rft::cluster_node &addr) const {
+    std::lock_guard l(locker);
+    return losted.find(addr) != losted.end();
+  }
+
   std::vector<std::uint8_t> data;
   mutable std::mutex locker;
+  std::unordered_set<rft::cluster_node> losted;
 };
 
 TEST_CASE("connection", "[network]") {
@@ -102,7 +111,7 @@ TEST_CASE("connection", "[network]") {
     }
   }
 
-  uint8_t i = 0;
+  uint8_t cmd_index = 0;
   rft::append_entries ae;
   ae.cmd.data.resize(data_size);
   for (auto &v : connections) {
@@ -128,8 +137,8 @@ TEST_CASE("connection", "[network]") {
   for (auto &v : connections) {
     auto other = v->all_nodes();
     tst_logger->info(v->self_addr(), " to all ");
-    ae.cmd.data[0] = i;
-    i++;
+    ae.cmd.data[0] = cmd_index;
+    cmd_index++;
     v->send_all(v->self_addr(), ae);
     for (auto &node : other) {
       auto target_clnt = dynamic_cast<mock_cluster_client *>(clients[node].get());
@@ -142,8 +151,16 @@ TEST_CASE("connection", "[network]") {
       }
     }
   }
-  for (auto &&v : connections) {
+  for (size_t i = 0; i < connections.size(); ++i) {
+    auto v = connections[i];
     v->stop();
+    for (size_t j = i + 1; j < connections.size(); ++j) {
+      auto node = connections[j]->self_addr();
+      auto c = dynamic_cast<mock_cluster_client *>(clients[node].get());
+      while (!c->is_connection_losted(v->self_addr())) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      }
+    }
   }
   connections.clear();
 }

@@ -47,7 +47,10 @@ listener::listener(const std::shared_ptr<cluster_connection> parent) {
 
 void listener::on_network_error(dialler::listener_client_ptr i,
                                 const dialler::message_ptr &d,
-                                const boost::system::error_code &err) {}
+                                const boost::system::error_code &err) {
+  ENSURE(!_self_logical_addr.name().empty());
+  _parent->rm_input_connection(_self_logical_addr);
+}
 
 void listener::on_new_message(dialler::listener_client_ptr i,
                               dialler::message_ptr &&d,
@@ -63,6 +66,7 @@ void listener::on_new_message(dialler::listener_client_ptr i,
     } else {
       dout = query_connect_t(protocol_version, _parent->_self_addr.name()).to_message();
       _self_logical_addr.set_name(qc.node_id);
+      ENSURE(!_self_logical_addr.name().empty());
       _parent->accept_input_connection(_self_logical_addr, i->get_id());
       _parent->_logger->info("accept connection from ", _self_logical_addr);
     }
@@ -146,6 +150,15 @@ void cluster_connection::start() {
 void cluster_connection::stop() {
 
   _logger->info(" stoping...");
+  _stoped = true;
+
+  _io_context.stop();
+
+  for (auto &&t : _threads) {
+    t.join();
+  }
+  _threads.clear();
+
   std::vector<std::shared_ptr<dialler::dial>> diallers_to_stop;
   {
     std::shared_lock l(_locker);
@@ -174,14 +187,6 @@ void cluster_connection::stop() {
     _listener_consumer = nullptr;
   }
 
-  _stoped = true;
-
-  _io_context.stop();
-
-  for (auto &&t : _threads) {
-    t.join();
-  }
-  _threads.clear();
   _logger->info(" stopped.");
 }
 
@@ -243,14 +248,22 @@ void cluster_connection::accept_input_connection(const cluster_node &name, uint6
 
 void cluster_connection::rm_out_connection(const cluster_node &name) {
   std::lock_guard l(_locker);
-  _accepted_out_connections.erase(name);
   _logger->dbg(name, " disconnected as output");
+  if (auto it = _accepted_out_connections.find(name);
+      it != _accepted_out_connections.end()) {
+    _accepted_out_connections.erase(it);
+    _client->lost_connection_with(name);
+  }
 }
 
 void cluster_connection::rm_input_connection(const cluster_node &name) {
   std::lock_guard l(_locker);
-  _accepted_input_connections.erase(name);
   _logger->dbg(name, " disconnected as input");
+  if (auto it = _accepted_input_connections.find(name);
+      it != _accepted_input_connections.end()) {
+    _accepted_input_connections.erase(it);
+    _client->lost_connection_with(name);
+  }
 }
 
 void cluster_connection::on_new_command(const std::vector<dialler::message_ptr> &m) {
