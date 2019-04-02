@@ -236,14 +236,20 @@ std::vector<cluster_node> cluster_connection::all_nodes() const {
 void cluster_connection::accept_out_connection(const cluster_node &name,
                                                const cluster_node &addr) {
   std::lock_guard l(_locker);
-  _accepted_out_connections.insert({name, addr});
   _logger->dbg("_accepted_out_connections: ", _accepted_out_connections.size());
+  _accepted_out_connections.insert({name, addr});
+  if (_accepted_input_connections.find(name) != _accepted_input_connections.end()) {
+    _client->new_connection_with(name);
+  }
 }
 
 void cluster_connection::accept_input_connection(const cluster_node &name, uint64_t id) {
   std::lock_guard l(_locker);
-  _accepted_input_connections.insert({name, id});
   _logger->dbg("_accepted_input_connections: ", _accepted_input_connections.size());
+  _accepted_input_connections.insert({name, id});
+  if (_accepted_out_connections.find(name) != _accepted_out_connections.end()) {
+    _client->new_connection_with(name);
+  }
 }
 
 void cluster_connection::rm_out_connection(const cluster_node &name) {

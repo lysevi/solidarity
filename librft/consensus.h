@@ -51,7 +51,7 @@ public:
   
   EXPORT void recv(const cluster_node &from, const append_entries &e) override;
   EXPORT void lost_connection_with(const cluster_node &addr) override;
-
+  EXPORT void new_connection_with(const rft::cluster_node &addr) override;
   EXPORT void add_command(const command &cmd);
   
 

@@ -139,6 +139,9 @@ void consensus::lost_connection_with(const cluster_node &addr) {
   _last_sended.erase(addr);
   _state.votes_to_me.erase(addr);
 }
+void consensus::new_connection_with(const rft::cluster_node &addr) {
+  // TODO need implementation
+}
 
 void consensus::on_heartbeat(const cluster_node &from, const append_entries &e) {
   const auto old_s = _state;

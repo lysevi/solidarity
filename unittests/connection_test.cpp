@@ -12,7 +12,12 @@ struct mock_cluster_client : rft::abstract_cluster_client {
   void lost_connection_with(const rft::cluster_node &addr) override {
     std::lock_guard l(locker);
     losted.insert(addr);
-  };
+  }
+
+  void new_connection_with(const rft::cluster_node &addr) override {
+    std::lock_guard l(locker);
+    connected.insert(addr);
+  }
 
   bool data_equal_to(const std::vector<std::uint8_t> &o) const {
     std::lock_guard l(locker);
@@ -24,9 +29,15 @@ struct mock_cluster_client : rft::abstract_cluster_client {
     return losted.find(addr) != losted.end();
   }
 
+  size_t connections_size() const {
+    std::lock_guard l(locker);
+    return connected.size();
+  }
+
   std::vector<std::uint8_t> data;
   mutable std::mutex locker;
   std::unordered_set<rft::cluster_node> losted;
+  std::unordered_set<rft::cluster_node> connected;
 };
 
 TEST_CASE("connection", "[network]") {
@@ -98,13 +109,20 @@ TEST_CASE("connection", "[network]") {
     c->start();
   }
 
-  for (auto &v : connections) {
+  size_t without_one = cluster_size - 1;
 
+  for (auto &v : connections) {
+    auto target_clnt = dynamic_cast<mock_cluster_client *>(clients[v->self_addr()].get());
     while (true) {
       auto nds = v->all_nodes();
-      tst_logger->info("wait node: ", v->self_addr(), " --> ", nds.size());
+      tst_logger->info("wait node: ",
+                       v->self_addr(),
+                       " --> ",
+                       nds.size(),
+                       "    ",
+                       target_clnt->connections_size());
 
-      if (nds.size() == cluster_size - 1) {
+      if (nds.size() == without_one && target_clnt->connections_size() == without_one) {
         break;
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(300));
