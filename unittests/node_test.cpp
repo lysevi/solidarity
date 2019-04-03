@@ -83,7 +83,23 @@ TEST_CASE("node", "[network]") {
     }
   }
 
+  std::shared_ptr<rft::node> leader_node = nodes[leaders.begin()->name()];
+  rft::client::params_t cpar;
+  cpar.threads_count = 1;
+  cpar.host = "localhost";
+  cpar.port = leader_node->params().client_port;
+
+  rft::client c(cpar);
+  c.connect();
+  while (!c.is_connected()) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+
   for (auto &kv : nodes) {
     kv.second->stop();
+  }
+
+  while (c.is_connected()) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 }
