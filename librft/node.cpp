@@ -63,12 +63,12 @@ node::node(const params_t &p, abstract_consensus_consumer *consumer) {
   _consumer = consumer;
   auto log_prefix = utils::strings::args_to_string(p.name, "> ");
   _logger = std::make_shared<utils::logging::prefix_logger>(
-      utils::logging::logger_manager::instance()->get_logger(), log_prefix);
+      utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
 
   auto jrn = std::make_shared<rft::logdb::memory_journal>();
   auto addr = rft::cluster_node().set_name(_params.name);
   auto s = rft::node_settings().set_name(_params.name);
-  _consensus = std::make_shared<rft::consensus>(s, nullptr, jrn, consumer);
+  _consensus = std::make_shared<rft::consensus>(s, nullptr, jrn, consumer, _logger);
 
   rft::cluster_connection::params_t params;
   params.listener_params.port = p.port;

@@ -24,12 +24,12 @@ consensus::consensus(const node_settings &ns,
     , _cluster(cluster)
     , _jrn(jrn) {
   if (logger != nullptr) {
-    _logger = logger;
+    _logger = std::make_shared<utils::logging::prefix_logger>(logger, "[raft] ");
   } else {
     auto log_prefix = utils::strings::args_to_string("node ", ns.name(), ": ");
 
     _logger = std::make_shared<utils::logging::prefix_logger>(
-        utils::logging::logger_manager::instance()->get_logger(), log_prefix);
+        utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
   }
 
   ENSURE(_consumer != nullptr);
@@ -143,6 +143,7 @@ void consensus::lost_connection_with(const cluster_node &addr) {
   _last_sended.erase(addr);
   _state.votes_to_me.erase(addr);
 }
+
 void consensus::new_connection_with(const rft::cluster_node &addr) {
   // TODO need implementation
 }

@@ -38,6 +38,10 @@ abstract_logger *logger_manager::get_logger() noexcept {
   return _logger.get();
 }
 
+abstract_logger_ptr logger_manager::get_shared_logger() noexcept {
+  return _logger;
+}
+
 logger_manager::logger_manager(abstract_logger_ptr &logger) {
   _logger = logger;
 }

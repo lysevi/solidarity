@@ -42,23 +42,27 @@ public:
   }
 };
 
+
+using abstract_logger_ptr = std::shared_ptr<abstract_logger>;
+using abstract_logger_uptr = std::unique_ptr<abstract_logger>;
+
 class prefix_logger : public abstract_logger {
 public:
-  prefix_logger(abstract_logger *target, const std::string &prefix)
+  prefix_logger(abstract_logger_ptr target, const std::string &prefix)
       : _prefix(prefix)
-      , _target(target) {}
+      , _shared_target(target) {
+    
+  }
 
   void message(MESSAGE_KIND kind, const std::string &msg) noexcept {
-    _target->message(kind, utils::strings::args_to_string(_prefix, msg));
+    _shared_target->message(kind, utils::strings::args_to_string(_prefix, msg));
   }
 
 private:
   const std::string _prefix;
-  abstract_logger *const _target;
+  abstract_logger_ptr _shared_target;
 };
 
-using abstract_logger_ptr = std::shared_ptr<abstract_logger>;
-using abstract_logger_uptr = std::unique_ptr<abstract_logger>;
 
 class console_logger final : public abstract_logger {
 public:
@@ -77,6 +81,7 @@ public:
   EXPORT static VERBOSE_KIND verbose;
   logger_manager(abstract_logger_ptr &logger);
   EXPORT abstract_logger *get_logger() noexcept;
+  EXPORT abstract_logger_ptr get_shared_logger() noexcept;
 
   EXPORT static void start(abstract_logger_ptr &logger);
   EXPORT static void stop();

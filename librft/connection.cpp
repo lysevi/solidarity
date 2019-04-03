@@ -12,7 +12,7 @@ out_connection::out_connection(const std::shared_ptr<cluster_connection> parent,
 }
 
 void out_connection::on_connect() {
-  _parent->_logger->info("connect to ", _target_addr);
+  _parent->_logger->info("[network] connect to ", _target_addr);
   this->_connection->send_async(
       queries::query_connect_t(protocol_version, _parent->_self_addr.name())
           .to_message());
@@ -68,7 +68,7 @@ void listener::on_new_message(dialler::listener_client_ptr i,
       _self_logical_addr.set_name(qc.node_id);
       ENSURE(!_self_logical_addr.name().empty());
       _parent->accept_input_connection(_self_logical_addr, i->get_id());
-      _parent->_logger->info("accept connection from ", _self_logical_addr);
+      _parent->_logger->info("[network] accept connection from ", _self_logical_addr);
     }
     i->send_data(dout);
     break;
@@ -108,7 +108,7 @@ cluster_connection::cluster_connection(
     THROW_EXCEPTION("threads count is zero!");
   }
   _threads_at_work.store(0);
-  _logger = logger;
+  _logger = std::make_shared<utils::logging::prefix_logger>(logger, "[network] ");
   _client = client;
   _params = params;
   _self_addr = self_addr;
@@ -166,7 +166,7 @@ void cluster_connection::heartbeat_timer() {
 }
 
 void cluster_connection::stop() {
-  _logger->info(" stoping...");
+  _logger->info("stoping...");
   _stoped = true;
 
   _timer->cancel();
@@ -192,7 +192,7 @@ void cluster_connection::stop() {
     _listener_consumer = nullptr;
   }
 
-  _logger->info(" stopped.");
+  _logger->info("stopped.");
 }
 
 void cluster_connection::send_to(const cluster_node &from,

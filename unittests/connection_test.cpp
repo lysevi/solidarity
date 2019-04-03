@@ -47,7 +47,7 @@ TEST_CASE("connection", "[network]") {
   size_t cluster_size = 0;
   auto tst_log_prefix = utils::strings::args_to_string("test?> ");
   auto tst_logger = std::make_shared<utils::logging::prefix_logger>(
-      utils::logging::logger_manager::instance()->get_logger(), tst_log_prefix);
+      utils::logging::logger_manager::instance()->get_shared_logger(), tst_log_prefix);
   size_t data_size = 1;
 
   SECTION("connection.2") {
@@ -103,7 +103,7 @@ TEST_CASE("connection", "[network]") {
 
     auto log_prefix = utils::strings::args_to_string("localhost_", p, ": ");
     auto logger = std::make_shared<utils::logging::prefix_logger>(
-        utils::logging::logger_manager::instance()->get_logger(), log_prefix);
+        utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
 
     auto addr = rft::cluster_node().set_name(utils::strings::args_to_string("node_", p));
     auto clnt = std::make_shared<mock_cluster_client>();
@@ -195,7 +195,7 @@ TEST_CASE("connection.election", "[network]") {
   size_t cluster_size = 0;
   auto tst_log_prefix = utils::strings::args_to_string("test?> ");
   auto tst_logger = std::make_shared<utils::logging::prefix_logger>(
-      utils::logging::logger_manager::instance()->get_logger(), tst_log_prefix);
+      utils::logging::logger_manager::instance()->get_shared_logger(), tst_log_prefix);
 
   SECTION("cluster.3") { cluster_size = 3; }
   SECTION("cluster.4") { cluster_size = 4; }
@@ -233,7 +233,7 @@ TEST_CASE("connection.election", "[network]") {
 
     auto log_prefix = utils::strings::args_to_string("localhost_", p, ": ");
     auto logger = std::make_shared<utils::logging::prefix_logger>(
-        utils::logging::logger_manager::instance()->get_logger(), log_prefix);
+        utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
 
     auto addr = rft::cluster_node().set_name(utils::strings::args_to_string("node_", p));
     auto s = rft::node_settings().set_name(addr.name());

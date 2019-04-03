@@ -12,7 +12,7 @@ TEST_CASE("node", "[network]") {
   size_t cluster_size = 0;
   auto tst_log_prefix = utils::strings::args_to_string("test?> ");
   auto tst_logger = std::make_shared<utils::logging::prefix_logger>(
-      utils::logging::logger_manager::instance()->get_logger(), tst_log_prefix);
+      utils::logging::logger_manager::instance()->get_shared_logger(), tst_log_prefix);
 
   SECTION("node.2") { cluster_size = 2; }
   SECTION("node.4") { cluster_size = 4; }
