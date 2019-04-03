@@ -33,6 +33,7 @@ public:
   EXPORT void connect();
   EXPORT void disconnect();
 
+  params_t params() const { return _params; }
   bool is_connected() const { return _connected; }
 
   friend void inner::client_update_connection_status(client &c, bool status);

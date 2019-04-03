@@ -153,3 +153,17 @@ std::vector<dialler::message_ptr> command_t::to_message() const {
   }
   return result;
 }
+
+client_connect_t::client_connect_t(const dialler::message_ptr &msg) {
+  ENSURE(msg->get_header()->kind
+         == (dialler::message::kind_t)queries::QUERY_KIND::CONNECT);
+  msgpack::unpacker pac = get_unpacker(msg);
+  msgpack::object_handle oh;
+
+  pac.next(oh);
+  protocol_version = oh.get().as<uint16_t>();
+}
+
+dialler::message_ptr client_connect_t::to_message() const {
+  return pack_to_message(queries::QUERY_KIND::CONNECT, protocol_version);
+}

@@ -1,8 +1,9 @@
 #include <librft/client.h>
+#include <librft/protocol_version.h>
+#include <librft/queries.h>
 #include <libdialler/dialler.h>
 #include <libutils/strings.h>
 #include <libutils/utils.h>
-
 #include <boost/asio.hpp>
 
 using namespace rft;
@@ -16,9 +17,37 @@ public:
   client_connection(client *const parent)
       : _parent(parent) {}
 
-  void on_connect() override { inner::client_update_connection_status(*_parent, true); }
+  void on_connect() override {
 
-  void on_new_message(dialler::message_ptr &&d, bool &cancel) override {}
+    queries::client_connect_t qc(protocol_version);
+    this->_connection->send_async(qc.to_message());
+  }
+
+  void on_new_message(dialler::message_ptr &&d, bool &cancel) override {
+    using namespace queries;
+    QUERY_KIND kind = static_cast<QUERY_KIND>(d->get_header()->kind);
+    switch (kind) {
+    case QUERY_KIND::CONNECT: {
+      // query_connect_t cc(d);
+      inner::client_update_connection_status(*_parent, true);
+      break;
+    }
+    case QUERY_KIND::CONNECTION_ERROR: {
+      connection_error_t cc(d);
+      inner::client_update_connection_status(*_parent, false);
+      auto msg = utils::strings::args_to_string("protocol version=",
+                                                protocol_version,
+                                                "remote protocol=",
+                                                cc.protocol_version,
+                                                " msg:",
+                                                cc.msg);
+      THROW_EXCEPTION(msg);
+      break;
+    }
+    default:
+      NOT_IMPLEMENTED;
+    }
+  }
 
   void on_network_error(const dialler::message_ptr &d,
                         const boost::system::error_code &err) override {

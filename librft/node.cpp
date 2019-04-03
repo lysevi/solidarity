@@ -1,15 +1,20 @@
 #include <librft/connection.h>
 #include <librft/consensus.h>
 #include <librft/node.h>
+#include <librft/protocol_version.h>
+#include <librft/queries.h>
 #include <libdialler/listener.h>
+#include <libutils/utils.h>
+
 #include <boost/asio.hpp>
 
 using namespace rft;
 
 class node_listener : public dialler::abstract_listener_consumer {
 public:
-  node_listener(node *const parent)
-      : _parent(parent) {}
+  node_listener(node *const parent, utils::logging::abstract_logger_ptr &l)
+      : _parent(parent)
+      , _logger(l) {}
 
   void on_network_error(dialler::listener_client_ptr i,
                         const dialler::message_ptr &d,
@@ -17,7 +22,32 @@ public:
 
   void on_new_message(dialler::listener_client_ptr i,
                       dialler::message_ptr &&d,
-                      bool &cancel) override {}
+                      bool &cancel) override {
+    using namespace queries;
+    QUERY_KIND kind = static_cast<QUERY_KIND>(d->get_header()->kind);
+    switch (kind) {
+    case QUERY_KIND::CONNECT: {
+      client_connect_t cc(d);
+      dialler::message_ptr answer = nullptr;
+      if (cc.protocol_version != protocol_version) {
+        _logger->fatal("wrong protocol version: get:",
+                       cc.protocol_version,
+                       " expected:",
+                       protocol_version);
+        cancel = true;
+        answer
+            = connection_error_t(protocol_version, "wrong protocol version").to_message();
+
+      } else {
+        answer = query_connect_t(protocol_version, _parent->params().name).to_message();
+      }
+      this->send_to(i->get_id(), answer);
+      break;
+    }
+    default:
+      NOT_IMPLEMENTED;
+    }
+  }
 
   bool on_new_connection(dialler::listener_client_ptr i) override { return true; }
 
@@ -25,6 +55,7 @@ public:
 
 private:
   node *const _parent;
+  utils::logging::abstract_logger_ptr _logger;
 };
 
 node::node(const params_t &p, abstract_consensus_consumer *consumer) {
@@ -60,7 +91,7 @@ node::node(const params_t &p, abstract_consensus_consumer *consumer) {
   dialler::listener::params_t lst_params;
   lst_params.port = _params.client_port;
   _listener = std::make_shared<dialler::listener>(_cluster_con->context(), lst_params);
-  _listener_consumer = std::make_shared<node_listener>(this);
+  _listener_consumer = std::make_shared<node_listener>(this, _logger);
   _listener->add_consumer(_listener_consumer.get());
 }
 

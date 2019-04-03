@@ -3,6 +3,7 @@
 #include <librft/abstract_cluster.h>
 #include <librft/config.h>
 #include <librft/consensus.h>
+#include <librft/protocol_version.h>
 #include <libdialler/dialler.h>
 #include <libdialler/listener.h>
 #include <libdialler/message.h>
@@ -12,7 +13,7 @@
 
 namespace rft {
 class cluster_connection;
-const uint16_t protocol_version = 1;
+
 namespace impl {
 
 class out_connection : public dialler::abstract_dial {

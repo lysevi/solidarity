@@ -29,7 +29,7 @@ public:
   EXPORT node(const params_t &p, abstract_consensus_consumer *consumer);
   EXPORT ~node();
   params_t params() const { return _params; }
-
+  
   EXPORT void start();
   EXPORT void stop();
   EXPORT node_state_t state() const;
