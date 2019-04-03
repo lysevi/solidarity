@@ -307,7 +307,6 @@ void cluster_connection::rm_input_connection(const cluster_node &name) {
 }
 
 void cluster_connection::on_new_command(const std::vector<dialler::message_ptr> &m) {
-  std::shared_lock l(_locker);
   queries::command_t cmd_q(m);
   _logger->dbg("on_new_command: from=", cmd_q.from);
   _client->recv(cmd_q.from, cmd_q.cmd);
