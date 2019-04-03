@@ -85,6 +85,8 @@ public:
 
   cluster_node self_addr() const { return _self_addr; };
 
+  boost::asio::io_context *context() { return &_io_context; }
+
 protected:
   void accept_out_connection(const cluster_node &name, const cluster_node &addr);
   void accept_input_connection(const cluster_node &name, uint64_t id);
@@ -100,7 +102,7 @@ private:
   mutable std::shared_mutex _locker;
   bool _stoped;
   params_t _params;
-  
+
   std::vector<std::thread> _threads;
   std::atomic_size_t _threads_at_work;
 

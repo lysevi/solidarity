@@ -16,17 +16,21 @@ inline std::mt19937 make_seeded_engine() {
 consensus::consensus(const node_settings &ns,
                      abstract_cluster *cluster,
                      const logdb::journal_ptr &jrn,
-                     abstract_consensus_consumer *consumer)
+                     abstract_consensus_consumer *consumer,
+                     utils::logging::abstract_logger_ptr logger)
     : _consumer(consumer)
     , _rnd_eng(make_seeded_engine())
     , _settings(ns)
     , _cluster(cluster)
     , _jrn(jrn) {
+  if (logger != nullptr) {
+    _logger = logger;
+  } else {
+    auto log_prefix = utils::strings::args_to_string("node ", ns.name(), ": ");
 
-  auto log_prefix = utils::strings::args_to_string("node ", ns.name(), ": ");
-
-  _logger = std::make_shared<utils::logging::prefix_logger>(
-      utils::logging::logger_manager::instance()->get_logger(), log_prefix);
+    _logger = std::make_shared<utils::logging::prefix_logger>(
+        utils::logging::logger_manager::instance()->get_logger(), log_prefix);
+  }
 
   ENSURE(_consumer != nullptr);
 
@@ -478,6 +482,7 @@ void consensus::heartbeat() {
 
   if (_state.node_kind != NODE_KIND::LEADER) {
     const auto old_s = _state;
+    ENSURE(_cluster != nullptr);
     const auto ns = node_state_t::heartbeat(_state, _self_addr, _cluster->size());
     _state = ns;
 

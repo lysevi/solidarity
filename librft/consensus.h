@@ -34,7 +34,8 @@ public:
   EXPORT consensus(const node_settings &ns,
                    abstract_cluster *cluster,
                    const logdb::journal_ptr &jrn,
-                   abstract_consensus_consumer *consumer);
+                   abstract_consensus_consumer *consumer,
+                   utils::logging::abstract_logger_ptr logger=nullptr);
   node_state_t state() const {
     std::lock_guard l(_locker);
     return _state;
