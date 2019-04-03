@@ -174,20 +174,16 @@ void cluster_connection::stop() {
   while (_threads_at_work.load() != 0) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
-
-  std::vector<std::shared_ptr<dialler::dial>> diallers_to_stop;
-  {
-    std::shared_lock l(_locker);
-    diallers_to_stop.reserve(_diallers.size());
-    for (auto &&kv : _diallers) {
-      diallers_to_stop.push_back(kv.second);
-    }
+  for (auto &&t : _threads) {
+    t.join();
   }
+  _threads.clear();
 
-  for (auto &&v : diallers_to_stop) {
-    v->disconnect();
-    v->wait_stoping();
+  for (auto &&kv : _diallers) {
+    kv.second->disconnect();
+    kv.second->wait_stoping();
   }
+  _diallers.clear();
 
   if (_listener != nullptr) {
     _listener->stop();
@@ -195,16 +191,6 @@ void cluster_connection::stop() {
     _listener = nullptr;
     _listener_consumer = nullptr;
   }
-
-  {
-    std::lock_guard l(_locker);
-    _diallers.clear();
-  }
-
-  for (auto &&t : _threads) {
-    t.join();
-  }
-  _threads.clear();
 
   _logger->info(" stopped.");
 }
