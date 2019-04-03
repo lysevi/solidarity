@@ -107,6 +107,7 @@ cluster_connection::cluster_connection(
   if (params.thread_count == 0) {
     THROW_EXCEPTION("threads count is zero!");
   }
+  _threads_at_work.store(0);
   _logger = logger;
   _client = client;
   _params = params;
@@ -123,11 +124,14 @@ void cluster_connection::start() {
   _threads.resize(_params.thread_count);
   for (size_t i = 0; i < _params.thread_count; ++i) {
     _threads[i] = std::thread([this]() {
+      _threads_at_work.fetch_add(1);
       while (!_stoped) {
-        _io_context.run();
+        _io_context.poll_one();
       }
+      _threads_at_work.fetch_sub(1);
     });
   }
+
   auto self = shared_from_this();
   _listener_consumer = std::make_shared<impl::listener>(self);
   _listener = std::make_unique<dialler::listener>(&_io_context, _params.listener_params);
@@ -155,21 +159,21 @@ void cluster_connection::start() {
 
 void cluster_connection::heartbeat_timer() {
   _client->heartbeat();
-  _timer->expires_at(_timer->expires_at() + boost::posix_time::milliseconds(100));
-  _timer->async_wait([this](auto) { this->heartbeat_timer(); });
+  if (!_stoped) {
+    _timer->expires_at(_timer->expires_at() + boost::posix_time::milliseconds(100));
+    _timer->async_wait([this](auto) { this->heartbeat_timer(); });
+  }
 }
 
 void cluster_connection::stop() {
-
   _logger->info(" stoping...");
   _stoped = true;
 
-  _io_context.stop();
+  _timer->cancel();
 
-  for (auto &&t : _threads) {
-    t.join();
+  while (_threads_at_work.load() != 0) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
-  _threads.clear();
 
   std::vector<std::shared_ptr<dialler::dial>> diallers_to_stop;
   {
@@ -177,8 +181,6 @@ void cluster_connection::stop() {
     diallers_to_stop.reserve(_diallers.size());
     for (auto &&kv : _diallers) {
       diallers_to_stop.push_back(kv.second);
-      kv.second->disconnect();
-      kv.second->wait_stoping();
     }
   }
 
@@ -187,17 +189,22 @@ void cluster_connection::stop() {
     v->wait_stoping();
   }
 
-  {
-    std::lock_guard l(_locker);
-    _diallers.clear();
-  }
-
   if (_listener != nullptr) {
     _listener->stop();
     _listener->wait_stoping();
     _listener = nullptr;
     _listener_consumer = nullptr;
   }
+
+  {
+    std::lock_guard l(_locker);
+    _diallers.clear();
+  }
+
+  for (auto &&t : _threads) {
+    t.join();
+  }
+  _threads.clear();
 
   _logger->info(" stopped.");
 }
@@ -247,40 +254,55 @@ std::vector<cluster_node> cluster_connection::all_nodes() const {
 
 void cluster_connection::accept_out_connection(const cluster_node &name,
                                                const cluster_node &addr) {
-  std::lock_guard l(_locker);
-  _logger->dbg("_accepted_out_connections: ", _accepted_out_connections.size());
-  _accepted_out_connections.insert({name, addr});
-  if (_accepted_input_connections.find(name) != _accepted_input_connections.end()) {
+  bool call_client = false;
+  {
+    std::lock_guard l(_locker);
+    _logger->dbg("_accepted_out_connections: ", _accepted_out_connections.size());
+    _accepted_out_connections.insert({name, addr});
+    call_client
+        = _accepted_input_connections.find(name) != _accepted_input_connections.end();
+  }
+  if (call_client) {
     _client->new_connection_with(name);
   }
 }
 
 void cluster_connection::accept_input_connection(const cluster_node &name, uint64_t id) {
-  std::lock_guard l(_locker);
-  _logger->dbg("_accepted_input_connections: ", _accepted_input_connections.size());
-  _accepted_input_connections.insert({name, id});
-  if (_accepted_out_connections.find(name) != _accepted_out_connections.end()) {
+  bool call_client = false;
+  {
+    std::lock_guard l(_locker);
+    _logger->dbg("_accepted_input_connections: ", _accepted_input_connections.size());
+    _accepted_input_connections.insert({name, id});
+    call_client
+        = (_accepted_out_connections.find(name) != _accepted_out_connections.end());
+  }
+
+  if (call_client) {
     _client->new_connection_with(name);
   }
 }
 
 void cluster_connection::rm_out_connection(const cluster_node &name) {
-  std::lock_guard l(_locker);
-  _logger->dbg(name, " disconnected as output");
-  if (auto it = _accepted_out_connections.find(name);
-      it != _accepted_out_connections.end()) {
-    _accepted_out_connections.erase(it);
-    _client->lost_connection_with(name);
+  {
+    std::lock_guard l(_locker);
+    _logger->dbg(name, " disconnected as output");
+    if (auto it = _accepted_out_connections.find(name);
+        it != _accepted_out_connections.end()) {
+      _accepted_out_connections.erase(it);
+    }
   }
+  std::shared_lock l(_locker);
+  _client->lost_connection_with(name);
 }
 
 void cluster_connection::rm_input_connection(const cluster_node &name) {
-  std::lock_guard l(_locker);
-  _logger->dbg(name, " disconnected as input");
-  if (auto it = _accepted_input_connections.find(name);
-      it != _accepted_input_connections.end()) {
-    _accepted_input_connections.erase(it);
-    _client->lost_connection_with(name);
+  {
+    std::lock_guard l(_locker);
+    _logger->dbg(name, " disconnected as input");
+    if (auto it = _accepted_input_connections.find(name);
+        it != _accepted_input_connections.end()) {
+      _accepted_input_connections.erase(it);
+    }
   }
 }
 

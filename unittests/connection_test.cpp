@@ -190,3 +190,94 @@ TEST_CASE("connection", "[network]") {
   }
   connections.clear();
 }
+
+TEST_CASE("connection.election", "[network]") {
+  size_t cluster_size = 0;
+  auto tst_log_prefix = utils::strings::args_to_string("test?> ");
+  auto tst_logger = std::make_shared<utils::logging::prefix_logger>(
+      utils::logging::logger_manager::instance()->get_logger(), tst_log_prefix);
+
+  SECTION("cluster.3") { cluster_size = 3; }
+  SECTION("cluster.4") { cluster_size = 4; }
+
+  std::vector<unsigned short> ports(cluster_size);
+  std::iota(ports.begin(), ports.end(), unsigned short(8000));
+
+  std::unordered_map<rft::cluster_node, std::shared_ptr<rft::cluster_connection>>
+      connections;
+  std::unordered_map<rft::cluster_node, std::shared_ptr<rft::consensus>> clients;
+  std::unordered_map<rft::cluster_node, std::shared_ptr<mock_consumer>> consumers;
+  connections.reserve(cluster_size);
+  clients.reserve(cluster_size);
+  consumers.reserve(cluster_size);
+
+  for (auto p : ports) {
+    std::vector<unsigned short> out_ports;
+    out_ports.reserve(ports.size() - 1);
+    std::copy_if(ports.begin(),
+                 ports.end(),
+                 std::back_inserter(out_ports),
+                 [p](const auto v) { return v != p; });
+
+    EXPECT_EQ(out_ports.size(), ports.size() - 1);
+
+    rft::cluster_connection::params_t params;
+    params.listener_params.port = p;
+    params.thread_count = 2;
+    params.addrs.reserve(out_ports.size());
+    std::transform(
+        out_ports.begin(),
+        out_ports.end(),
+        std::back_inserter(params.addrs),
+        [](const auto prt) { return dialler::dial::params_t("localhost", prt); });
+
+    auto log_prefix = utils::strings::args_to_string("localhost_", p, ": ");
+    auto logger = std::make_shared<utils::logging::prefix_logger>(
+        utils::logging::logger_manager::instance()->get_logger(), log_prefix);
+
+    auto addr = rft::cluster_node().set_name(utils::strings::args_to_string("node_", p));
+    auto s = rft::node_settings().set_name(addr.name());
+
+    auto jrn = std::make_shared<rft::logdb::memory_journal>();
+    auto consumer = std::make_shared<mock_consumer>();
+    auto clnt = std::make_shared<rft::consensus>(s, nullptr, jrn, consumer.get());
+
+    auto c = std::make_shared<rft::cluster_connection>(addr, clnt, logger, params);
+    clnt->set_cluster(c.get());
+
+    connections.insert({addr, c});
+    clients.insert({addr, clnt});
+    consumers.insert({addr, consumer});
+    c->start();
+  }
+
+  std::unordered_set<rft::cluster_node> leaders;
+  while (true) {
+    leaders.clear();
+    for (auto &kv : clients) {
+      if (kv.second->state().node_kind == rft::NODE_KIND::LEADER) {
+        leaders.insert(kv.first);
+      }
+    }
+    if (leaders.size() == 1) {
+      bool election_complete = true;
+      for (auto &kv : clients) {
+        auto state = kv.second->state();
+        auto nkind = state.node_kind;
+        if ((nkind == rft::NODE_KIND::LEADER || nkind == rft::NODE_KIND::FOLLOWER)
+            && state.leader.name() != leaders.begin()->name()) {
+          election_complete = false;
+          break;
+        }
+      }
+      if (election_complete) {
+        break;
+      }
+    }
+  }
+
+  for (auto &&kv : std::move(connections)) {
+    kv.second->stop();
+  }
+  connections.clear();
+}

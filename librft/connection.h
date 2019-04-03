@@ -100,7 +100,10 @@ private:
   mutable std::shared_mutex _locker;
   bool _stoped;
   params_t _params;
+  
   std::vector<std::thread> _threads;
+  std::atomic_size_t _threads_at_work;
+
   boost::asio::io_context _io_context;
 
   std::shared_ptr<dialler::abstract_listener_consumer> _listener_consumer;
