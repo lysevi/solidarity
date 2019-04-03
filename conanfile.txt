@@ -8,5 +8,5 @@ boost:shared=True
 [generators]
 cmake
 
-#[imports]
-#bin, *.dll -> ./bin # Copies all dll files from packages bin folder to my "bin" folder
+[imports]
+bin, *.dll -> ./bin # Copies all dll files from packages bin folder to my "bin" folder

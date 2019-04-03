@@ -104,6 +104,9 @@ cluster_connection::cluster_connection(
     const std::shared_ptr<abstract_cluster_client> &client,
     const utils::logging::abstract_logger_ptr &logger,
     const cluster_connection::params_t &params) {
+  if (params.thread_count == 0) {
+    THROW_EXCEPTION("threads count is zero!");
+  }
   _logger = logger;
   _client = client;
   _params = params;
@@ -145,6 +148,15 @@ void cluster_connection::start() {
     _diallers.insert(std::make_pair(cnaddr, d));
     d->start_async_connection();
   }
+  _timer = std::make_unique<boost::asio::deadline_timer>(
+      _io_context, boost::posix_time::milliseconds(100));
+  _timer->async_wait([this](auto) { this->heartbeat_timer(); });
+}
+
+void cluster_connection::heartbeat_timer() {
+  _client->heartbeat();
+  _timer->expires_at(_timer->expires_at() + boost::posix_time::milliseconds(100));
+  _timer->async_wait([this](auto) { this->heartbeat_timer(); });
 }
 
 void cluster_connection::stop() {

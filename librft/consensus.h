@@ -47,7 +47,7 @@ public:
   abstract_consensus_consumer *consumer() { return _consumer; }
 
   EXPORT void set_cluster(abstract_cluster *cluster);
-  EXPORT void heartbeat();
+  EXPORT void heartbeat()override;
   
   EXPORT void recv(const cluster_node &from, const append_entries &e) override;
   EXPORT void lost_connection_with(const cluster_node &addr) override;
