@@ -22,7 +22,7 @@ TEST_CASE("node", "[network]") {
 
   std::unordered_map<std::string, std::shared_ptr<rft::node>> nodes;
   std::unordered_map<std::string, std::shared_ptr<mock_consumer>> consumers;
-
+  unsigned short client_port = 10000;
   for (auto p : ports) {
     std::vector<unsigned short> out_ports;
     out_ports.reserve(ports.size() - 1);
@@ -43,7 +43,7 @@ TEST_CASE("node", "[network]") {
 
     rft::node::params_t params;
     params.port = p;
-    params.client_port = (unsigned short)10000;
+    params.client_port = client_port++;
     params.thread_count = 1;
     params.cluster = out_addrs;
     params.name = utils::strings::args_to_string("node_", p);
@@ -84,22 +84,31 @@ TEST_CASE("node", "[network]") {
   }
 
   std::shared_ptr<rft::node> leader_node = nodes[leaders.begin()->name()];
-  rft::client::params_t cpar;
-  cpar.threads_count = 1;
-  cpar.host = "localhost";
-  cpar.port = leader_node->params().client_port;
 
-  rft::client c(cpar);
-  c.connect();
-  while (!c.is_connected()) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  std::unordered_map<std::string, std::shared_ptr<rft::client>> clients;
+  clients.reserve(nodes.size());
+
+  for (const auto &kv : nodes) {
+    auto node_params = kv.second->params();
+    rft::client::params_t cpar;
+    cpar.threads_count = 1;
+    cpar.host = "localhost";
+    cpar.port = node_params.client_port;
+    auto c = std::make_shared<rft::client>(cpar);
+    c->connect();
+    while (!c->is_connected()) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    clients[node_params.name] = c;
   }
 
   for (auto &kv : nodes) {
     kv.second->stop();
   }
 
-  while (c.is_connected()) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  for (auto &kv : clients) {
+    while (kv.second->is_connected()) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
   }
 }
