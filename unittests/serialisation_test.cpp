@@ -161,12 +161,13 @@ TEST_CASE("serialisation.command", "[network]") {
 }
 
 TEST_CASE("serialisation.client_connect_t", "[network]") {
-  rft::queries::clients::client_connect_t qc(777);
+  rft::queries::clients::client_connect_t qc("client name", 777);
   auto msg = qc.to_message();
   rft::queries::clients::client_connect_t qc_u(msg);
   EXPECT_EQ(msg->get_header()->kind,
             (dialler::message::kind_t)rft::queries::QUERY_KIND::CONNECT);
   EXPECT_EQ(qc.protocol_version, qc_u.protocol_version);
+  EXPECT_EQ(qc.client_name, qc_u.client_name);
 }
 
 TEST_CASE("serialisation.read_query_t", "[network]") {

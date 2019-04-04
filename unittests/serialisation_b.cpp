@@ -54,7 +54,7 @@ TEST_CASE("serialisation", "[bench]") {
     BENCHMARK("command_t:unpack") { command_t unpacked(cmd_msg); }
   }
   {
-    clients::client_connect_t client_con(777);
+    clients::client_connect_t client_con("client name", 777);
     BENCHMARK("client_connect_t::to_message") { UNUSED(client_con.to_message()); }
 
     auto clcon_msg = client_con.to_message();

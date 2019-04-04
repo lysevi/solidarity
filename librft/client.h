@@ -40,9 +40,12 @@ private:
 class client {
 public:
   struct params_t {
+    params_t(const std::string &name_) { name = name_; }
+
     size_t threads_count = 1;
     std::string host;
     unsigned short port;
+    std::string name;
   };
   client(const client &) = delete;
   client(client &&) = delete;

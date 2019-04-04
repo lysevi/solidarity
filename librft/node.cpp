@@ -30,7 +30,9 @@ public:
       clients::client_connect_t cc(d);
       dialler::message_ptr answer = nullptr;
       if (cc.protocol_version != protocol_version) {
-        _logger->fatal("wrong protocol version: get:",
+        _logger->fatal("client: ",
+                       cc.client_name,
+                       "wrong protocol version: get:",
                        cc.protocol_version,
                        " expected:",
                        protocol_version);
@@ -40,13 +42,14 @@ public:
 
       } else {
         answer = query_connect_t(protocol_version, _parent->params().name).to_message();
+        _client_name = cc.client_name;
       }
       this->send_to(i->get_id(), answer);
       break;
     }
     case QUERY_KIND::READ: {
       clients::read_query_t rq(d);
-      _logger->dbg("read query: from: ", i->get_id(), " #", rq.msg_id);
+      _logger->dbg("client:", _client_name, " read query #", rq.msg_id);
       rft::command result = _parent->consumer()->read(rq.query);
       clients::read_query_t answer(rq.msg_id, result);
       auto ames = answer.to_message();
@@ -55,7 +58,7 @@ public:
     }
     case QUERY_KIND::WRITE: {
       clients::write_query_t wq(d);
-      _logger->dbg("write query: from: ", i->get_id(), " #", wq.msg_id);
+      _logger->dbg("client:", _client_name, " write query #", wq.msg_id);
       if (_parent->state().node_kind == NODE_KIND::LEADER) {
         _parent->get_consensus()->add_command(wq.query);
         if (_parent->state().node_kind != NODE_KIND::LEADER) {
@@ -82,6 +85,7 @@ public:
 private:
   node *const _parent;
   utils::logging::abstract_logger_ptr _logger;
+  std::string _client_name;
 };
 
 node::node(const params_t &p, abstract_consensus_consumer *consumer) {

@@ -64,8 +64,10 @@ struct command_t {
 namespace clients {
 struct client_connect_t {
   uint16_t protocol_version;
-  EXPORT client_connect_t(uint16_t protocol_version_) {
+  std::string client_name;
+  EXPORT client_connect_t(const std::string&client_name_, uint16_t protocol_version_) {
     protocol_version = protocol_version_;
+    client_name = client_name_;
   }
   EXPORT client_connect_t(const dialler::message_ptr &msg);
   EXPORT dialler::message_ptr to_message() const;

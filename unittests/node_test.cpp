@@ -15,7 +15,7 @@ TEST_CASE("node", "[network]") {
       utils::logging::logger_manager::instance()->get_shared_logger(), tst_log_prefix);
 
   SECTION("node.2") { cluster_size = 2; }
-  SECTION("node.4") { cluster_size = 4; }
+  SECTION("node.3") { cluster_size = 3; }
 
   std::vector<unsigned short> ports(cluster_size);
   std::iota(ports.begin(), ports.end(), unsigned short(8000));
@@ -91,7 +91,7 @@ TEST_CASE("node", "[network]") {
 
   for (const auto &kv : nodes) {
     auto node_params = kv.second->params();
-    rft::client::params_t cpar;
+    rft::client::params_t cpar(utils::strings::args_to_string("client_", kv.first));
     cpar.threads_count = 1;
     cpar.host = "localhost";
     cpar.port = node_params.client_port;
