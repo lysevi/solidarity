@@ -344,7 +344,7 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
   if ((!e.current.is_empty() || e.current.kind == logdb::LOG_ENTRY_KIND::SNAPSHOT)
       && e.term == _state.term) {
     ENSURE(!e.current.is_empty() || e.current.kind == logdb::LOG_ENTRY_KIND::SNAPSHOT);
-    _logger->info("new entry from:", from, " cur:", e.current);
+    _logger->info("new entry from:", from, " cur:", e.current, " self_prev:", self_prev);
 
     if (e.current == self_prev) {
       _logger->info("duplicates");
