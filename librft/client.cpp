@@ -87,19 +87,12 @@ public:
     switch (kind) {
     case QUERY_KIND::CONNECT: {
       // query_connect_t cc(d);
-      inner::client_update_connection_status(*_parent, true);
+      inner::client_update_async_result(*_parent, 0, {}, std::string());
       break;
     }
     case QUERY_KIND::CONNECTION_ERROR: {
       connection_error_t cc(d);
-      inner::client_update_connection_status(*_parent, false);
-      auto msg = utils::strings::args_to_string("protocol version=",
-                                                protocol_version,
-                                                "remote protocol=",
-                                                cc.protocol_version,
-                                                " msg:",
-                                                cc.msg);
-      THROW_EXCEPTION(msg);
+      inner::client_update_async_result(*_parent, 0, {}, cc.msg);
       break;
     }
     case QUERY_KIND::READ: {
@@ -164,6 +157,7 @@ void client::connect() {
     throw utils::exceptions::exception_t("called twice!");
   }
   _threads_at_work.store(0);
+  // TODO clear _async_results and free all elements of them;
 
   _threads.resize(_params.threads_count);
   for (size_t i = 0; i < _params.threads_count; ++i) {
@@ -181,6 +175,11 @@ void client::connect() {
   _dialler = std::make_shared<dialler::dial>(&_io_context, p);
   _dialler->add_consumer(c);
   _dialler->start_async_connection();
+
+  auto w = make_waiter();
+  ENSURE(w->id() == 0);
+  w->result();
+  _connected = true;
 }
 
 std::shared_ptr<async_result_t> client::make_waiter() {

@@ -9,6 +9,8 @@
 #include <boost/asio.hpp>
 
 using namespace rft;
+using namespace rft::queries;
+using namespace dialler;
 
 class node_listener : public dialler::abstract_listener_consumer {
 public:
@@ -16,71 +18,93 @@ public:
       : _parent(parent)
       , _logger(l) {}
 
-  void on_network_error(dialler::listener_client_ptr i,
-                        const dialler::message_ptr &d,
-                        const boost::system::error_code &err) override {}
-
   void on_new_message(dialler::listener_client_ptr i,
                       dialler::message_ptr &&d,
                       bool &cancel) override {
-    using namespace queries;
-    QUERY_KIND kind = static_cast<QUERY_KIND>(d->get_header()->kind);
-    switch (kind) {
-    case QUERY_KIND::CONNECT: {
-      clients::client_connect_t cc(d);
-      dialler::message_ptr answer = nullptr;
-      if (cc.protocol_version != protocol_version) {
-        _logger->fatal("client: ",
-                       cc.client_name,
-                       "wrong protocol version: get:",
-                       cc.protocol_version,
-                       " expected:",
-                       protocol_version);
-        cancel = true;
-        answer
-            = connection_error_t(protocol_version, "wrong protocol version").to_message();
-
-      } else {
-        answer = query_connect_t(protocol_version, _parent->params().name).to_message();
-        _client_name = cc.client_name;
+    try {
+      QUERY_KIND kind = static_cast<QUERY_KIND>(d->get_header()->kind);
+      switch (kind) {
+      case QUERY_KIND::CONNECT: {
+        connect_handler(i, std::move(d), cancel);
+        break;
       }
-      this->send_to(i->get_id(), answer);
-      break;
-    }
-    case QUERY_KIND::READ: {
-      clients::read_query_t rq(d);
-      _logger->dbg("client:", _client_name, " read query #", rq.msg_id);
-      rft::command result = _parent->consumer()->read(rq.query);
-      clients::read_query_t answer(rq.msg_id, result);
-      auto ames = answer.to_message();
-      send_to(i->get_id(), ames);
-      break;
-    }
-    case QUERY_KIND::WRITE: {
-      clients::write_query_t wq(d);
-      _logger->dbg("client:", _client_name, " write query #", wq.msg_id);
-      if (_parent->state().node_kind == NODE_KIND::LEADER) {
-        _parent->get_consensus()->add_command(wq.query);
-        if (_parent->state().node_kind != NODE_KIND::LEADER) {
-          NOT_IMPLEMENTED;
-        }
-        status_t s(wq.msg_id, std::string());
-        auto ames = s.to_message();
-        send_to(i->get_id(), ames);
-      } else {
+      case QUERY_KIND::READ: {
+        read_handler(i, std::move(d));
+        break;
+      }
+      case QUERY_KIND::WRITE: {
+        write_handler(i, std::move(d));
+        break;
+      }
+      default:
         NOT_IMPLEMENTED;
       }
-
-      break;
+    } catch (utils::exceptions::exception_t &e) {
+      _logger->fatal(e.what());
+    } catch (std::exception &e) {
+      _logger->fatal(e.what());
     }
-    default:
+  }
+
+  void connect_handler(listener_client_ptr i, message_ptr &&d, bool &cancel) {
+    clients::client_connect_t cc(d);
+    message_ptr answer = nullptr;
+    if (cc.protocol_version != protocol_version) {
+      _logger->fatal("client: ",
+                     cc.client_name,
+                     "wrong protocol version: get:",
+                     cc.protocol_version,
+                     " expected:",
+                     protocol_version);
+      cancel = true;
+      connection_error_t ce(protocol_version, "wrong protocol version");
+      answer = ce.to_message();
+    } else {
+      query_connect_t q(protocol_version, _parent->params().name);
+      answer = q.to_message();
+      _client_name = cc.client_name;
+      _parent->add_client(i->get_id());
+    }
+
+    i->send_data(answer);
+  }
+
+  void read_handler(listener_client_ptr i, message_ptr &&d) {
+    clients::read_query_t rq(d);
+    _logger->dbg("client:", _client_name, " read query #", rq.msg_id);
+    command result = _parent->consumer()->read(rq.query);
+    clients::read_query_t answer(rq.msg_id, result);
+    auto ames = answer.to_message();
+    i->send_data(ames);
+  }
+
+  void write_handler(listener_client_ptr i, message_ptr &&d) {
+    clients::write_query_t wq(d);
+    _logger->dbg("client:", _client_name, " write query #", wq.msg_id);
+    if (_parent->state().node_kind == NODE_KIND::LEADER) {
+      _parent->get_consensus()->add_command(wq.query);
+      if (_parent->state().node_kind != NODE_KIND::LEADER) {
+        NOT_IMPLEMENTED;
+      }
+      status_t s(wq.msg_id, std::string());
+      auto ames = s.to_message();
+      i->send_data(ames);
+    } else {
       NOT_IMPLEMENTED;
     }
   }
 
-  bool on_new_connection(dialler::listener_client_ptr i) override { return true; }
+  bool on_new_connection(dialler::listener_client_ptr) override { return true; }
 
-  void on_disconnect(const dialler::listener_client_ptr &i) override {}
+  void on_disconnect(const dialler::listener_client_ptr &i) override {
+    _parent->rm_client(i->get_id());
+  }
+
+  void on_network_error(listener_client_ptr i,
+                        const message_ptr &d,
+                        const boost::system::error_code &err) override {
+    _parent->rm_client(i->get_id());
+  }
 
 private:
   node *const _parent;
@@ -156,4 +180,19 @@ node_state_t node::state() const {
 
 cluster_node node::self_name() const {
   return _consensus->self_addr();
+}
+
+void node::add_client(uint64_t id) {
+  std::lock_guard l(_locker);
+  _clients.insert(id);
+}
+
+void node::rm_client(uint64_t id) {
+  std::lock_guard l(_locker);
+  _clients.erase(id);
+}
+
+size_t node::connections_count() const {
+  std::shared_lock l(_locker);
+  return _clients.size();
 }

@@ -22,6 +22,8 @@ TEST_CASE("node", "[network]") {
 
   std::unordered_map<std::string, std::shared_ptr<rft::node>> nodes;
   std::unordered_map<std::string, std::shared_ptr<mock_consumer>> consumers;
+  std::unordered_map<std::string, std::shared_ptr<rft::client>> clients;
+
   unsigned short client_port = 10000;
   for (auto p : ports) {
     std::vector<unsigned short> out_ports;
@@ -51,10 +53,25 @@ TEST_CASE("node", "[network]") {
     auto consumer = std::make_shared<mock_consumer>();
     auto n = std::make_shared<rft::node>(params, consumer.get());
 
+    n->start();
+
+    rft::client::params_t cpar(utils::strings::args_to_string("client_", params.name));
+    cpar.threads_count = 1;
+    cpar.host = "localhost";
+    cpar.port = params.client_port;
+
+    auto c = std::make_shared<rft::client>(cpar);
+    c->connect();
+
+    while (!c->is_connected()) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    EXPECT_EQ(n->connections_count(), size_t(1));
+
     consumers[params.name] = consumer;
     nodes[params.name] = n;
-
-    n->start();
+    clients[params.name] = c;
   }
 
   std::unordered_set<rft::cluster_node> leaders;
@@ -84,24 +101,7 @@ TEST_CASE("node", "[network]") {
   }
 
   auto leader_name = leaders.begin()->name();
-  std::shared_ptr<rft::node> leader_node = nodes[leader_name];
-
-  std::unordered_map<std::string, std::shared_ptr<rft::client>> clients;
-  clients.reserve(nodes.size());
-
-  for (const auto &kv : nodes) {
-    auto node_params = kv.second->params();
-    rft::client::params_t cpar(utils::strings::args_to_string("client_", kv.first));
-    cpar.threads_count = 1;
-    cpar.host = "localhost";
-    cpar.port = node_params.client_port;
-    auto c = std::make_shared<rft::client>(cpar);
-    c->connect();
-    while (!c->is_connected()) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-    clients[node_params.name] = c;
-  }
+  //std::shared_ptr<rft::node> leader_node = nodes[leader_name];
 
   auto leader_client = clients[leader_name];
   std::vector<uint8_t> first_cmd{1, 2, 3, 4, 5};

@@ -42,6 +42,9 @@ public:
   EXPORT node_state_t state() const;
   EXPORT cluster_node self_name() const;
 
+  void add_client(uint64_t id);
+  void rm_client(uint64_t id);
+  EXPORT size_t connections_count()const;
 private:
   params_t _params;
   std::shared_ptr<consensus> _consensus;
@@ -52,5 +55,8 @@ private:
 
   std::shared_ptr<dialler::listener> _listener;
   std::shared_ptr<dialler::abstract_listener_consumer> _listener_consumer;
+
+  mutable std::shared_mutex _locker;
+  std::unordered_set<uint64_t> _clients;
 };
 } // namespace rft
