@@ -32,6 +32,12 @@ TEST_CASE("serialisation", "[bench]") {
   auto qcon_err_msg = con_error.to_message();
   BENCHMARK("connection_error_t:unpack") { connection_error_t unpacked(qcon_err_msg); }
 
+  status_t status_(777, "long error message");
+  BENCHMARK("status_t::to_message") { UNUSED(status_.to_message()); }
+
+  auto status_msg = status_.to_message();
+  BENCHMARK("status_t:unpack") { status_t unpacked(qcon_err_msg); }
+
   command_t cmd(rft::cluster_node("long cluster node name"), ae);
   BENCHMARK("command_t::to_message") { UNUSED(cmd.to_message()); }
 
@@ -49,6 +55,18 @@ TEST_CASE("serialisation", "[bench]") {
 
   auto clcon_msg = client_con.to_message();
   BENCHMARK("client_connect_t:unpack") { clients::client_connect_t unpacked(clcon_msg); }
+
+  clients::read_query_t read_q(777, ae.cmd);
+  BENCHMARK("read_query_t::to_message") { UNUSED(read_q.to_message()); }
+
+  auto read_q_msg = read_q.to_message();
+  BENCHMARK("read_query_t:unpack") { clients::read_query_t unpacked(read_q_msg); }
+
+  clients::write_query_t write_q(777, ae.cmd);
+  BENCHMARK("write_query_t::to_message") { UNUSED(write_q.to_message()); }
+
+  auto write_q_msg = write_q.to_message();
+  BENCHMARK("write_query_t:unpack") { clients::write_query_t unpacked(write_q_msg); }
 }
 
 #endif

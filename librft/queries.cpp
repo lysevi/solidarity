@@ -69,6 +69,22 @@ dialler::message_ptr connection_error_t::to_message() const {
   return pack_to_message(queries::QUERY_KIND::CONNECTION_ERROR, protocol_version, msg);
 }
 
+status_t::status_t(const dialler::message_ptr &mptr) {
+  ENSURE(mptr->get_header()->kind
+         == (dialler::message::kind_t)queries::QUERY_KIND::STATUS);
+  msgpack::unpacker pac = get_unpacker(mptr);
+  msgpack::object_handle oh;
+
+  pac.next(oh);
+  id = oh.get().as<uint64_t>();
+  pac.next(oh);
+  msg = oh.get().as<std::string>();
+}
+
+dialler::message_ptr status_t::to_message() const {
+  return pack_to_message(queries::QUERY_KIND::STATUS, id, msg);
+}
+
 command_t::command_t(const std::vector<dialler::message_ptr> &mptrs) {
   ENSURE(std::all_of(mptrs.cbegin(), mptrs.cend(), [](auto mptr) {
     return mptr->get_header()->kind == (dialler::message::kind_t)QUERY_KIND::COMMAND;
@@ -167,4 +183,36 @@ client_connect_t::client_connect_t(const dialler::message_ptr &msg) {
 
 dialler::message_ptr client_connect_t::to_message() const {
   return pack_to_message(queries::QUERY_KIND::CONNECT, protocol_version);
+}
+
+read_query_t::read_query_t(const dialler::message_ptr &msg) {
+  ENSURE(msg->get_header()->kind == (dialler::message::kind_t)queries::QUERY_KIND::READ);
+  msgpack::unpacker pac = get_unpacker(msg);
+  msgpack::object_handle oh;
+
+  pac.next(oh);
+  msg_id = oh.get().as<uint64_t>();
+  pac.next(oh);
+  auto data = oh.get().as<std::vector<uint8_t>>();
+  query.data = data;
+}
+
+dialler::message_ptr read_query_t::to_message() const {
+  return pack_to_message(queries::QUERY_KIND::READ, msg_id, query.data);
+}
+
+write_query_t::write_query_t(const dialler::message_ptr &msg) {
+  ENSURE(msg->get_header()->kind == (dialler::message::kind_t)queries::QUERY_KIND::WRITE);
+  msgpack::unpacker pac = get_unpacker(msg);
+  msgpack::object_handle oh;
+
+  pac.next(oh);
+  msg_id = oh.get().as<uint64_t>();
+  pac.next(oh);
+  auto data = oh.get().as<std::vector<uint8_t>>();
+  query.data = data;
+}
+
+dialler::message_ptr write_query_t::to_message() const {
+  return pack_to_message(queries::QUERY_KIND::WRITE, msg_id, query.data);
 }

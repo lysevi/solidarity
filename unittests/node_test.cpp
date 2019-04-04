@@ -83,7 +83,8 @@ TEST_CASE("node", "[network]") {
     }
   }
 
-  std::shared_ptr<rft::node> leader_node = nodes[leaders.begin()->name()];
+  auto leader_name = leaders.begin()->name();
+  std::shared_ptr<rft::node> leader_node = nodes[leader_name];
 
   std::unordered_map<std::string, std::shared_ptr<rft::client>> clients;
   clients.reserve(nodes.size());
@@ -100,6 +101,24 @@ TEST_CASE("node", "[network]") {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     clients[node_params.name] = c;
+  }
+
+  auto leader_client = clients[leader_name];
+  std::vector<uint8_t> first_cmd{1, 2, 3, 4, 5};
+  leader_client->send(first_cmd);
+
+  auto target = first_cmd;
+  std::transform(target.begin(), target.end(), target.begin(), [](auto &v) -> uint8_t {
+    return uint8_t(v + 1);
+  });
+  for (auto &kv : clients) {
+    while (true) {
+      auto answer = kv.second->read({1});
+      if (std::equal(target.begin(), target.end(), answer.begin(), answer.end())) {
+        break;
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
   }
 
   for (auto &kv : nodes) {

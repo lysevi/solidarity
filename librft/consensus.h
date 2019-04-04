@@ -19,8 +19,8 @@ public:
   virtual void apply_cmd(const command &cmd) = 0;
   virtual void reset() = 0;
   virtual command snapshot() = 0;
+  virtual command read(const command &cmd) = 0;
 };
-
 
 class consensus : public abstract_cluster_client {
   enum class RDIRECTION { FORWARDS = 0, BACKWARDS };
@@ -35,7 +35,7 @@ public:
                    abstract_cluster *cluster,
                    const logdb::journal_ptr &jrn,
                    abstract_consensus_consumer *consumer,
-                   utils::logging::abstract_logger_ptr logger=nullptr);
+                   utils::logging::abstract_logger_ptr logger = nullptr);
   node_state_t state() const {
     std::lock_guard l(_locker);
     return _state;
@@ -48,13 +48,12 @@ public:
   abstract_consensus_consumer *consumer() { return _consumer; }
 
   EXPORT void set_cluster(abstract_cluster *cluster);
-  EXPORT void heartbeat()override;
-  
+  EXPORT void heartbeat() override;
+
   EXPORT void recv(const cluster_node &from, const append_entries &e) override;
   EXPORT void lost_connection_with(const cluster_node &addr) override;
   EXPORT void new_connection_with(const rft::cluster_node &addr) override;
   EXPORT void add_command(const command &cmd);
-  
 
   cluster_node get_leader() const {
     std::lock_guard l(_locker);
@@ -66,8 +65,8 @@ public:
   }
 
 protected:
-  append_entries make_append_entries(const ENTRIES_KIND kind
-                                     = ENTRIES_KIND::APPEND) const noexcept;
+  append_entries make_append_entries(const ENTRIES_KIND kind = ENTRIES_KIND::APPEND) const
+      noexcept;
   append_entries make_append_entries(const logdb::index_t lsn_to_replicate,
                                      const logdb::index_t prev_lsn);
   void send_all(const ENTRIES_KIND kind);

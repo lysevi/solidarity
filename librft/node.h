@@ -32,7 +32,10 @@ public:
   node &operator=(const node &) = delete;
   EXPORT node(const params_t &p, abstract_consensus_consumer *consumer);
   EXPORT ~node();
+
   params_t params() const { return _params; }
+  abstract_consensus_consumer *consumer() { return _consumer; }
+  std::shared_ptr<consensus> get_consensus() { return _consensus; }
 
   EXPORT void start();
   EXPORT void stop();

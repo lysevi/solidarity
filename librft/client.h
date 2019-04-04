@@ -17,9 +17,12 @@ class dial;
 namespace rft {
 
 class client;
+struct async_result_t;
+
 namespace inner {
 void client_update_connection_status(client &c, bool status);
-}
+void client_update_async_result(client &c, uint64_t id, const std::vector<uint8_t> &cmd, const std::string&err);
+} // namespace inner
 
 class client {
 public:
@@ -31,15 +34,27 @@ public:
   client(const client &) = delete;
   client(client &&) = delete;
   client &operator=(const client &) = delete;
+
   EXPORT client(const params_t &p);
   EXPORT ~client();
+
   EXPORT void connect();
   EXPORT void disconnect();
+
+  EXPORT void send(const std::vector<uint8_t> &cmd);
+  EXPORT std::vector<uint8_t> read(const std::vector<uint8_t> &cmd);
 
   params_t params() const { return _params; }
   bool is_connected() const { return _connected; }
 
   friend void inner::client_update_connection_status(client &c, bool status);
+  friend void inner::client_update_async_result(client &c,
+                                                uint64_t id,
+                                                const std::vector<uint8_t> &cmd,
+                                                const std::string &err);
+
+private:
+  std::shared_ptr<async_result_t> make_waiter();
 
 private:
   params_t _params;
@@ -50,8 +65,9 @@ private:
   std::atomic_size_t _threads_at_work;
   boost::asio::io_context _io_context;
 
-  
   std::atomic_uint64_t _next_query_id;
+  std::unordered_map<uint64_t, std::shared_ptr<async_result_t>> _async_results;
+
 protected:
   bool _connected;
 };

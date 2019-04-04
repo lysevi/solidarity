@@ -98,6 +98,22 @@ TEST_CASE("serialisation.connection_error", "[network]") {
   EXPECT_EQ(qc.msg, qc_u.msg);
 }
 
+TEST_CASE("serialisation.status_t", "[network]") {
+  rft::queries::status_t qc(777, "");
+
+  SECTION("empty message") { qc.msg = std::string(); }
+  SECTION("long message") {
+    qc.msg = "long error message! long error message! long error message";
+  }
+
+  auto msg = qc.to_message();
+  rft::queries::status_t qc_u(msg);
+  EXPECT_EQ(msg->get_header()->kind,
+            (dialler::message::kind_t)rft::queries::QUERY_KIND::STATUS);
+  EXPECT_EQ(qc.id, qc_u.id);
+  EXPECT_EQ(qc.msg, qc_u.msg);
+}
+
 TEST_CASE("serialisation.command", "[network]") {
   rft::append_entries ae;
 
@@ -151,4 +167,40 @@ TEST_CASE("serialisation.client_connect_t", "[network]") {
   EXPECT_EQ(msg->get_header()->kind,
             (dialler::message::kind_t)rft::queries::QUERY_KIND::CONNECT);
   EXPECT_EQ(qc.protocol_version, qc_u.protocol_version);
+}
+
+TEST_CASE("serialisation.read_query_t", "[network]") {
+  rft::command cmd;
+  cmd.data = std::vector<uint8_t>{0, 1, 2, 3};
+  rft::queries::clients::read_query_t qc(777, cmd);
+  auto msg = qc.to_message();
+
+  rft::queries::clients::read_query_t qc_u(msg);
+  EXPECT_EQ(msg->get_header()->kind,
+            (dialler::message::kind_t)rft::queries::QUERY_KIND::READ);
+  EXPECT_EQ(qc.msg_id, qc_u.msg_id);
+  EXPECT_TRUE(std::equal(qc.query.data.begin(),
+                         qc.query.data.end(),
+                         qc_u.query.data.begin(),
+                         qc_u.query.data.end()));
+  EXPECT_TRUE(std::equal(
+      qc.query.data.begin(), qc.query.data.end(), cmd.data.begin(), cmd.data.end()));
+}
+
+TEST_CASE("serialisation.write_query_t", "[network]") {
+  rft::command cmd;
+  cmd.data = std::vector<uint8_t>{0, 1, 2, 3};
+  rft::queries::clients::write_query_t qc(777, cmd);
+  auto msg = qc.to_message();
+
+  rft::queries::clients::write_query_t qc_u(msg);
+  EXPECT_EQ(msg->get_header()->kind,
+            (dialler::message::kind_t)rft::queries::QUERY_KIND::WRITE);
+  EXPECT_EQ(qc.msg_id, qc_u.msg_id);
+  EXPECT_TRUE(std::equal(qc.query.data.begin(),
+                         qc.query.data.end(),
+                         qc_u.query.data.begin(),
+                         qc_u.query.data.end()));
+  EXPECT_TRUE(std::equal(
+      qc.query.data.begin(), qc.query.data.end(), cmd.data.begin(), cmd.data.end()));
 }

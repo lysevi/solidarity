@@ -44,6 +44,32 @@ public:
       this->send_to(i->get_id(), answer);
       break;
     }
+    case QUERY_KIND::READ: {
+      clients::read_query_t rq(d);
+      _logger->dbg("read query: from: ", i->get_id(), " #", rq.msg_id);
+      rft::command result = _parent->consumer()->read(rq.query);
+      clients::read_query_t answer(rq.msg_id, result);
+      auto ames = answer.to_message();
+      send_to(i->get_id(), ames);
+      break;
+    }
+    case QUERY_KIND::WRITE: {
+      clients::write_query_t wq(d);
+      _logger->dbg("write query: from: ", i->get_id(), " #", wq.msg_id);
+      if (_parent->state().node_kind == NODE_KIND::LEADER) {
+        _parent->get_consensus()->add_command(wq.query);
+        if (_parent->state().node_kind != NODE_KIND::LEADER) {
+          NOT_IMPLEMENTED;
+        }
+        status_t s(wq.msg_id, std::string());
+        auto ames = s.to_message();
+        send_to(i->get_id(), ames);
+      } else {
+        NOT_IMPLEMENTED;
+      }
+
+      break;
+    }
     default:
       NOT_IMPLEMENTED;
     }

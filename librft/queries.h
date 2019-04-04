@@ -5,10 +5,15 @@
 #include <vector>
 
 namespace rft::queries {
+const uint64_t UNDEFINED_QUERY_ID = std::numeric_limits<uint64_t>::max();
+
 enum class QUERY_KIND : dialler::message::kind_t {
   CONNECT = 0,
+  STATUS,
   CONNECTION_ERROR,
-  COMMAND
+  COMMAND,
+  READ,
+  WRITE
 };
 
 struct query_connect_t {
@@ -19,7 +24,7 @@ struct query_connect_t {
     node_id = node_id_;
   }
   EXPORT query_connect_t(const dialler::message_ptr &msg);
-  dialler::message_ptr to_message() const;
+  EXPORT dialler::message_ptr to_message() const;
 };
 
 struct connection_error_t {
@@ -30,8 +35,19 @@ struct connection_error_t {
     msg = m;
   }
   EXPORT connection_error_t(const dialler::message_ptr &mptr);
+  EXPORT dialler::message_ptr to_message() const;
+};
 
-  dialler::message_ptr to_message() const;
+struct status_t {
+  uint64_t id;
+  std::string msg;
+
+  EXPORT status_t(uint64_t id_, const std::string &m) {
+    id = id_;
+    msg = m;
+  }
+  EXPORT status_t(const dialler::message_ptr &mptr);
+  EXPORT dialler::message_ptr to_message() const;
 };
 
 struct command_t {
@@ -42,8 +58,7 @@ struct command_t {
     from = from_;
   }
   EXPORT command_t(const std::vector<dialler::message_ptr> &mptr);
-
-  std::vector<dialler::message_ptr> to_message() const;
+  EXPORT std::vector<dialler::message_ptr> to_message() const;
 };
 
 namespace clients {
@@ -53,7 +68,29 @@ struct client_connect_t {
     protocol_version = protocol_version_;
   }
   EXPORT client_connect_t(const dialler::message_ptr &msg);
-  dialler::message_ptr to_message() const;
+  EXPORT dialler::message_ptr to_message() const;
+};
+
+struct read_query_t {
+  uint64_t msg_id;
+  rft::command query;
+  EXPORT read_query_t(uint64_t id, const rft::command &q) {
+    msg_id = id;
+    query = q;
+  }
+  EXPORT read_query_t(const dialler::message_ptr &msg);
+  EXPORT dialler::message_ptr to_message() const;
+};
+
+struct write_query_t {
+  uint64_t msg_id;
+  rft::command query;
+  EXPORT write_query_t(uint64_t id, const rft::command &q) {
+    msg_id = id;
+    query = q;
+  }
+  EXPORT write_query_t(const dialler::message_ptr &msg);
+  EXPORT dialler::message_ptr to_message() const;
 };
 } // namespace clients
 
