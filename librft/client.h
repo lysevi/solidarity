@@ -50,6 +50,8 @@ private:
   std::atomic_size_t _threads_at_work;
   boost::asio::io_context _io_context;
 
+  
+  std::atomic_uint64_t _next_query_id;
 protected:
   bool _connected;
 };

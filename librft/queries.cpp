@@ -5,6 +5,7 @@
 #include <numeric>
 
 using namespace rft::queries;
+using namespace rft::queries::clients;
 
 namespace {
 

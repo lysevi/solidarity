@@ -44,11 +44,11 @@ TEST_CASE("serialisation", "[bench]") {
   cmd_msg = cmd.to_message();
   BENCHMARK("command_t:unpack(big)") { command_t unpacked(cmd_msg); }
 
-  client_connect_t client_con(777);
+  clients::client_connect_t client_con(777);
   BENCHMARK("client_connect_t::to_message") { UNUSED(qcon.to_message()); }
 
   auto clcon_msg = client_con.to_message();
-  BENCHMARK("client_connect_t:unpack") { client_connect_t unpacked(clcon_msg); }
+  BENCHMARK("client_connect_t:unpack") { clients::client_connect_t unpacked(clcon_msg); }
 }
 
 #endif

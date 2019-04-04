@@ -18,8 +18,7 @@ public:
       : _parent(parent) {}
 
   void on_connect() override {
-
-    queries::client_connect_t qc(protocol_version);
+    queries::clients::client_connect_t qc(protocol_version);
     this->_connection->send_async(qc.to_message());
   }
 
@@ -61,6 +60,7 @@ private:
 client::client(const params_t &p) {
   _params = p;
   _connected = false;
+  _next_query_id.store(0);
 }
 
 client::~client() {

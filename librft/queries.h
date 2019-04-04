@@ -46,6 +46,7 @@ struct command_t {
   std::vector<dialler::message_ptr> to_message() const;
 };
 
+namespace clients {
 struct client_connect_t {
   uint16_t protocol_version;
   EXPORT client_connect_t(uint16_t protocol_version_) {
@@ -54,4 +55,6 @@ struct client_connect_t {
   EXPORT client_connect_t(const dialler::message_ptr &msg);
   dialler::message_ptr to_message() const;
 };
+} // namespace clients
+
 } // namespace rft::queries

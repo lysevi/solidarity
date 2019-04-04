@@ -27,7 +27,7 @@ public:
     QUERY_KIND kind = static_cast<QUERY_KIND>(d->get_header()->kind);
     switch (kind) {
     case QUERY_KIND::CONNECT: {
-      client_connect_t cc(d);
+      clients::client_connect_t cc(d);
       dialler::message_ptr answer = nullptr;
       if (cc.protocol_version != protocol_version) {
         _logger->fatal("wrong protocol version: get:",
