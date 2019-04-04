@@ -103,7 +103,8 @@ cluster_connection::cluster_connection(
     cluster_node self_addr,
     const std::shared_ptr<abstract_cluster_client> &client,
     const utils::logging::abstract_logger_ptr &logger,
-    const cluster_connection::params_t &params) {
+    const cluster_connection::params_t &params)
+    : _io_context(params.thread_count) {
   if (params.thread_count == 0) {
     THROW_EXCEPTION("threads count is zero!");
   }
@@ -126,7 +127,7 @@ void cluster_connection::start() {
     _threads[i] = std::thread([this]() {
       _threads_at_work.fetch_add(1);
       while (!_stoped) {
-        _io_context.run_one();
+        _io_context.run();
       }
       _threads_at_work.fetch_sub(1);
     });
