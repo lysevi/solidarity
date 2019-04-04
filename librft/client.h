@@ -17,7 +17,7 @@ class dial;
 namespace rft {
 
 class client;
-struct async_result_t;
+class async_result_t;
 
 namespace inner {
 void client_update_connection_status(client &c, bool status);

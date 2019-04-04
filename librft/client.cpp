@@ -2,26 +2,50 @@
 #include <librft/protocol_version.h>
 #include <librft/queries.h>
 #include <libdialler/dialler.h>
-#include <libutils/async/locker.h>
 #include <libutils/strings.h>
 #include <libutils/utils.h>
 #include <boost/asio.hpp>
+#include <condition_variable>
 
 using namespace rft;
 
-struct rft::async_result_t {
-  uint64_t id;
-  utils::async::locker locker;
-  std::vector<uint8_t> answer;
-  std::string err;
+class rft::async_result_t {
+public:
+  rft::async_result_t(uint64_t id_) {
+    _id = id_;
+    answer_received = false;
+  }
 
   std::vector<uint8_t> result() {
-    locker.lock();
+    std::unique_lock ul(_mutex);
+    while (true) {
+      _condition.wait(ul, [this] { return answer_received; });
+      if (answer_received) {
+        break;
+      }
+    }
     if (err.empty()) {
       return answer;
     }
     throw rft::exception(err);
   }
+
+  void set_result(const std::vector<uint8_t> &r, const std::string &err_) {
+    answer = r;
+    err = err_;
+    answer_received = true;
+    _condition.notify_all();
+  }
+
+  uint64_t id() const { return _id; }
+
+private:
+  uint64_t _id;
+  std::condition_variable _condition;
+  std::mutex _mutex;
+  std::vector<uint8_t> answer;
+  std::string err;
+  bool answer_received;
 };
 
 void rft::inner::client_update_connection_status(client &c, bool status) {
@@ -42,10 +66,8 @@ void rft::inner::client_update_async_result(client &c,
     auto ares = it->second;
     c._async_results.erase(it);
     c._locker.unlock();
-    ENSURE(id == ares->id);
-    ares->answer = cmd;
-    ares->locker.unlock();
-    ares->err = err;
+    ENSURE(id == ares->id());
+    ares->set_result(cmd, err);
   }
 }
 
@@ -159,10 +181,8 @@ void client::connect() {
 
 std::shared_ptr<async_result_t> client::make_waiter() {
   std::lock_guard l(_locker);
-  auto waiter = std::make_shared<async_result_t>();
-  waiter->id = _next_query_id.fetch_add(1);
-  waiter->locker.lock();
-  _async_results[waiter->id] = waiter;
+  auto waiter = std::make_shared<async_result_t>(_next_query_id.fetch_add(1));
+  _async_results[waiter->id()] = waiter;
   return waiter;
 }
 
@@ -171,7 +191,7 @@ void client::send(const std::vector<uint8_t> &cmd) {
   c.data = cmd;
 
   auto waiter = make_waiter();
-  queries::clients::write_query_t rq(waiter->id, c);
+  queries::clients::write_query_t rq(waiter->id(), c);
 
   _dialler->send_async(rq.to_message());
 }
@@ -181,7 +201,7 @@ std::vector<uint8_t> client::read(const std::vector<uint8_t> &cmd) {
   c.data = cmd;
 
   auto waiter = make_waiter();
-  queries::clients::read_query_t rq(waiter->id, c);
+  queries::clients::read_query_t rq(waiter->id(), c);
 
   _dialler->send_async(rq.to_message());
 
