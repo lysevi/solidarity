@@ -126,7 +126,7 @@ void cluster_connection::start() {
     _threads[i] = std::thread([this]() {
       _threads_at_work.fetch_add(1);
       while (!_stoped) {
-        _io_context.poll_one();
+        _io_context.run_one();
       }
       _threads_at_work.fetch_sub(1);
     });
@@ -170,7 +170,7 @@ void cluster_connection::stop() {
   _stoped = true;
 
   _timer->cancel();
-
+  _io_context.stop();
   while (_threads_at_work.load() != 0) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
