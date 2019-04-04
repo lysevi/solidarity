@@ -28,6 +28,9 @@ public:
     std::string host;
     unsigned short port;
   };
+  client(const client &) = delete;
+  client(client &&) = delete;
+  client &operator=(const client &) = delete;
   EXPORT client(const params_t &p);
   EXPORT ~client();
   EXPORT void connect();
