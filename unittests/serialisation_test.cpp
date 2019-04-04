@@ -205,3 +205,14 @@ TEST_CASE("serialisation.write_query_t", "[network]") {
   EXPECT_TRUE(std::equal(
       qc.query.data.begin(), qc.query.data.end(), cmd.data.begin(), cmd.data.end()));
 }
+
+TEST_CASE("serialisation.state_machine_updated_t", "[network]") {
+  rft::queries::clients::state_machine_updated_t qc;
+  auto msg = qc.to_message();
+
+  rft::queries::clients::state_machine_updated_t qc_u(msg);
+  EXPECT_EQ(msg->get_header()->kind,
+            (dialler::message::kind_t)rft::queries::QUERY_KIND::UPDATE);
+  EXPECT_TRUE(qc_u.f);
+  EXPECT_TRUE(qc.f);
+}

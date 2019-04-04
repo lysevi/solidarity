@@ -13,7 +13,8 @@ enum class QUERY_KIND : dialler::message::kind_t {
   CONNECTION_ERROR,
   COMMAND,
   READ,
-  WRITE
+  WRITE,
+  UPDATE
 };
 
 struct query_connect_t {
@@ -65,7 +66,7 @@ namespace clients {
 struct client_connect_t {
   uint16_t protocol_version;
   std::string client_name;
-  EXPORT client_connect_t(const std::string&client_name_, uint16_t protocol_version_) {
+  EXPORT client_connect_t(const std::string &client_name_, uint16_t protocol_version_) {
     protocol_version = protocol_version_;
     client_name = client_name_;
   }
@@ -92,6 +93,13 @@ struct write_query_t {
     query = q;
   }
   EXPORT write_query_t(const dialler::message_ptr &msg);
+  EXPORT dialler::message_ptr to_message() const;
+};
+
+struct state_machine_updated_t {
+  bool f;
+  EXPORT state_machine_updated_t();
+  EXPORT state_machine_updated_t(const dialler::message_ptr &msg);
   EXPORT dialler::message_ptr to_message() const;
 };
 } // namespace clients

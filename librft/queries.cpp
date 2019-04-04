@@ -218,3 +218,21 @@ write_query_t::write_query_t(const dialler::message_ptr &msg) {
 dialler::message_ptr write_query_t::to_message() const {
   return pack_to_message(queries::QUERY_KIND::WRITE, msg_id, query.data);
 }
+
+state_machine_updated_t::state_machine_updated_t() {
+  f = true;
+}
+
+state_machine_updated_t::state_machine_updated_t(const dialler::message_ptr &msg) {
+  ENSURE(msg->get_header()->kind
+         == (dialler::message::kind_t)queries::QUERY_KIND::UPDATE);
+  msgpack::unpacker pac = get_unpacker(msg);
+  msgpack::object_handle oh;
+
+  pac.next(oh);
+  f = oh.get().as<bool>();
+}
+
+dialler::message_ptr state_machine_updated_t::to_message() const {
+  return pack_to_message(queries::QUERY_KIND::UPDATE, f);
+}

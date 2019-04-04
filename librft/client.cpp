@@ -106,6 +106,10 @@ public:
       inner::client_update_async_result(*_parent, sq.id, std::vector<uint8_t>(), sq.msg);
       break;
     }
+    case QUERY_KIND::UPDATE: {
+      NOT_IMPLEMENTED;
+      break;
+    }
     default:
       NOT_IMPLEMENTED;
     }

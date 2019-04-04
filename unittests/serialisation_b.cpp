@@ -82,6 +82,18 @@ TEST_CASE("serialisation", "[bench]") {
     auto write_q_msg = write_q.to_message();
     BENCHMARK("write_query_t:unpack") { clients::write_query_t unpacked(write_q_msg); }
   }
+
+  {
+    clients::state_machine_updated_t state_machine_u;
+    BENCHMARK("state_machine_updated_t::to_message") {
+      UNUSED(state_machine_u.to_message());
+    }
+
+    auto sm_q = state_machine_u.to_message();
+    BENCHMARK("state_machine_updated_t:unpack") {
+      clients::state_machine_updated_t unpacked(sm_q);
+    }
+  }
 }
 
 #endif

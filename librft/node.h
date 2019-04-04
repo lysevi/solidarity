@@ -34,7 +34,7 @@ public:
   EXPORT ~node();
 
   params_t params() const { return _params; }
-  abstract_consensus_consumer *consumer() { return _consumer; }
+  EXPORT abstract_consensus_consumer *consumer();
   std::shared_ptr<consensus> get_consensus() { return _consensus; }
 
   EXPORT void start();
@@ -44,7 +44,10 @@ public:
 
   void add_client(uint64_t id);
   void rm_client(uint64_t id);
-  EXPORT size_t connections_count()const;
+  EXPORT size_t connections_count() const;
+
+  void notify_state_machine_update();
+
 private:
   params_t _params;
   std::shared_ptr<consensus> _consensus;

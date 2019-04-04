@@ -112,9 +112,35 @@ private:
   std::string _client_name;
 };
 
+class consumer_wrapper : public rft::abstract_consensus_consumer {
+public:
+  consumer_wrapper(node *parent, rft::abstract_consensus_consumer *t) {
+    _target = t;
+    _parent = parent;
+  }
+
+  void apply_cmd(const command &cmd) override {
+    _parent->notify_state_machine_update();
+    _target->apply_cmd(cmd);
+  }
+
+  void reset() override {
+    _parent->notify_state_machine_update();
+    _target->reset();
+  }
+
+  command snapshot() override { return _target->snapshot(); }
+
+  command read(const command &cmd) override { return _target->read(cmd); }
+
+  rft::abstract_consensus_consumer *_target;
+  node *_parent;
+};
+
 node::node(const params_t &p, abstract_consensus_consumer *consumer) {
   _params = p;
-  _consumer = consumer;
+  _consumer = new consumer_wrapper(this, consumer);
+
   auto log_prefix = utils::strings::args_to_string(p.name, "> ");
   _logger = std::make_shared<utils::logging::prefix_logger>(
       utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
@@ -122,7 +148,7 @@ node::node(const params_t &p, abstract_consensus_consumer *consumer) {
   auto jrn = std::make_shared<rft::logdb::memory_journal>();
   auto addr = rft::cluster_node().set_name(_params.name);
   auto s = rft::node_settings().set_name(_params.name);
-  _consensus = std::make_shared<rft::consensus>(s, nullptr, jrn, consumer, _logger);
+  _consensus = std::make_shared<rft::consensus>(s, nullptr, jrn, _consumer, _logger);
 
   rft::cluster_connection::params_t params;
   params.listener_params.port = p.port;
@@ -152,6 +178,10 @@ node::node(const params_t &p, abstract_consensus_consumer *consumer) {
 node::~node() {
   if (_cluster_con != nullptr) {
     stop();
+  }
+  if (_consumer != nullptr) {
+    delete _consumer;
+    _consumer = nullptr;
   }
 }
 
@@ -195,4 +225,16 @@ void node::rm_client(uint64_t id) {
 size_t node::connections_count() const {
   std::shared_lock l(_locker);
   return _clients.size();
+}
+
+void node::notify_state_machine_update() {
+  _logger->dbg("notify_state_machine_update()");
+  std::shared_lock l(_locker);
+  for (auto v : _clients) {
+    this->_listener->send_to(v, clients::state_machine_updated_t().to_message());
+  }
+}
+
+abstract_consensus_consumer *node::consumer() {
+  return dynamic_cast<consumer_wrapper *>(_consumer)->_target;
 }
