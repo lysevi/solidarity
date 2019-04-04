@@ -21,8 +21,21 @@ struct async_result_t;
 
 namespace inner {
 void client_update_connection_status(client &c, bool status);
-void client_update_async_result(client &c, uint64_t id, const std::vector<uint8_t> &cmd, const std::string&err);
+void client_update_async_result(client &c,
+                                uint64_t id,
+                                const std::vector<uint8_t> &cmd,
+                                const std::string &err);
 } // namespace inner
+
+class exception : public std::exception {
+public:
+  exception(std::string &m)
+      : _message(m) {}
+  const char *what() const noexcept override { return _message.c_str(); }
+
+private:
+  std::string _message;
+};
 
 class client {
 public:

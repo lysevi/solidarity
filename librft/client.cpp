@@ -12,9 +12,16 @@ using namespace rft;
 struct rft::async_result_t {
   uint64_t id;
   utils::async::locker locker;
-  rft::command result;
+  std::vector<uint8_t> answer;
   std::string err;
-  void wait() { locker.lock(); }
+
+  std::vector<uint8_t> result() {
+    locker.lock();
+    if (err.empty()) {
+      return answer;
+    }
+    throw rft::exception(err);
+  }
 };
 
 void rft::inner::client_update_connection_status(client &c, bool status) {
@@ -35,10 +42,10 @@ void rft::inner::client_update_async_result(client &c,
     auto ares = it->second;
     c._async_results.erase(it);
     c._locker.unlock();
-    ares->result.data = cmd;
+    ENSURE(id == ares->id);
+    ares->answer = cmd;
     ares->locker.unlock();
     ares->err = err;
-    ENSURE(id == ares->id);
   }
 }
 
@@ -167,8 +174,6 @@ void client::send(const std::vector<uint8_t> &cmd) {
   queries::clients::write_query_t rq(waiter->id, c);
 
   _dialler->send_async(rq.to_message());
-  /*
-    waiter->wait();*/
 }
 
 std::vector<uint8_t> client::read(const std::vector<uint8_t> &cmd) {
@@ -180,6 +185,5 @@ std::vector<uint8_t> client::read(const std::vector<uint8_t> &cmd) {
 
   _dialler->send_async(rq.to_message());
 
-  waiter->wait();
-  return waiter->result.data;
+  return waiter->result();
 }
