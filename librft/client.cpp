@@ -173,7 +173,8 @@ void client::connect() {
     _threads[i] = std::thread([this]() {
       _threads_at_work.fetch_add(1);
       while (!_stoped) {
-        _io_context.run_one();
+        _io_context.run();
+        _io_context.restart();
       }
       _threads_at_work.fetch_sub(1);
     });
