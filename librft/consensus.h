@@ -4,6 +4,7 @@
 #include <librft/journal.h>
 #include <librft/settings.h>
 #include <librft/state.h>
+#include <librft/abstract_consumer.h>
 #include <libutils/logger.h>
 
 #include <memory>
@@ -13,14 +14,6 @@
 
 namespace rft {
 
-class abstract_consensus_consumer {
-public:
-  virtual ~abstract_consensus_consumer() {}
-  virtual void apply_cmd(const command &cmd) = 0;
-  virtual void reset() = 0;
-  virtual command snapshot() = 0;
-  virtual command read(const command &cmd) = 0;
-};
 
 class consensus : public abstract_cluster_client {
   enum class RDIRECTION { FORWARDS = 0, BACKWARDS };

@@ -238,3 +238,7 @@ void node::notify_state_machine_update() {
 abstract_consensus_consumer *node::consumer() {
   return dynamic_cast<consumer_wrapper *>(_consumer)->_target;
 }
+
+std::shared_ptr<consensus> node::get_consensus() {
+  return _consensus;
+}

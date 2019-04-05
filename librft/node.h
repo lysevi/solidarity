@@ -1,7 +1,8 @@
 #pragma once
 
-#include <librft/consensus.h>
+#include <librft/abstract_consumer.h>
 #include <librft/exports.h>
+#include <librft/state.h>
 #include <libutils/logger.h>
 
 #include <string>
@@ -11,11 +12,13 @@
 namespace dialler {
 class listener;
 class abstract_listener_consumer;
+
 } // namespace dialler
 
 namespace rft {
 class cluster_connection;
-
+class consensus;
+class state;
 class node {
 public:
   struct params_t {
@@ -35,7 +38,7 @@ public:
 
   params_t params() const { return _params; }
   EXPORT abstract_consensus_consumer *consumer();
-  std::shared_ptr<consensus> get_consensus() { return _consensus; }
+  EXPORT std::shared_ptr<consensus> get_consensus();
 
   EXPORT void start();
   EXPORT void stop();
