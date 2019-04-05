@@ -130,7 +130,7 @@ private:
 
 client::client(const params_t &p)
     : _params(p)
-    , _io_context(p.threads_count) {
+    , _io_context((int)p.threads_count) {
   if (p.threads_count == 0) {
     throw rft::exception(std::string("threads count can't be zero"));
   }
@@ -172,8 +172,11 @@ void client::connect() {
   for (size_t i = 0; i < _params.threads_count; ++i) {
     _threads[i] = std::thread([this]() {
       _threads_at_work.fetch_add(1);
-      while (!_stoped) {
+      while (true) {
         _io_context.run();
+        if (_stoped) {
+          break;
+        }
         _io_context.restart();
       }
       _threads_at_work.fetch_sub(1);

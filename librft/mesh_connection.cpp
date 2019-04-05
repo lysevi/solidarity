@@ -99,12 +99,11 @@ void listener::on_disconnect(const dialler::listener_client_ptr &i) {
 
 } // namespace rft::impl
 
-mesh_connection::mesh_connection(
-    cluster_node self_addr,
-    const std::shared_ptr<abstract_cluster_client> &client,
-    const utils::logging::abstract_logger_ptr &logger,
-    const mesh_connection::params_t &params)
-    : _io_context(params.thread_count) {
+mesh_connection::mesh_connection(cluster_node self_addr,
+                                 const std::shared_ptr<abstract_cluster_client> &client,
+                                 const utils::logging::abstract_logger_ptr &logger,
+                                 const mesh_connection::params_t &params)
+    : _io_context((int)params.thread_count) {
   if (params.thread_count == 0) {
     THROW_EXCEPTION("threads count is zero!");
   }
@@ -126,8 +125,11 @@ void mesh_connection::start() {
   for (size_t i = 0; i < _params.thread_count; ++i) {
     _threads[i] = std::thread([this]() {
       _threads_at_work.fetch_add(1);
-      while (!_stoped) {
+      while (true) {
         _io_context.run();
+        if (_stoped) {
+          break;
+        }
         _io_context.restart();
       }
       _threads_at_work.fetch_sub(1);
@@ -155,8 +157,6 @@ void mesh_connection::start() {
     d->start_async_connection();
   }
 }
-
-
 
 void mesh_connection::stop() {
   _logger->info("stoping...");
@@ -188,8 +188,8 @@ void mesh_connection::stop() {
 }
 
 void mesh_connection::send_to(const cluster_node &from,
-                                 const cluster_node &to,
-                                 const append_entries &m) {
+                              const cluster_node &to,
+                              const append_entries &m) {
   std::shared_lock l(_locker);
   _logger->dbg("send to ", to);
   if (auto it = _accepted_out_connections.find(to);
@@ -231,7 +231,7 @@ std::vector<cluster_node> mesh_connection::all_nodes() const {
 }
 
 void mesh_connection::accept_out_connection(const cluster_node &name,
-                                               const cluster_node &addr) {
+                                            const cluster_node &addr) {
   bool call_client = false;
   {
     std::lock_guard l(_locker);
