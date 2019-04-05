@@ -113,10 +113,6 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
       result.votes_to_me.insert(from);
       size_t quorum = quorum_for_cluster(cluster_size, settings.vote_quorum());
       ENSURE(quorum <= cluster_size);
-      /// quorum = 50% +1
-      /* if (std::fabs(settings.vote_quorum() - float(1.0)) < float(0.00001)) {
-         quorum += float(1.0);
-       }*/
       if (result.votes_to_me.size() >= quorum) {
         result.node_kind = NODE_KIND::LEADER;
         result.term++;

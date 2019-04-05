@@ -15,6 +15,7 @@ struct changed_state_t;
 
 inline size_t quorum_for_cluster(size_t cluster_size, float quorum) {
   size_t quorum_size = static_cast<size_t>(cluster_size * quorum);
+  /// quorum = 50% +1
   if (std::fabs(quorum - 1.0) > 0.0001) { // quorum!=1.0
     quorum_size += 1;
   }

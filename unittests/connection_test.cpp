@@ -19,7 +19,7 @@ struct mock_cluster_client : rft::abstract_cluster_client {
     connected.insert(addr);
   }
 
-  void heartbeat() override { heartbeats++; }
+  void heartbeat() override {}
 
   bool data_equal_to(const std::vector<std::uint8_t> &o) const {
     std::lock_guard l(locker);
@@ -40,7 +40,6 @@ struct mock_cluster_client : rft::abstract_cluster_client {
   mutable std::mutex locker;
   std::unordered_set<rft::cluster_node> losted;
   std::unordered_set<rft::cluster_node> connected;
-  size_t heartbeats = 0;
 };
 
 TEST_CASE("mesh_connection", "[network]") {
@@ -175,10 +174,6 @@ TEST_CASE("mesh_connection", "[network]") {
   }
   for (size_t i = 0; i < connections.size(); ++i) {
     auto v = connections[i];
-    /*auto v_client = dynamic_cast<mock_cluster_client *>(clients[v->self_addr()].get());
-    while (v_client->heartbeats < 2) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }*/
     v->stop();
     for (size_t j = i + 1; j < connections.size(); ++j) {
       auto node = connections[j]->self_addr();

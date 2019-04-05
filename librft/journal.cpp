@@ -114,7 +114,7 @@ void memory_journal::erase_all_after(const index_t lsn) {
   std::vector<rmtype> to_erase;
   to_erase.reserve(_wal.size());
   for (auto it = _wal.rbegin(); it != _wal.rend(); ++it) {
-    if (it->first == lsn /*&& it->second.term == e.term*/) {
+    if (it->first == lsn) {
       break;
     }
     to_erase.push_back(*it);
