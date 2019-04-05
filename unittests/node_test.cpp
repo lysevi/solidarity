@@ -7,6 +7,7 @@
 #include "mock_consumer.h"
 
 #include <catch.hpp>
+#include <condition_variable>
 
 TEST_CASE("node", "[network]") {
   size_t cluster_size = 0;
@@ -101,16 +102,37 @@ TEST_CASE("node", "[network]") {
   }
 
   auto leader_name = leaders.begin()->name();
-  //std::shared_ptr<rft::node> leader_node = nodes[leader_name];
+  // std::shared_ptr<rft::node> leader_node = nodes[leader_name];
 
   auto leader_client = clients[leader_name];
   std::vector<uint8_t> first_cmd{1, 2, 3, 4, 5};
+
+  std::mutex locker;
+  std::unique_lock ulock(locker);
+  bool is_on_update_received = false;
+  std::condition_variable cond;
+
+  auto uh_id = leader_client->add_update_handler([&is_on_update_received, &cond]() {
+    is_on_update_received = true;
+    cond.notify_all();
+  });
+
   leader_client->send(first_cmd);
+
+  while (true) {
+    cond.wait(ulock, [&is_on_update_received]() { return is_on_update_received; });
+    if (is_on_update_received) {
+      break;
+    }
+  }
+
+  leader_client->rm_update_handler(uh_id);
 
   auto target = first_cmd;
   std::transform(target.begin(), target.end(), target.begin(), [](auto &v) -> uint8_t {
     return uint8_t(v + 1);
   });
+
   for (auto &kv : clients) {
     while (true) {
       auto answer = kv.second->read({1});

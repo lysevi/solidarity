@@ -71,6 +71,10 @@ void rft::inner::client_update_async_result(client &c,
   }
 }
 
+void rft::inner::client_notify_update(client &c) {
+  c.notify_on_update();
+}
+
 class client_connection : public dialler::abstract_dial {
 public:
   client_connection(client *const parent)
@@ -107,7 +111,7 @@ public:
       break;
     }
     case QUERY_KIND::UPDATE: {
-      NOT_IMPLEMENTED;
+      inner::client_notify_update(*_parent);
       break;
     }
     default:
@@ -144,6 +148,7 @@ void client::disconnect() {
   }
 
   _stoped = true;
+  _io_context.stop();
   while (_threads_at_work.load() != 0) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
@@ -168,7 +173,7 @@ void client::connect() {
     _threads[i] = std::thread([this]() {
       _threads_at_work.fetch_add(1);
       while (!_stoped) {
-        _io_context.poll_one();
+        _io_context.run_one();
       }
       _threads_at_work.fetch_sub(1);
     });
@@ -213,4 +218,25 @@ std::vector<uint8_t> client::read(const std::vector<uint8_t> &cmd) {
   _dialler->send_async(rq.to_message());
 
   return waiter->result();
+}
+
+uint64_t client::add_update_handler(const std::function<void()> &f) {
+  std::lock_guard l(_locker);
+  auto id = _next_query_id.fetch_add(1);
+  _on_update_handlers[id] = f;
+  return id;
+}
+
+void client::rm_update_handler(uint64_t id) {
+  std::lock_guard l(_locker);
+  if (auto it = _on_update_handlers.find(id); it != _on_update_handlers.end()) {
+    _on_update_handlers.erase(it);
+  }
+}
+
+void client::notify_on_update() {
+  std::lock_guard l(_locker);
+  for (auto &kv : _on_update_handlers) {
+    kv.second();
+  }
 }
