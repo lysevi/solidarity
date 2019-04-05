@@ -12,13 +12,13 @@
 #include <boost/asio.hpp>
 
 namespace rft {
-class cluster_connection;
+class mesh_connection;
 
 namespace impl {
 
 class out_connection : public dialler::abstract_dial {
 public:
-  out_connection(const std::shared_ptr<cluster_connection> parent,
+  out_connection(const std::shared_ptr<mesh_connection> parent,
                  const cluster_node &target_addr);
   void on_connect() override;
   void on_new_message(dialler::message_ptr &&d, bool &cancel) override;
@@ -26,14 +26,14 @@ public:
                         const boost::system::error_code &err) override;
 
 private:
-  std::shared_ptr<cluster_connection> _parent;
+  std::shared_ptr<mesh_connection> _parent;
   cluster_node _target_addr;
   cluster_node _self_logical_addr;
 };
 
 class listener : public dialler::abstract_listener_consumer {
 public:
-  listener(const std::shared_ptr<cluster_connection> parent);
+  listener(const std::shared_ptr<mesh_connection> parent);
 
   void on_network_error(dialler::listener_client_ptr i,
                         const dialler::message_ptr &d,
@@ -48,7 +48,7 @@ public:
   void on_disconnect(const dialler::listener_client_ptr &i) override;
 
 private:
-  std::shared_ptr<cluster_connection> _parent;
+  std::shared_ptr<mesh_connection> _parent;
   cluster_node _self_logical_addr;
 
   std::vector<dialler::message_ptr> _recv_message_pool;
@@ -56,8 +56,8 @@ private:
 
 } // namespace impl
 
-class cluster_connection : public abstract_cluster,
-                           public std::enable_shared_from_this<cluster_connection> {
+class mesh_connection : public abstract_cluster,
+                           public std::enable_shared_from_this<mesh_connection> {
 public:
   struct params_t {
     params_t() { thread_count = std::thread::hardware_concurrency(); }
@@ -65,13 +65,13 @@ public:
     std::vector<dialler::dial::params_t> addrs;
     size_t thread_count = 0;
   };
-  EXPORT cluster_connection(cluster_node self_addr,
+  EXPORT mesh_connection(cluster_node self_addr,
                             const std::shared_ptr<abstract_cluster_client> &client,
                             const utils::logging::abstract_logger_ptr &logger,
                             const params_t &params);
   EXPORT void start();
   EXPORT void stop();
-  EXPORT ~cluster_connection();
+  EXPORT ~mesh_connection();
 
   EXPORT void send_to(const cluster_node &from,
                       const cluster_node &to,

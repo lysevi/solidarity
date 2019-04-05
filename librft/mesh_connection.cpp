@@ -1,11 +1,11 @@
-#include <librft/connection.h>
+#include <librft/mesh_connection.h>
 #include <librft/queries.h>
 #include <libutils/utils.h>
 
 using namespace rft;
 
 namespace rft::impl {
-out_connection::out_connection(const std::shared_ptr<cluster_connection> parent,
+out_connection::out_connection(const std::shared_ptr<mesh_connection> parent,
                                const cluster_node &target_addr) {
   _parent = parent;
   _target_addr = target_addr;
@@ -41,7 +41,7 @@ void out_connection::on_network_error(const dialler::message_ptr &d,
   _parent->rm_out_connection(_self_logical_addr);
 }
 
-listener::listener(const std::shared_ptr<cluster_connection> parent) {
+listener::listener(const std::shared_ptr<mesh_connection> parent) {
   _parent = parent;
 }
 
@@ -99,11 +99,11 @@ void listener::on_disconnect(const dialler::listener_client_ptr &i) {
 
 } // namespace rft::impl
 
-cluster_connection::cluster_connection(
+mesh_connection::mesh_connection(
     cluster_node self_addr,
     const std::shared_ptr<abstract_cluster_client> &client,
     const utils::logging::abstract_logger_ptr &logger,
-    const cluster_connection::params_t &params)
+    const mesh_connection::params_t &params)
     : _io_context(params.thread_count) {
   if (params.thread_count == 0) {
     THROW_EXCEPTION("threads count is zero!");
@@ -115,11 +115,11 @@ cluster_connection::cluster_connection(
   _self_addr = self_addr;
 }
 
-cluster_connection::~cluster_connection() {
+mesh_connection::~mesh_connection() {
   stop();
 }
 
-void cluster_connection::start() {
+void mesh_connection::start() {
   std::lock_guard l(_locker);
   _stoped = false;
   _threads.resize(_params.thread_count);
@@ -158,7 +158,7 @@ void cluster_connection::start() {
   _timer->async_wait([this](auto) { this->heartbeat_timer(); });
 }
 
-void cluster_connection::heartbeat_timer() {
+void mesh_connection::heartbeat_timer() {
   _client->heartbeat();
   if (!_stoped) {
     _timer->expires_at(_timer->expires_at() + boost::posix_time::milliseconds(100));
@@ -166,7 +166,7 @@ void cluster_connection::heartbeat_timer() {
   }
 }
 
-void cluster_connection::stop() {
+void mesh_connection::stop() {
   _logger->info("stoping...");
   _stoped = true;
 
@@ -196,7 +196,7 @@ void cluster_connection::stop() {
   _logger->info("stopped.");
 }
 
-void cluster_connection::send_to(const cluster_node &from,
+void mesh_connection::send_to(const cluster_node &from,
                                  const cluster_node &to,
                                  const append_entries &m) {
   std::shared_lock l(_locker);
@@ -215,7 +215,7 @@ void cluster_connection::send_to(const cluster_node &from,
   }
 }
 
-void cluster_connection::send_all(const cluster_node &from, const append_entries &m) {
+void mesh_connection::send_all(const cluster_node &from, const append_entries &m) {
   _logger->dbg("send all");
   auto all = all_nodes();
   for (auto &&o : std::move(all)) {
@@ -223,11 +223,11 @@ void cluster_connection::send_all(const cluster_node &from, const append_entries
   }
 }
 
-size_t cluster_connection::size() {
+size_t mesh_connection::size() {
   return all_nodes().size();
 }
 
-std::vector<cluster_node> cluster_connection::all_nodes() const {
+std::vector<cluster_node> mesh_connection::all_nodes() const {
   std::shared_lock l(_locker);
   std::vector<cluster_node> result;
   result.reserve(_accepted_input_connections.size());
@@ -239,7 +239,7 @@ std::vector<cluster_node> cluster_connection::all_nodes() const {
   return result;
 }
 
-void cluster_connection::accept_out_connection(const cluster_node &name,
+void mesh_connection::accept_out_connection(const cluster_node &name,
                                                const cluster_node &addr) {
   bool call_client = false;
   {
@@ -254,7 +254,7 @@ void cluster_connection::accept_out_connection(const cluster_node &name,
   }
 }
 
-void cluster_connection::accept_input_connection(const cluster_node &name, uint64_t id) {
+void mesh_connection::accept_input_connection(const cluster_node &name, uint64_t id) {
   bool call_client = false;
   {
     std::lock_guard l(_locker);
@@ -269,7 +269,7 @@ void cluster_connection::accept_input_connection(const cluster_node &name, uint6
   }
 }
 
-void cluster_connection::rm_out_connection(const cluster_node &name) {
+void mesh_connection::rm_out_connection(const cluster_node &name) {
   {
     std::lock_guard l(_locker);
     _logger->dbg(name, " disconnected as output");
@@ -282,7 +282,7 @@ void cluster_connection::rm_out_connection(const cluster_node &name) {
   _client->lost_connection_with(name);
 }
 
-void cluster_connection::rm_input_connection(const cluster_node &name) {
+void mesh_connection::rm_input_connection(const cluster_node &name) {
   {
     std::lock_guard l(_locker);
     _logger->dbg(name, " disconnected as input");
@@ -293,7 +293,7 @@ void cluster_connection::rm_input_connection(const cluster_node &name) {
   }
 }
 
-void cluster_connection::on_new_command(const std::vector<dialler::message_ptr> &m) {
+void mesh_connection::on_new_command(const std::vector<dialler::message_ptr> &m) {
   queries::command_t cmd_q(m);
   _logger->dbg("on_new_command: from=", cmd_q.from);
   _client->recv(cmd_q.from, cmd_q.cmd);

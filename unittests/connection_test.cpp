@@ -1,6 +1,6 @@
 #include "helpers.h"
 #include "mock_consumer.h"
-#include <librft/connection.h>
+#include <librft/mesh_connection.h>
 #include <catch.hpp>
 
 struct mock_cluster_client : rft::abstract_cluster_client {
@@ -43,32 +43,32 @@ struct mock_cluster_client : rft::abstract_cluster_client {
   size_t heartbeats = 0;
 };
 
-TEST_CASE("connection", "[network]") {
+TEST_CASE("mesh_connection", "[network]") {
   size_t cluster_size = 0;
   auto tst_log_prefix = utils::strings::args_to_string("test?> ");
   auto tst_logger = std::make_shared<utils::logging::prefix_logger>(
       utils::logging::logger_manager::instance()->get_shared_logger(), tst_log_prefix);
   size_t data_size = 1;
 
-  SECTION("connection.2") {
+  SECTION("mesh_connection.2") {
     cluster_size = 2;
-    SECTION("connection.small_data") { data_size = 1; }
-    SECTION("connection.big_data") {
+    SECTION("mesh_connection.small_data") { data_size = 1; }
+    SECTION("mesh_connection.big_data") {
       data_size = size_t(dialler::message::MAX_BUFFER_SIZE * cluster_size * 2);
     }
   }
 
-  SECTION("connection.3") {
+  SECTION("mesh_connection.3") {
     cluster_size = 3;
-    SECTION("connection.small_data") { data_size = 1; }
-    SECTION("connection.big_data") {
+    SECTION("mesh_connection.small_data") { data_size = 1; }
+    SECTION("mesh_connection.big_data") {
       data_size = size_t(dialler::message::MAX_BUFFER_SIZE * cluster_size * 3.75);
     }
   }
   SECTION("connection.5") {
     cluster_size = 5;
-    SECTION("connection.small_data") { data_size = 1; }
-    SECTION("connection.big_data") {
+    SECTION("mesh_connection.small_data") { data_size = 1; }
+    SECTION("mesh_connection.big_data") {
       data_size = size_t(dialler::message::MAX_BUFFER_SIZE * cluster_size * 1.75);
     }
   }
@@ -76,7 +76,7 @@ TEST_CASE("connection", "[network]") {
   std::vector<unsigned short> ports(cluster_size);
   std::iota(ports.begin(), ports.end(), unsigned short(8000));
 
-  std::vector<std::shared_ptr<rft::cluster_connection>> connections;
+  std::vector<std::shared_ptr<rft::mesh_connection>> connections;
   std::unordered_map<rft::cluster_node, std::shared_ptr<mock_cluster_client>> clients;
   connections.reserve(cluster_size);
   clients.reserve(cluster_size);
@@ -91,7 +91,7 @@ TEST_CASE("connection", "[network]") {
 
     EXPECT_EQ(out_ports.size(), ports.size() - 1);
 
-    rft::cluster_connection::params_t params;
+    rft::mesh_connection::params_t params;
     params.listener_params.port = p;
     params.thread_count = 1;
     params.addrs.reserve(out_ports.size());
@@ -107,7 +107,7 @@ TEST_CASE("connection", "[network]") {
 
     auto addr = rft::cluster_node().set_name(utils::strings::args_to_string("node_", p));
     auto clnt = std::make_shared<mock_cluster_client>();
-    auto c = std::make_shared<rft::cluster_connection>(addr, clnt, logger, params);
+    auto c = std::make_shared<rft::mesh_connection>(addr, clnt, logger, params);
     connections.push_back(c);
     clients.insert({addr, clnt});
     c->start();
@@ -191,19 +191,19 @@ TEST_CASE("connection", "[network]") {
   connections.clear();
 }
 
-TEST_CASE("connection.election", "[network]") {
+TEST_CASE("mesh_connection.election", "[network]") {
   size_t cluster_size = 0;
   auto tst_log_prefix = utils::strings::args_to_string("test?> ");
   auto tst_logger = std::make_shared<utils::logging::prefix_logger>(
       utils::logging::logger_manager::instance()->get_shared_logger(), tst_log_prefix);
 
-  SECTION("cluster.3") { cluster_size = 3; }
-  SECTION("cluster.4") { cluster_size = 4; }
+  SECTION("mesh_connection.cluster.3") { cluster_size = 3; }
+  SECTION("mesh_connection.cluster.4") { cluster_size = 4; }
 
   std::vector<unsigned short> ports(cluster_size);
   std::iota(ports.begin(), ports.end(), unsigned short(8000));
 
-  std::unordered_map<rft::cluster_node, std::shared_ptr<rft::cluster_connection>>
+  std::unordered_map<rft::cluster_node, std::shared_ptr<rft::mesh_connection>>
       connections;
   std::unordered_map<rft::cluster_node, std::shared_ptr<rft::consensus>> clients;
   std::unordered_map<rft::cluster_node, std::shared_ptr<mock_consumer>> consumers;
@@ -221,7 +221,7 @@ TEST_CASE("connection.election", "[network]") {
 
     EXPECT_EQ(out_ports.size(), ports.size() - 1);
 
-    rft::cluster_connection::params_t params;
+    rft::mesh_connection::params_t params;
     params.listener_params.port = p;
     params.thread_count = 2;
     params.addrs.reserve(out_ports.size());
@@ -242,7 +242,7 @@ TEST_CASE("connection.election", "[network]") {
     auto consumer = std::make_shared<mock_consumer>();
     auto clnt = std::make_shared<rft::consensus>(s, nullptr, jrn, consumer.get());
 
-    auto c = std::make_shared<rft::cluster_connection>(addr, clnt, logger, params);
+    auto c = std::make_shared<rft::mesh_connection>(addr, clnt, logger, params);
     clnt->set_cluster(c.get());
 
     connections.insert({addr, c});

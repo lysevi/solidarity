@@ -1,4 +1,4 @@
-#include <librft/connection.h>
+#include <librft/mesh_connection.h>
 #include <librft/consensus.h>
 #include <librft/node.h>
 #include <librft/protocol_version.h>
@@ -150,7 +150,7 @@ node::node(utils::logging::abstract_logger_ptr logger,
   auto s = rft::node_settings().set_name(_params.name);
   _consensus = std::make_shared<rft::consensus>(s, nullptr, jrn, _consumer, _logger);
 
-  rft::cluster_connection::params_t params;
+  rft::mesh_connection::params_t params;
   params.listener_params.port = p.port;
   params.thread_count = p.thread_count;
   params.addrs.reserve(p.cluster.size());
@@ -165,7 +165,7 @@ node::node(utils::logging::abstract_logger_ptr logger,
                  });
 
   _cluster_con
-      = std::make_shared<rft::cluster_connection>(addr, _consensus, _logger, params);
+      = std::make_shared<rft::mesh_connection>(addr, _consensus, _logger, params);
   _consensus->set_cluster(_cluster_con.get());
 
   dialler::listener::params_t lst_params;

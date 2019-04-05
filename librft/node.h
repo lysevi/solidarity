@@ -16,7 +16,7 @@ class abstract_listener_consumer;
 } // namespace dialler
 
 namespace rft {
-class cluster_connection;
+class mesh_connection;
 class consensus;
 class state;
 class node {
@@ -55,7 +55,7 @@ public:
 private:
   params_t _params;
   std::shared_ptr<consensus> _consensus;
-  std::shared_ptr<cluster_connection> _cluster_con;
+  std::shared_ptr<mesh_connection> _cluster_con;
   abstract_consensus_consumer *_consumer;
 
   utils::logging::abstract_logger_ptr _logger;
