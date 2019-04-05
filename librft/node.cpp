@@ -1,5 +1,5 @@
-#include <librft/mesh_connection.h>
 #include <librft/consensus.h>
+#include <librft/mesh_connection.h>
 #include <librft/node.h>
 #include <librft/protocol_version.h>
 #include <librft/queries.h>
@@ -173,6 +173,11 @@ node::node(utils::logging::abstract_logger_ptr logger,
   _listener = std::make_shared<dialler::listener>(_cluster_con->context(), lst_params);
   _listener_consumer = std::make_shared<node_listener>(this, _logger);
   _listener->add_consumer(_listener_consumer.get());
+
+  auto original_period = _consensus->settings().election_timeout().count();
+  _timer_period = uint32_t(original_period * 0.1);
+  _timer = std::make_unique<boost::asio::deadline_timer>(
+      *_cluster_con->context(), boost::posix_time::milliseconds(_timer_period));
 }
 
 node::~node() {
@@ -186,13 +191,18 @@ node::~node() {
 }
 
 void node::start() {
+  _stoped = false;
   _cluster_con->start();
+  _timer->async_wait([this](auto) { this->heartbeat_timer(); });
   _listener->start();
   _listener->wait_starting();
 }
 
 void node::stop() {
   if (_listener != nullptr) {
+    _stoped = true;
+    _timer->cancel();
+
     _listener->stop();
     _listener->wait_stoping();
     _listener = nullptr;
@@ -231,7 +241,8 @@ void node::notify_state_machine_update() {
   _logger->dbg("notify_state_machine_update()");
   std::shared_lock l(_locker);
   for (auto v : _clients) {
-    this->_listener->send_to(v, clients::state_machine_updated_t().to_message());
+    auto m = clients::state_machine_updated_t().to_message();
+    this->_listener->send_to(v, m);
   }
 }
 
@@ -241,4 +252,13 @@ abstract_consensus_consumer *node::consumer() {
 
 std::shared_ptr<consensus> node::get_consensus() {
   return _consensus;
+}
+
+void node::heartbeat_timer() {
+  _consensus->heartbeat();
+  if (!_stoped) {
+    _timer->expires_at(_timer->expires_at()
+                       + boost::posix_time::milliseconds(_timer_period));
+    _timer->async_wait([this](auto) { this->heartbeat_timer(); });
+  }
 }

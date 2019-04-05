@@ -33,7 +33,8 @@ public:
   node(const node &) = delete;
   node(const node &&) = delete;
   node &operator=(const node &) = delete;
-  EXPORT node(utils::logging::abstract_logger_ptr logger, const params_t &p,
+  EXPORT node(utils::logging::abstract_logger_ptr logger,
+              const params_t &p,
               abstract_consensus_consumer *consumer);
   EXPORT ~node();
 
@@ -53,6 +54,10 @@ public:
   void notify_state_machine_update();
 
 private:
+  void heartbeat_timer();
+
+private:
+  bool _stoped;
   params_t _params;
   std::shared_ptr<consensus> _consensus;
   std::shared_ptr<mesh_connection> _cluster_con;
@@ -65,5 +70,8 @@ private:
 
   mutable std::shared_mutex _locker;
   std::unordered_set<uint64_t> _clients;
+  
+  uint32_t _timer_period;
+  std::unique_ptr<boost::asio::deadline_timer> _timer;
 };
 } // namespace rft

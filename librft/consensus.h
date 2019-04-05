@@ -1,10 +1,10 @@
 #pragma once
 
+#include <librft/abstract_consumer.h>
 #include <librft/exports.h>
 #include <librft/journal.h>
 #include <librft/settings.h>
 #include <librft/state.h>
-#include <librft/abstract_consumer.h>
 #include <libutils/logger.h>
 
 #include <memory>
@@ -13,7 +13,6 @@
 #include <unordered_map>
 
 namespace rft {
-
 
 class consensus : public abstract_cluster_client {
   enum class RDIRECTION { FORWARDS = 0, BACKWARDS };
@@ -55,6 +54,11 @@ public:
   cluster_node self_addr() const {
     std::lock_guard l(_locker);
     return _self_addr;
+  }
+
+  node_settings settings() const {
+    std::lock_guard l(_locker);
+    return _settings;
   }
 
 protected:

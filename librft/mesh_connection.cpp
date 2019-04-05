@@ -153,24 +153,14 @@ void mesh_connection::start() {
     _diallers.insert(std::make_pair(cnaddr, d));
     d->start_async_connection();
   }
-  _timer = std::make_unique<boost::asio::deadline_timer>(
-      _io_context, boost::posix_time::milliseconds(100));
-  _timer->async_wait([this](auto) { this->heartbeat_timer(); });
 }
 
-void mesh_connection::heartbeat_timer() {
-  _client->heartbeat();
-  if (!_stoped) {
-    _timer->expires_at(_timer->expires_at() + boost::posix_time::milliseconds(100));
-    _timer->async_wait([this](auto) { this->heartbeat_timer(); });
-  }
-}
+
 
 void mesh_connection::stop() {
   _logger->info("stoping...");
   _stoped = true;
 
-  _timer->cancel();
   _io_context.stop();
   while (_threads_at_work.load() != 0) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));

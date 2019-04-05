@@ -94,8 +94,7 @@ protected:
   void rm_out_connection(const cluster_node &name);
   void rm_input_connection(const cluster_node &name);
   void on_new_command(const std::vector<dialler::message_ptr> &m);
-  void heartbeat_timer();
-
+  
 private:
   utils::logging::abstract_logger_ptr _logger;
   cluster_node _self_addr;
@@ -119,7 +118,6 @@ private:
   std::unordered_map<cluster_node, uint64_t>
       _accepted_input_connections; // loigcal_name->id
 
-  std::unique_ptr<boost::asio::deadline_timer> _timer;
   std::shared_ptr<abstract_cluster_client> _client;
 };
 } // namespace rft
