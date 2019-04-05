@@ -17,6 +17,7 @@ TEST_CASE("node", "[network]") {
 
   SECTION("node.2") { cluster_size = 2; }
   SECTION("node.3") { cluster_size = 3; }
+  SECTION("node.5") { cluster_size = 5; }
 
   std::vector<unsigned short> ports(cluster_size);
   std::iota(ports.begin(), ports.end(), unsigned short(8000));
