@@ -33,7 +33,8 @@ public:
   node(const node &) = delete;
   node(const node &&) = delete;
   node &operator=(const node &) = delete;
-  EXPORT node(const params_t &p, abstract_consensus_consumer *consumer);
+  EXPORT node(utils::logging::abstract_logger_ptr logger, const params_t &p,
+              abstract_consensus_consumer *consumer);
   EXPORT ~node();
 
   params_t params() const { return _params; }

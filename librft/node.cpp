@@ -137,13 +137,13 @@ public:
   node *_parent;
 };
 
-node::node(const params_t &p, abstract_consensus_consumer *consumer) {
+node::node(utils::logging::abstract_logger_ptr logger,
+           const params_t &p,
+           abstract_consensus_consumer *consumer) {
   _params = p;
   _consumer = new consumer_wrapper(this, consumer);
 
-  auto log_prefix = utils::strings::args_to_string(p.name, "> ");
-  _logger = std::make_shared<utils::logging::prefix_logger>(
-      utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
+  _logger = logger;
 
   auto jrn = std::make_shared<rft::logdb::memory_journal>();
   auto addr = rft::cluster_node().set_name(_params.name);

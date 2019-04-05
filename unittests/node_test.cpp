@@ -51,8 +51,12 @@ TEST_CASE("node", "[network]") {
     params.cluster = out_addrs;
     params.name = utils::strings::args_to_string("node_", p);
 
+    auto log_prefix = utils::strings::args_to_string(params.name, "> ");
+    auto node_logger = std::make_shared<utils::logging::prefix_logger>(
+        utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
+
     auto consumer = std::make_shared<mock_consumer>();
-    auto n = std::make_shared<rft::node>(params, consumer.get());
+    auto n = std::make_shared<rft::node>(node_logger, params, consumer.get());
 
     n->start();
 
