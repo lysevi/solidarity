@@ -135,8 +135,7 @@ void async_io::readNextAsync() {
       ENSURE(read_bytes == message::SIZE_OF_SIZE);
 
       auto data_left = self->next_message_size - message::SIZE_OF_SIZE;
-      message_ptr d = std::make_shared<message>(0);
-	  d->init_for_size(self->next_message_size);
+      message_ptr d = std::make_shared<message>(self->next_message_size);
 
       auto buf_ptr = (uint8_t *)(d->get_header());
       auto buf = boost::asio::buffer(buf_ptr, data_left);

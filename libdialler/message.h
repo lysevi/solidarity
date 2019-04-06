@@ -46,26 +46,16 @@ public:
     *_size = *other._size;
   }
 
-  message(size_t sz) {
-    assert((sz + SIZE_OF_SIZE + SIZE_OF_HEADER) <= MAX_MESSAGE_SIZE);
-    auto full_size = static_cast<size_t>(sz + SIZE_OF_SIZE + SIZE_OF_HEADER);
-    init_for_size(full_size);
-  }
+  message(size_t sz) { init_for_size(sz); }
 
-  message(size_t sz, const kind_t &kind_)
-      : message(sz) {
+  message(size_t sz, const kind_t &kind_) {
+    auto full_size = static_cast<size_t>(sz + SIZE_OF_SIZE + SIZE_OF_HEADER);
+    assert(full_size <= MAX_MESSAGE_SIZE);
+    init_for_size(full_size);
     get_header()->kind = kind_;
   }
 
   ~message() {}
-
-  void init_for_size(size_t sz) {
-    std::fill(std::begin(_data), std::end(_data), uint8_t(0));
-    _size = (size_t *)_data.data();
-    *_size = sz;
-    auto hdr = get_header();
-    hdr->is_end_block = hdr->is_piece_block = hdr->is_start_block = uint8_t(0);
-  }
 
   uint8_t *value() { return (_data.data() + SIZE_OF_SIZE + sizeof(header_t)); }
   size_t values_size() const { return *_size - SIZE_OF_SIZE - SIZE_OF_HEADER; }
@@ -79,6 +69,15 @@ public:
 
   header_t *get_header() {
     return reinterpret_cast<header_t *>(this->_data.data() + SIZE_OF_SIZE);
+  }
+
+private:
+  void init_for_size(size_t sz) {
+    std::fill(std::begin(_data), std::end(_data), uint8_t(0));
+    _size = (size_t *)_data.data();
+    *_size = sz;
+    auto hdr = get_header();
+    hdr->is_end_block = hdr->is_piece_block = hdr->is_start_block = uint8_t(0);
   }
 
 private:
