@@ -132,7 +132,7 @@ client::client(const params_t &p)
     : _params(p)
     , _io_context((int)p.threads_count) {
   if (p.threads_count == 0) {
-    throw rft::exception(std::string("threads count can't be zero"));
+    throw rft::exception("threads count can't be zero");
   }
   _connected = false;
   _next_query_id.store(0);

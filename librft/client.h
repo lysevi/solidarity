@@ -30,7 +30,7 @@ void client_notify_update(client &c);
 
 class exception : public std::exception {
 public:
-  exception(std::string &m)
+  exception(std::string m)
       : _message(m) {}
   const char *what() const noexcept override { return _message.c_str(); }
 
@@ -63,8 +63,8 @@ public:
 
   params_t params() const { return _params; }
   bool is_connected() const { return _connected; }
-  
-  uint64_t add_update_handler(const std::function<void()>&);
+
+  uint64_t add_update_handler(const std::function<void()> &);
   void rm_update_handler(uint64_t);
 
   friend void inner::client_update_connection_status(client &c, bool status);
