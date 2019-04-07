@@ -87,7 +87,7 @@ public:
       if (_parent->state().node_kind != NODE_KIND::LEADER) {
         writed = false;
       } else {
-        status_t s(wq.msg_id, std::string());
+        status_t s(wq.msg_id, ERROR_CODE::OK, std::string());
         auto ames = s.to_message();
         i->send_data(ames);
         writed = true;
@@ -274,15 +274,17 @@ void node::send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd)
   _message_resend[client_id].push_back(std::pair(message_id, cmd));
 
   _cluster_con->send_to(
-      _consensus->state().leader, cmd, [client_id, message_id, this](bool is_ok) {
+      _consensus->state().leader, cmd, [client_id, message_id, this](ERROR_CODE s) {
         // TODO use shared_from_this;
-        this->on_message_sended_status(client_id, message_id, is_ok);
+        this->on_message_sended_status(client_id, message_id, s);
       });
 }
 
-void node::on_message_sended_status(uint64_t client, uint64_t message, bool is_ok) {
+void node::on_message_sended_status(uint64_t client,
+                                    uint64_t message,
+                                    ERROR_CODE status) {
   _logger->dbg(
-      "on_message_sended_status client:", client, " #", message, " is_ok:", is_ok);
+      "on_message_sended_status client:", client, " #", message, " status:", status);
   std::lock_guard l(_locker);
   // TODO if!is_ok?
   // TODO refact

@@ -93,7 +93,7 @@ void listener::on_new_message(dialler::listener_client_ptr i,
   }
   case QUERY_KIND::STATUS: {
     queries::status_t sq(d);
-    _parent->on_write_status(_self_logical_addr, sq.id, sq.msg.empty());
+    _parent->on_write_status(_self_logical_addr, sq.id, sq.status);
     break;
   }
   }
@@ -305,7 +305,7 @@ void mesh_connection::on_new_command(const std::vector<dialler::message_ptr> &m)
 
 void mesh_connection::send_to(rft::cluster_node &target,
                               rft::command &cmd,
-                              std::function<void(bool)> callback) {
+                              std::function<void(ERROR_CODE)> callback) {
   // TODO need an unit test
   std::lock_guard l(_locker);
   if (auto it = _accepted_out_connections.find(target);
@@ -320,7 +320,7 @@ void mesh_connection::send_to(rft::cluster_node &target,
     auto out_con = _diallers[it->second];
     out_con->send_async(queries::clients::write_query_t(id, cmd).to_message());
   } else {
-    callback(false);
+    callback(ERROR_CODE::CONNECTION_NOT_FOUND);
   }
 }
 
@@ -330,11 +330,9 @@ void mesh_connection::on_write_resend(const cluster_node &target,
   dialler::message_ptr result;
   {
     std::shared_lock l(_locker);
-    if (_client->add_command(cmd)) {
-      result = queries::status_t(mess_id, std::string()).to_message();
-    } else {
-      result = queries::status_t(mess_id, std::string("error")).to_message();
-    }
+    auto s = _client->add_command(cmd);
+    auto m = s == ERROR_CODE::OK ? "" : to_string(s);
+    result = queries::status_t(mess_id, s, m).to_message();
   }
   std::lock_guard l(_locker);
   if (auto it = _accepted_out_connections.find(target);
@@ -345,7 +343,7 @@ void mesh_connection::on_write_resend(const cluster_node &target,
 
 void mesh_connection::on_write_status(rft::cluster_node &target,
                                       uint64_t mess_id,
-                                      bool is_ok) {
+                                      ERROR_CODE status) {
   std::lock_guard l(_locker);
   if (auto mess_it = _messages.find(target); mess_it != _messages.end()) {
     auto pos = std::find_if(
@@ -353,7 +351,7 @@ void mesh_connection::on_write_status(rft::cluster_node &target,
         mess_it->second.end(),
         [mess_id](const message_desciption &md) { return std::get<0>(md) == mess_id; });
     if (pos != mess_it->second.end()) {
-      std::get<2> (*pos)(is_ok);
+      std::get<2> (*pos)(status);
     }
   }
 }

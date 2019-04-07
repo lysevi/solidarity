@@ -35,7 +35,7 @@ TEST_CASE("serialisation", "[bench]") {
     BENCHMARK("connection_error_t:unpack") { connection_error_t unpacked(qcon_err_msg); }
   }
   {
-    status_t status_(777, "long error message");
+    status_t status_(777, rft::ERROR_CODE::OK, "long error message");
     BENCHMARK("status_t::to_message") { UNUSED(status_.to_message()); }
 
     auto status_msg = status_.to_message();

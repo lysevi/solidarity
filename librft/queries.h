@@ -1,6 +1,7 @@
 #include <librft/abstract_cluster.h>
-
 #include <librft/exports.h>
+#include <librft/error_codes.h>
+
 #include <libdialler/message.h>
 #include <vector>
 
@@ -42,11 +43,14 @@ struct connection_error_t {
 struct status_t {
   uint64_t id;
   std::string msg;
+  ERROR_CODE status;
 
-  EXPORT status_t(uint64_t id_, const std::string &m) {
+  EXPORT status_t(uint64_t id_, ERROR_CODE status_, const std::string &m) {
     id = id_;
     msg = m;
+    status = status_;
   }
+
   EXPORT status_t(const dialler::message_ptr &mptr);
   EXPORT dialler::message_ptr to_message() const;
 };

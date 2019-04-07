@@ -99,7 +99,12 @@ TEST_CASE("serialisation.connection_error", "[network]") {
 }
 
 TEST_CASE("serialisation.status_t", "[network]") {
-  rft::queries::status_t qc(777, "");
+  rft::ERROR_CODE s = rft::ERROR_CODE::OK;
+  SECTION("serialisation.status_t::OK") { s = rft::ERROR_CODE::OK; }
+  SECTION("serialisation.status_t::NOT_A_LEADER") { s = rft::ERROR_CODE::NOT_A_LEADER; }
+  SECTION("serialisation.status_t::CONNECTION_NOT_FOUND") { s = rft::ERROR_CODE::CONNECTION_NOT_FOUND; }
+
+  rft::queries::status_t qc(777, s, "");
 
   SECTION("empty message") { qc.msg = std::string(); }
   SECTION("long message") {
@@ -112,6 +117,7 @@ TEST_CASE("serialisation.status_t", "[network]") {
             (dialler::message::kind_t)rft::queries::QUERY_KIND::STATUS);
   EXPECT_EQ(qc.id, qc_u.id);
   EXPECT_EQ(qc.msg, qc_u.msg);
+  EXPECT_EQ(qc.status, s);
 }
 
 TEST_CASE("serialisation.command", "[network]") {

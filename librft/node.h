@@ -57,7 +57,7 @@ public:
 
 private:
   void heartbeat_timer();
-  void on_message_sended_status(uint64_t client, uint64_t message, bool is_ok);
+  void on_message_sended_status(uint64_t client, uint64_t message, ERROR_CODE status);
 
 private:
   bool _stoped;

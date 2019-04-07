@@ -1,6 +1,7 @@
 #pragma once
 
 #include <librft/journal.h>
+#include <librft/error_codes.h>
 #include <libutils/property.h>
 #include <memory>
 
@@ -63,7 +64,7 @@ struct abstract_cluster_client {
   virtual void lost_connection_with(const cluster_node &addr) = 0;
   virtual void new_connection_with(const cluster_node &addr) = 0;
   virtual void heartbeat() = 0;
-  virtual bool add_command(const command &cmd) = 0;
+  virtual ERROR_CODE add_command(const command &cmd) = 0;
 };
 
 class abstract_cluster {

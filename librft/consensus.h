@@ -45,7 +45,7 @@ public:
   EXPORT void recv(const cluster_node &from, const append_entries &e) override;
   EXPORT void lost_connection_with(const cluster_node &addr) override;
   EXPORT void new_connection_with(const rft::cluster_node &addr) override;
-  EXPORT bool add_command(const command &cmd)override;
+  EXPORT ERROR_CODE add_command(const command &cmd) override;
 
   cluster_node get_leader() const {
     std::lock_guard l(_locker);

@@ -107,6 +107,7 @@ public:
     }
     case QUERY_KIND::STATUS: {
       status_t sq(d);
+      // TODO check sq::status
       inner::client_update_async_result(*_parent, sq.id, std::vector<uint8_t>(), sq.msg);
       break;
     }

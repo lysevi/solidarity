@@ -79,10 +79,13 @@ status_t::status_t(const dialler::message_ptr &mptr) {
   id = oh.get().as<uint64_t>();
   pac.next(oh);
   msg = oh.get().as<std::string>();
+  pac.next(oh);
+  status = static_cast<ERROR_CODE>(oh.get().as<uint8_t>());
 }
 
 dialler::message_ptr status_t::to_message() const {
-  return pack_to_message(queries::QUERY_KIND::STATUS, id, msg);
+  return pack_to_message(
+      queries::QUERY_KIND::STATUS, id, msg, static_cast<uint8_t>(status));
 }
 
 command_t::command_t(const std::vector<dialler::message_ptr> &mptrs) {

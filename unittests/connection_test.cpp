@@ -36,7 +36,9 @@ struct mock_cluster_client : rft::abstract_cluster_client {
     return connected.size();
   }
 
-  bool add_command(const rft::command &cmd) override { return true; }
+  rft::ERROR_CODE add_command(const rft::command &cmd) override {
+    return rft::ERROR_CODE::OK;
+  }
 
   std::vector<std::uint8_t> data;
   mutable std::mutex locker;

@@ -607,13 +607,13 @@ void consensus::add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k) {
   }
 }
 
-bool consensus::add_command(const command &cmd) {
+ERROR_CODE consensus::add_command(const command &cmd) {
   // TODO global lock for this method. a while cmd not in consumer;
   std::lock_guard lg(_locker);
 
   if (_state.node_kind != NODE_KIND::LEADER) {
-    //THROW_EXCEPTION("only leader-node have rights to add commands into the cluster!");
-    return false;
+    // THROW_EXCEPTION("only leader-node have rights to add commands into the cluster!");
+    return ERROR_CODE::NOT_A_LEADER;
   }
 
   if (_jrn->size() >= _settings.max_log_size()) {
@@ -622,5 +622,5 @@ bool consensus::add_command(const command &cmd) {
   }
 
   add_command_impl(cmd, logdb::LOG_ENTRY_KIND::APPEND);
-  return true;
+  return ERROR_CODE::OK;
 }

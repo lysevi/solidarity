@@ -90,7 +90,7 @@ public:
 
   void send_to(rft::cluster_node &target,
                rft::command &cmd,
-               std::function<void(bool)> callback);
+               std::function<void(ERROR_CODE)> callback);
 
 protected:
   void accept_out_connection(const cluster_node &name, const cluster_node &addr);
@@ -100,7 +100,7 @@ protected:
   void on_new_command(const std::vector<dialler::message_ptr> &m);
 
   void on_write_resend(const cluster_node &target, uint64_t mess_id, rft::command &cmd);
-  void on_write_status(rft::cluster_node &target, uint64_t mess_id, bool is_ok);
+  void on_write_status(rft::cluster_node &target, uint64_t mess_id, ERROR_CODE status);
 
 private:
   utils::logging::abstract_logger_ptr _logger;
@@ -130,7 +130,7 @@ private:
   std::atomic_size_t _message_id;
   // TODO dedicated type
   using message_desciption
-      = std::tuple<uint64_t, rft::command, std::function<void(bool)>>;
+      = std::tuple<uint64_t, rft::command, std::function<void(ERROR_CODE)>>;
   std::unordered_map<rft::cluster_node, std::vector<message_desciption>> _messages;
 };
 } // namespace rft
