@@ -21,7 +21,7 @@ TEST_CASE("serialisation", "[bench]") {
     }
   }
   {
-    query_connect_t qcon(777, "long node id");
+    query_connect_t qcon(777, "long node id", "long node id2");
     BENCHMARK("query_connect_t::to_message") { UNUSED(qcon.to_message()); }
 
     auto qcon_msg = qcon.to_message();

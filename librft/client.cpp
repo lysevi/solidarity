@@ -211,6 +211,7 @@ void client::send(const std::vector<uint8_t> &cmd) {
   queries::clients::write_query_t rq(waiter->id(), c);
 
   _dialler->send_async(rq.to_message());
+  waiter->result();
 }
 
 std::vector<uint8_t> client::read(const std::vector<uint8_t> &cmd) {

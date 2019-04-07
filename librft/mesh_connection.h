@@ -49,7 +49,7 @@ public:
 
 private:
   std::shared_ptr<mesh_connection> _parent;
-  cluster_node _self_logical_addr;
+  //cluster_node _self_logical_addr;
 
   std::vector<dialler::message_ptr> _recv_message_pool;
 };
@@ -92,11 +92,12 @@ public:
                rft::command &cmd,
                std::function<void(ERROR_CODE)> callback);
 
+  cluster_node addr_by_id(uint64_t id);
 protected:
   void accept_out_connection(const cluster_node &name, const cluster_node &addr);
   void accept_input_connection(const cluster_node &name, uint64_t id);
   void rm_out_connection(const cluster_node &name);
-  void rm_input_connection(const cluster_node &name);
+  void rm_input_connection(uint64_t id);
   void on_new_command(const std::vector<dialler::message_ptr> &m);
 
   void on_write_resend(const cluster_node &target, uint64_t mess_id, rft::command &cmd);
@@ -129,8 +130,8 @@ private:
 
   std::atomic_size_t _message_id;
   // TODO dedicated type
-  using message_desciption
-      = std::tuple<uint64_t, rft::command, std::function<void(ERROR_CODE)>>;
-  std::unordered_map<rft::cluster_node, std::vector<message_desciption>> _messages;
+  using message_desciption = std::tuple<rft::command, std::function<void(ERROR_CODE)>>;
+  using meas_id_to_description = std::unordered_map<uint64_t, message_desciption>;
+  std::unordered_map<rft::cluster_node, meas_id_to_description> _messages;
 };
 } // namespace rft

@@ -73,13 +73,14 @@ TEST_CASE("serialisation.append_entries", "[network]") {
 }
 
 TEST_CASE("serialisation.query_connect", "[network]") {
-  rft::queries::query_connect_t qc(777, "node id");
+  rft::queries::query_connect_t qc(777, "node id", "node id 2");
   auto msg = qc.to_message();
   rft::queries::query_connect_t qc_u(msg);
   EXPECT_EQ(msg->get_header()->kind,
             (dialler::message::kind_t)rft::queries::QUERY_KIND::CONNECT);
   EXPECT_EQ(qc.protocol_version, qc_u.protocol_version);
   EXPECT_EQ(qc.node_id, qc_u.node_id);
+  EXPECT_EQ(qc.target_node_id, qc_u.target_node_id);
 }
 
 TEST_CASE("serialisation.connection_error", "[network]") {
@@ -102,7 +103,9 @@ TEST_CASE("serialisation.status_t", "[network]") {
   rft::ERROR_CODE s = rft::ERROR_CODE::OK;
   SECTION("serialisation.status_t::OK") { s = rft::ERROR_CODE::OK; }
   SECTION("serialisation.status_t::NOT_A_LEADER") { s = rft::ERROR_CODE::NOT_A_LEADER; }
-  SECTION("serialisation.status_t::CONNECTION_NOT_FOUND") { s = rft::ERROR_CODE::CONNECTION_NOT_FOUND; }
+  SECTION("serialisation.status_t::CONNECTION_NOT_FOUND") {
+    s = rft::ERROR_CODE::CONNECTION_NOT_FOUND;
+  }
 
   rft::queries::status_t qc(777, s, "");
 

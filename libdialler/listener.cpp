@@ -84,9 +84,7 @@ void listener::OnAcceptHandler(std::shared_ptr<listener> self,
     std::shared_ptr<listener_client> new_client = nullptr;
     {
       std::lock_guard lg(self->_locker_connections);
-      new_client = std::make_shared<listener_client>(self->_next_id.load(), aio, self);
-
-      self->_next_id.fetch_add(1);
+      new_client = std::make_shared<listener_client>(self->_next_id.fetch_add(1), aio, self);
     }
     bool connectionAccepted = false;
     if (self->_consumer != nullptr) {

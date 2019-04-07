@@ -13,9 +13,10 @@ out_connection::out_connection(const std::shared_ptr<mesh_connection> parent,
 
 void out_connection::on_connect() {
   _parent->_logger->info("[network] connect to ", _target_addr);
-  this->_connection->send_async(
-      queries::query_connect_t(protocol_version, _parent->_self_addr.name())
-          .to_message());
+  this->_connection->send_async(queries::query_connect_t(protocol_version,
+                                                         _parent->_self_addr.name(),
+                                                         _target_addr.name())
+                                    .to_message());
 }
 
 void out_connection::on_new_message(dialler::message_ptr &&d, bool &cancel) {
@@ -48,8 +49,7 @@ listener::listener(const std::shared_ptr<mesh_connection> parent) {
 void listener::on_network_error(dialler::listener_client_ptr i,
                                 const dialler::message_ptr &d,
                                 const boost::system::error_code &err) {
-  ENSURE(!_self_logical_addr.name().empty());
-  _parent->rm_input_connection(_self_logical_addr);
+  _parent->rm_input_connection(i->get_id());
 }
 
 void listener::on_new_message(dialler::listener_client_ptr i,
@@ -64,11 +64,11 @@ void listener::on_new_message(dialler::listener_client_ptr i,
     if (qc.protocol_version != protocol_version) {
       dout = connection_error_t(protocol_version, "protocol version error").to_message();
     } else {
-      dout = query_connect_t(protocol_version, _parent->_self_addr.name()).to_message();
-      _self_logical_addr.set_name(qc.node_id);
-      ENSURE(!_self_logical_addr.name().empty());
-      _parent->accept_input_connection(_self_logical_addr, i->get_id());
-      _parent->_logger->info("[network] accept connection from ", _self_logical_addr);
+      dout = query_connect_t(protocol_version, _parent->_self_addr.name(), qc.node_id)
+                 .to_message();
+      auto addr = rft::cluster_node().set_name(qc.node_id);
+      _parent->accept_input_connection(addr, i->get_id());
+      _parent->_logger->info("[network] accept connection from ", addr);
     }
     i->send_data(dout);
     break;
@@ -88,12 +88,12 @@ void listener::on_new_message(dialler::listener_client_ptr i,
   }
   case QUERY_KIND::WRITE: {
     queries::clients::write_query_t wq(d);
-    _parent->on_write_resend(_self_logical_addr, wq.msg_id, wq.query);
+    _parent->on_write_resend(_parent->addr_by_id(i->get_id()), wq.msg_id, wq.query);
     break;
   }
   case QUERY_KIND::STATUS: {
     queries::status_t sq(d);
-    _parent->on_write_status(_self_logical_addr, sq.id, sq.status);
+    _parent->on_write_status(_parent->addr_by_id(i->get_id()), sq.id, sq.status);
     break;
   }
   }
@@ -104,7 +104,7 @@ bool listener::on_new_connection(dialler::listener_client_ptr i) {
 }
 
 void listener::on_disconnect(const dialler::listener_client_ptr &i) {
-  _parent->rm_input_connection(_self_logical_addr);
+  _parent->rm_input_connection(i->get_id());
 }
 
 } // namespace rft::impl
@@ -248,6 +248,7 @@ void mesh_connection::accept_out_connection(const cluster_node &name,
   bool call_client = false;
   {
     std::lock_guard l(_locker);
+    ENSURE(_accepted_out_connections.find(name) == _accepted_out_connections.end());
     _logger->dbg("_accepted_out_connections: ", _accepted_out_connections.size());
     _accepted_out_connections.insert({name, addr});
     call_client
@@ -262,6 +263,7 @@ void mesh_connection::accept_input_connection(const cluster_node &name, uint64_t
   bool call_client = false;
   {
     std::lock_guard l(_locker);
+    ENSURE(_accepted_input_connections.find(name) == _accepted_input_connections.end());
     _logger->dbg("_accepted_input_connections: ", _accepted_input_connections.size());
     _accepted_input_connections.insert({name, id});
     call_client
@@ -271,6 +273,18 @@ void mesh_connection::accept_input_connection(const cluster_node &name, uint64_t
   if (call_client) {
     _client->new_connection_with(name);
   }
+}
+
+cluster_node mesh_connection::addr_by_id(uint64_t id) {
+  std::shared_lock l(_locker);
+  for (auto it = _accepted_input_connections.begin();
+       it != _accepted_input_connections.end();
+       ++it) {
+    if (it->second == id) {
+      return it->first;
+    }
+  }
+  NOT_IMPLEMENTED;
 }
 
 void mesh_connection::rm_out_connection(const cluster_node &name) {
@@ -286,14 +300,20 @@ void mesh_connection::rm_out_connection(const cluster_node &name) {
   _client->lost_connection_with(name);
 }
 
-void mesh_connection::rm_input_connection(const cluster_node &name) {
+void mesh_connection::rm_input_connection(const uint64_t id) {
   {
     std::lock_guard l(_locker);
-    _logger->dbg(name, " disconnected as input");
-    if (auto it = _accepted_input_connections.find(name);
-        it != _accepted_input_connections.end()) {
-      _accepted_input_connections.erase(it);
+    
+    for (auto it = _accepted_input_connections.begin();
+         it != _accepted_input_connections.end();
+         ++it) {
+      if (it->second == id) {
+        _logger->dbg(it->first, " disconnected as input");
+        _accepted_input_connections.erase(it);
+        return;
+      }
     }
+   //NOT_IMPLEMENTED;
   }
 }
 
@@ -312,13 +332,13 @@ void mesh_connection::send_to(rft::cluster_node &target,
       it != _accepted_out_connections.end()) {
     auto id = _message_id.fetch_add(1);
     if (auto mess_it = _messages.find(target); mess_it != _messages.end()) {
-      mess_it->second.push_back(std::tie(id, cmd, callback));
+      mess_it->second[id] = std::tie(cmd, callback);
     } else {
-      _messages[target].push_back(std::tie(id, cmd, callback));
+      _messages[target][id] = std::tie(cmd, callback);
     }
 
     auto out_con = _diallers[it->second];
-    _logger->dbg("resend to ", target);
+    _logger->dbg("send command to ", target);
     out_con->send_async(queries::clients::write_query_t(id, cmd).to_message());
   } else {
     callback(ERROR_CODE::CONNECTION_NOT_FOUND);
@@ -347,12 +367,11 @@ void mesh_connection::on_write_status(rft::cluster_node &target,
                                       ERROR_CODE status) {
   std::lock_guard l(_locker);
   if (auto mess_it = _messages.find(target); mess_it != _messages.end()) {
-    auto pos = std::find_if(
-        mess_it->second.begin(),
-        mess_it->second.end(),
-        [mess_id](const message_desciption &md) { return std::get<0>(md) == mess_id; });
+    auto pos = mess_it->second.find(mess_id);
     if (pos != mess_it->second.end()) {
-      std::get<2> (*pos)(status);
+      std::get<1>(pos->second)(status);
+    } else {
+      THROW_EXCEPTION("mess_id ", mess_id, " not found");
     }
   }
 }
