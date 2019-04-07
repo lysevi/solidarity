@@ -318,6 +318,7 @@ void mesh_connection::send_to(rft::cluster_node &target,
     }
 
     auto out_con = _diallers[it->second];
+    _logger->dbg("resend to ", target);
     out_con->send_async(queries::clients::write_query_t(id, cmd).to_message());
   } else {
     callback(ERROR_CODE::CONNECTION_NOT_FOUND);

@@ -132,21 +132,33 @@ TEST_CASE("node", "[network]") {
   }
 
   leader_client->rm_update_handler(uh_id);
+  tst_logger->info("resend test");
 
   for (auto &kv : clients) {
     std::transform(first_cmd.begin(),
                    first_cmd.end(),
                    first_cmd.begin(),
                    [](auto &v) -> uint8_t { return uint8_t(v + 1); });
+    {
+      std::ostringstream oss;
+      oss << "[";
+      std::copy(first_cmd.begin(), first_cmd.end(), std::ostream_iterator<int>(oss, ","));
+      oss << "]";
+      tst_logger->info("send over ", kv.first, " cmd:", oss.str());
+    }
     kv.second->send(first_cmd);
 
     auto expected_answer = first_cmd;
-    std::transform(expected_answer.begin(), expected_answer.end(), expected_answer.begin(), [](auto &v) -> uint8_t {
-      return uint8_t(v + 1);
-    });
+    std::transform(expected_answer.begin(),
+                   expected_answer.end(),
+                   expected_answer.begin(),
+                   [](auto &v) -> uint8_t { return uint8_t(v + 1); });
     while (true) {
       auto answer = kv.second->read({1});
-      if (std::equal(expected_answer.begin(), expected_answer.end(), answer.begin(), answer.end())) {
+      if (std::equal(expected_answer.begin(),
+                     expected_answer.end(),
+                     answer.begin(),
+                     answer.end())) {
         break;
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
