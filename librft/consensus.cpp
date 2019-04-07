@@ -530,7 +530,7 @@ void consensus::replicate_log() {
     }
 
     bool is_append = false;
-    if (kv->second.prev.is_empty() || kv->second.prev != self_log_state.prev) {
+    if (kv->second.prev.lsn_is_empty() || kv->second.prev != self_log_state.prev) {
       _logger->info("try replication for ",
                     kv->first,
                     " => prev: ",
