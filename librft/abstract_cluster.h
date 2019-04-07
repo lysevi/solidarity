@@ -63,6 +63,7 @@ struct abstract_cluster_client {
   virtual void lost_connection_with(const cluster_node &addr) = 0;
   virtual void new_connection_with(const cluster_node &addr) = 0;
   virtual void heartbeat() = 0;
+  virtual bool add_command(const command &cmd) = 0;
 };
 
 class abstract_cluster {

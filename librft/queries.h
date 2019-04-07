@@ -1,7 +1,7 @@
 #include <librft/abstract_cluster.h>
+
 #include <librft/exports.h>
 #include <libdialler/message.h>
-
 #include <vector>
 
 namespace rft::queries {

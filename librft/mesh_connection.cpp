@@ -86,6 +86,16 @@ void listener::on_new_message(dialler::listener_client_ptr i,
     }
     break;
   }
+  case QUERY_KIND::WRITE: {
+    queries::clients::write_query_t wq(d);
+    _parent->on_write_resend(_self_logical_addr, wq.msg_id, wq.query);
+    break;
+  }
+  case QUERY_KIND::STATUS: {
+    queries::status_t sq(d);
+    _parent->on_write_status(_self_logical_addr, sq.id, sq.msg.empty());
+    break;
+  }
   }
 }
 
@@ -104,6 +114,9 @@ mesh_connection::mesh_connection(cluster_node self_addr,
                                  const utils::logging::abstract_logger_ptr &logger,
                                  const mesh_connection::params_t &params)
     : _io_context((int)params.thread_count) {
+
+  _message_id.store(0);
+
   if (params.thread_count == 0) {
     THROW_EXCEPTION("threads count is zero!");
   }
@@ -288,4 +301,59 @@ void mesh_connection::on_new_command(const std::vector<dialler::message_ptr> &m)
   queries::command_t cmd_q(m);
   _logger->dbg("on_new_command: from=", cmd_q.from);
   _client->recv(cmd_q.from, cmd_q.cmd);
+}
+
+void mesh_connection::send_to(rft::cluster_node &target,
+                              rft::command &cmd,
+                              std::function<void(bool)> callback) {
+  // TODO need an unit test
+  std::lock_guard l(_locker);
+  if (auto it = _accepted_out_connections.find(target);
+      it != _accepted_out_connections.end()) {
+    auto id = _message_id.fetch_add(1);
+    if (auto mess_it = _messages.find(target); mess_it != _messages.end()) {
+      mess_it->second.push_back(std::tie(id, cmd, callback));
+    } else {
+      _messages[target].push_back(std::tie(id, cmd, callback));
+    }
+
+    auto out_con = _diallers[it->second];
+    out_con->send_async(queries::clients::write_query_t(id, cmd).to_message());
+  } else {
+    callback(false);
+  }
+}
+
+void mesh_connection::on_write_resend(const cluster_node &target,
+                                      uint64_t mess_id,
+                                      rft::command &cmd) {
+  dialler::message_ptr result;
+  {
+    std::shared_lock l(_locker);
+    if (_client->add_command(cmd)) {
+      result = queries::status_t(mess_id, std::string()).to_message();
+    } else {
+      result = queries::status_t(mess_id, std::string("error")).to_message();
+    }
+  }
+  std::lock_guard l(_locker);
+  if (auto it = _accepted_out_connections.find(target);
+      it != _accepted_out_connections.end()) {
+    _diallers[it->second]->send_async(result);
+  }
+}
+
+void mesh_connection::on_write_status(rft::cluster_node &target,
+                                      uint64_t mess_id,
+                                      bool is_ok) {
+  std::lock_guard l(_locker);
+  if (auto mess_it = _messages.find(target); mess_it != _messages.end()) {
+    auto pos = std::find_if(
+        mess_it->second.begin(),
+        mess_it->second.end(),
+        [mess_id](const message_desciption &md) { return std::get<0>(md) == mess_id; });
+    if (pos != mess_it->second.end()) {
+      std::get<2> (*pos)(is_ok);
+    }
+  }
 }

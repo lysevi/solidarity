@@ -539,7 +539,7 @@ void consensus::replicate_log() {
                     self_log_state.prev);
 
       auto lsn_to_replicate = kv->second.prev.lsn;
-      if (kv->second.prev.is_empty()) {
+      if (kv->second.prev.lsn_is_empty()) {
         lsn_to_replicate = _jrn->first_rec().lsn;
       } else {
         if (kv->second.prev.lsn >= self_log_state.prev.lsn) {
@@ -607,12 +607,13 @@ void consensus::add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k) {
   }
 }
 
-void consensus::add_command(const command &cmd) {
+bool consensus::add_command(const command &cmd) {
   // TODO global lock for this method. a while cmd not in consumer;
   std::lock_guard lg(_locker);
 
   if (_state.node_kind != NODE_KIND::LEADER) {
-    THROW_EXCEPTION("only leader-node have rights to add commands into the cluster!");
+    //THROW_EXCEPTION("only leader-node have rights to add commands into the cluster!");
+    return false;
   }
 
   if (_jrn->size() >= _settings.max_log_size()) {
@@ -621,4 +622,5 @@ void consensus::add_command(const command &cmd) {
   }
 
   add_command_impl(cmd, logdb::LOG_ENTRY_KIND::APPEND);
+  return true;
 }

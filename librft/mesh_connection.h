@@ -57,7 +57,7 @@ private:
 } // namespace impl
 
 class mesh_connection : public abstract_cluster,
-                           public std::enable_shared_from_this<mesh_connection> {
+                        public std::enable_shared_from_this<mesh_connection> {
 public:
   struct params_t {
     params_t() { thread_count = std::thread::hardware_concurrency(); }
@@ -66,9 +66,9 @@ public:
     size_t thread_count = 0;
   };
   EXPORT mesh_connection(cluster_node self_addr,
-                            const std::shared_ptr<abstract_cluster_client> &client,
-                            const utils::logging::abstract_logger_ptr &logger,
-                            const params_t &params);
+                         const std::shared_ptr<abstract_cluster_client> &client,
+                         const utils::logging::abstract_logger_ptr &logger,
+                         const params_t &params);
   EXPORT void start();
   EXPORT void stop();
   EXPORT ~mesh_connection();
@@ -88,13 +88,20 @@ public:
 
   boost::asio::io_context *context() { return &_io_context; }
 
+  void send_to(rft::cluster_node &target,
+               rft::command &cmd,
+               std::function<void(bool)> callback);
+
 protected:
   void accept_out_connection(const cluster_node &name, const cluster_node &addr);
   void accept_input_connection(const cluster_node &name, uint64_t id);
   void rm_out_connection(const cluster_node &name);
   void rm_input_connection(const cluster_node &name);
   void on_new_command(const std::vector<dialler::message_ptr> &m);
-  
+
+  void on_write_resend(const cluster_node &target, uint64_t mess_id, rft::command &cmd);
+  void on_write_status(rft::cluster_node &target, uint64_t mess_id, bool is_ok);
+
 private:
   utils::logging::abstract_logger_ptr _logger;
   cluster_node _self_addr;
@@ -119,5 +126,11 @@ private:
       _accepted_input_connections; // loigcal_name->id
 
   std::shared_ptr<abstract_cluster_client> _client;
+
+  std::atomic_size_t _message_id;
+  // TODO dedicated type
+  using message_desciption
+      = std::tuple<uint64_t, rft::command, std::function<void(bool)>>;
+  std::unordered_map<rft::cluster_node, std::vector<message_desciption>> _messages;
 };
 } // namespace rft

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <librft/abstract_consumer.h>
+#include <librft/command.h>
 #include <librft/exports.h>
 #include <librft/state.h>
 #include <libutils/logger.h>
@@ -52,9 +53,11 @@ public:
   EXPORT size_t connections_count() const;
 
   void notify_state_machine_update();
+  void send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd);
 
 private:
   void heartbeat_timer();
+  void on_message_sended_status(uint64_t client, uint64_t message, bool is_ok);
 
 private:
   bool _stoped;
@@ -70,8 +73,10 @@ private:
 
   mutable std::shared_mutex _locker;
   std::unordered_set<uint64_t> _clients;
-  
+
   uint32_t _timer_period;
   std::unique_ptr<boost::asio::deadline_timer> _timer;
+  std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, rft::command>>>
+      _message_resend;
 };
 } // namespace rft

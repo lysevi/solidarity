@@ -81,16 +81,21 @@ public:
   void write_handler(listener_client_ptr i, message_ptr &&d) {
     clients::write_query_t wq(d);
     _logger->dbg("client:", _client_name, " write query #", wq.msg_id);
+    bool writed = false;
     if (_parent->state().node_kind == NODE_KIND::LEADER) {
       _parent->get_consensus()->add_command(wq.query);
       if (_parent->state().node_kind != NODE_KIND::LEADER) {
-        NOT_IMPLEMENTED;
+        writed = false;
+      } else {
+        status_t s(wq.msg_id, std::string());
+        auto ames = s.to_message();
+        i->send_data(ames);
+        writed = true;
       }
-      status_t s(wq.msg_id, std::string());
-      auto ames = s.to_message();
-      i->send_data(ames);
-    } else {
-      NOT_IMPLEMENTED;
+    }
+
+    if (!writed) {
+      _parent->send_to_leader(i->get_id(), wq.msg_id, wq.query);
     }
   }
 
@@ -260,5 +265,31 @@ void node::heartbeat_timer() {
     _timer->expires_at(_timer->expires_at()
                        + boost::posix_time::milliseconds(_timer_period));
     _timer->async_wait([this](auto) { this->heartbeat_timer(); });
+  }
+}
+
+void node::send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd) {
+  _logger->dbg("resend query #", client_id, " to leader");
+  std::lock_guard l(_locker);
+  _message_resend[client_id].push_back(std::pair(message_id, cmd));
+
+  _cluster_con->send_to(
+      _consensus->state().leader, cmd, [client_id, message_id, this](bool is_ok) {
+        // TODO use shared_from_this;
+        this->on_message_sended_status(client_id, message_id, is_ok);
+      });
+}
+
+void node::on_message_sended_status(uint64_t client, uint64_t message, bool is_ok) {
+  _logger->dbg(
+      "on_message_sended_status client:", client, " #", message, " is_ok:", is_ok);
+  std::lock_guard l(_locker);
+  // TODO if!is_ok?
+  // TODO refact
+  auto pos = std::find_if(_message_resend[client].begin(),
+                          _message_resend[client].end(),
+                          [message](auto p) { return p.first = message; });
+  if (pos != _message_resend[client].end()) {
+    _message_resend[client].erase(pos);
   }
 }

@@ -133,12 +133,17 @@ TEST_CASE("node", "[network]") {
 
   leader_client->rm_update_handler(uh_id);
 
-  auto target = first_cmd;
-  std::transform(target.begin(), target.end(), target.begin(), [](auto &v) -> uint8_t {
-    return uint8_t(v + 1);
-  });
-
   for (auto &kv : clients) {
+    std::transform(first_cmd.begin(),
+                   first_cmd.end(),
+                   first_cmd.begin(),
+                   [](auto &v) -> uint8_t { return uint8_t(v + 1); });
+    kv.second->send(first_cmd);
+
+    auto target = first_cmd;
+    std::transform(target.begin(), target.end(), target.begin(), [](auto &v) -> uint8_t {
+      return uint8_t(v + 1);
+    });
     while (true) {
       auto answer = kv.second->read({1});
       if (std::equal(target.begin(), target.end(), answer.begin(), answer.end())) {
