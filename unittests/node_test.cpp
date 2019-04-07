@@ -140,13 +140,13 @@ TEST_CASE("node", "[network]") {
                    [](auto &v) -> uint8_t { return uint8_t(v + 1); });
     kv.second->send(first_cmd);
 
-    auto target = first_cmd;
-    std::transform(target.begin(), target.end(), target.begin(), [](auto &v) -> uint8_t {
+    auto expected_answer = first_cmd;
+    std::transform(expected_answer.begin(), expected_answer.end(), expected_answer.begin(), [](auto &v) -> uint8_t {
       return uint8_t(v + 1);
     });
     while (true) {
       auto answer = kv.second->read({1});
-      if (std::equal(target.begin(), target.end(), answer.begin(), answer.end())) {
+      if (std::equal(expected_answer.begin(), expected_answer.end(), answer.begin(), answer.end())) {
         break;
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(100));

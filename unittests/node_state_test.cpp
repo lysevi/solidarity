@@ -2,7 +2,7 @@
 #include <librft/state.h>
 #include <catch.hpp>
 
-SCENARIO("node_state.vote") {
+SCENARIO("node_state.vote", "[raft]") {
   rft::node_state_t self;
   rft::node_settings s;
   self.term = 0;
@@ -225,7 +225,7 @@ SCENARIO("node_state.vote") {
   }
 }
 
-SCENARIO("node_state.on_append_entries") {
+SCENARIO("node_state.on_append_entries", "[raft]") {
   rft::node_state_t self;
   rft::node_state_t from_s;
 
@@ -346,7 +346,7 @@ SCENARIO("node_state.on_append_entries") {
   }
 }
 
-SCENARIO("node_state.on_heartbeat") {
+SCENARIO("node_state.on_heartbeat", "[raft]") {
   rft::node_state_t self;
   rft::node_state_t from_s;
 

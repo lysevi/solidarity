@@ -5,7 +5,7 @@
 #include <libutils/logger.h>
 #include <catch.hpp>
 
-TEST_CASE("consensus.quorum calculation") {
+TEST_CASE("consensus.quorum calculation", "[raft]") {
   EXPECT_EQ(rft::quorum_for_cluster(3, 0.5), 2);
   EXPECT_EQ(rft::quorum_for_cluster(4, 0.5), 3);
   EXPECT_EQ(rft::quorum_for_cluster(4, 1.0), 4);
@@ -13,7 +13,7 @@ TEST_CASE("consensus.quorum calculation") {
   EXPECT_EQ(rft::quorum_for_cluster(5, 0.5), 3);
 }
 
-TEST_CASE("consensus.add_nodes") {
+TEST_CASE("consensus.add_nodes", "[raft]") {
   auto cluster = std::make_shared<mock_cluster>();
 
   /// SINGLE
@@ -80,7 +80,7 @@ TEST_CASE("consensus.add_nodes") {
   cluster = nullptr;
 }
 
-TEST_CASE("consensus") {
+TEST_CASE("consensus", "[raft]") {
   auto cluster = std::make_shared<mock_cluster>();
 
   size_t nodes_count = 4;
@@ -201,7 +201,7 @@ TEST_CASE("consensus") {
   consumers.clear();
 }
 
-TEST_CASE("consensus.replication") {
+TEST_CASE("consensus.replication", "[raft]") {
   using rft::cluster_node;
   using rft::consensus;
   using rft::logdb::memory_journal;
@@ -303,7 +303,7 @@ TEST_CASE("consensus.replication") {
   consumers.clear();
 }
 
-TEST_CASE("consensus.log_compaction") {
+TEST_CASE("consensus.log_compaction", "[raft]") {
   using rft::node_settings;
   auto cluster = std::make_shared<mock_cluster>();
 
@@ -388,7 +388,7 @@ bool operator!=(const rft::logdb::log_entry &r, const rft::logdb::log_entry &l) 
   return !(r == l);
 }
 
-TEST_CASE("consensus.apply_journal_on_start") {
+TEST_CASE("consensus.apply_journal_on_start", "[raft]") {
   using rft::cluster_node;
   using rft::consensus;
   using rft::logdb::memory_journal;
@@ -429,7 +429,7 @@ TEST_CASE("consensus.apply_journal_on_start") {
   EXPECT_EQ(consumer->last_cmd.data, cmd.data);
 }
 
-TEST_CASE("consensus.rollback") {
+TEST_CASE("consensus.rollback", "[raft]") {
   using rft::cluster_node;
   using rft::consensus;
   using rft::logdb::memory_journal;
