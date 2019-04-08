@@ -13,10 +13,8 @@ out_connection::out_connection(const std::shared_ptr<mesh_connection> parent,
 
 void out_connection::on_connect() {
   _parent->_logger->info("[network] connect to ", _target_addr);
-  this->_connection->send_async(queries::query_connect_t(protocol_version,
-                                                         _parent->_self_addr.name(),
-                                                         _target_addr.name())
-                                    .to_message());
+  queries::query_connect_t qc(protocol_version, _parent->_self_addr.name());
+  this->_connection->send_async(qc.to_message());
 }
 
 void out_connection::on_new_message(dialler::message_ptr &&d, bool &cancel) {
@@ -64,8 +62,7 @@ void listener::on_new_message(dialler::listener_client_ptr i,
     if (qc.protocol_version != protocol_version) {
       dout = connection_error_t(protocol_version, "protocol version error").to_message();
     } else {
-      dout = query_connect_t(protocol_version, _parent->_self_addr.name(), qc.node_id)
-                 .to_message();
+      dout = query_connect_t(protocol_version, _parent->_self_addr.name()).to_message();
       auto addr = rft::cluster_node().set_name(qc.node_id);
       _parent->accept_input_connection(addr, i->get_id());
       _parent->_logger->info("[network] accept connection from ", addr);

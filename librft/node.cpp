@@ -60,7 +60,7 @@ public:
       connection_error_t ce(protocol_version, "wrong protocol version");
       answer = ce.to_message();
     } else {
-      query_connect_t q(protocol_version, _parent->params().name, "");
+      query_connect_t q(protocol_version, _parent->params().name);
       answer = q.to_message();
       _client_name = cc.client_name;
       _parent->add_client(i->get_id());

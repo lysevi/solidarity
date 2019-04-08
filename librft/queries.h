@@ -21,13 +21,10 @@ enum class QUERY_KIND : dialler::message::kind_t {
 struct query_connect_t {
   uint16_t protocol_version;
   std::string node_id;
-  std::string target_node_id;
   EXPORT query_connect_t(uint16_t protocol_version_,
-                         std::string node_id_,
-                         std::string target_node_id_) {
+                         std::string node_id_) {
     protocol_version = protocol_version_;
     node_id = node_id_;
-    target_node_id = target_node_id_;
   }
   EXPORT query_connect_t(const dialler::message_ptr &msg);
   EXPORT dialler::message_ptr to_message() const;

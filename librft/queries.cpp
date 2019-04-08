@@ -47,13 +47,11 @@ query_connect_t::query_connect_t(const dialler::message_ptr &msg) {
   protocol_version = oh.get().as<uint16_t>();
   pac.next(oh);
   node_id = oh.get().as<std::string>();
-  pac.next(oh);
-  target_node_id = oh.get().as<std::string>();
 }
 
 dialler::message_ptr query_connect_t::query_connect_t::to_message() const {
   return pack_to_message(
-      queries::QUERY_KIND::CONNECT, protocol_version, node_id, target_node_id);
+      queries::QUERY_KIND::CONNECT, protocol_version, node_id);
 }
 
 connection_error_t::connection_error_t(const dialler::message_ptr &mptr) {
