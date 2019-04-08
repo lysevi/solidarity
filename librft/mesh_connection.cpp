@@ -236,8 +236,8 @@ std::vector<cluster_node> mesh_connection::all_nodes() const {
   std::vector<cluster_node> result;
   result.reserve(_accepted_input_connections.size());
   for (const auto &kv : _accepted_input_connections) {
-    if (_accepted_out_connections.find(kv.first) != _accepted_out_connections.end()) {
-      result.push_back(kv.first);
+    if (_accepted_out_connections.find(kv.second) != _accepted_out_connections.end()) {
+      result.push_back(kv.second);
     }
   }
   return result;
@@ -251,8 +251,12 @@ void mesh_connection::accept_out_connection(const cluster_node &name,
     ENSURE(_accepted_out_connections.find(name) == _accepted_out_connections.end());
     _logger->dbg("_accepted_out_connections: ", _accepted_out_connections.size());
     _accepted_out_connections.insert({name, addr});
-    call_client
-        = _accepted_input_connections.find(name) != _accepted_input_connections.end();
+    for (const auto &kv : _accepted_input_connections) {
+      if (kv.second == name) {
+        call_client = true;
+        break;
+      }
+    }
   }
   if (call_client) {
     _client->new_connection_with(name);
@@ -263,9 +267,9 @@ void mesh_connection::accept_input_connection(const cluster_node &name, uint64_t
   bool call_client = false;
   {
     std::lock_guard l(_locker);
-    ENSURE(_accepted_input_connections.find(name) == _accepted_input_connections.end());
+    ENSURE(_accepted_input_connections.find(id) == _accepted_input_connections.end());
     _logger->dbg("_accepted_input_connections: ", _accepted_input_connections.size());
-    _accepted_input_connections.insert({name, id});
+    _accepted_input_connections.insert({id, name});
     call_client
         = (_accepted_out_connections.find(name) != _accepted_out_connections.end());
   }
@@ -277,14 +281,12 @@ void mesh_connection::accept_input_connection(const cluster_node &name, uint64_t
 
 cluster_node mesh_connection::addr_by_id(uint64_t id) {
   std::shared_lock l(_locker);
-  for (auto it = _accepted_input_connections.begin();
-       it != _accepted_input_connections.end();
-       ++it) {
-    if (it->second == id) {
-      return it->first;
-    }
+  if (auto it = _accepted_input_connections.find(id);
+      it != _accepted_input_connections.end()) {
+    return it->second;
+  } else {
+    THROW_EXCEPTION("id:", id, " not found");
   }
-  NOT_IMPLEMENTED;
 }
 
 void mesh_connection::rm_out_connection(const cluster_node &name) {
@@ -303,17 +305,7 @@ void mesh_connection::rm_out_connection(const cluster_node &name) {
 void mesh_connection::rm_input_connection(const uint64_t id) {
   {
     std::lock_guard l(_locker);
-    
-    for (auto it = _accepted_input_connections.begin();
-         it != _accepted_input_connections.end();
-         ++it) {
-      if (it->second == id) {
-        _logger->dbg(it->first, " disconnected as input");
-        _accepted_input_connections.erase(it);
-        return;
-      }
-    }
-   //NOT_IMPLEMENTED;
+    _accepted_input_connections.erase(id);
   }
 }
 
@@ -331,11 +323,8 @@ void mesh_connection::send_to(rft::cluster_node &target,
   if (auto it = _accepted_out_connections.find(target);
       it != _accepted_out_connections.end()) {
     auto id = _message_id.fetch_add(1);
-    if (auto mess_it = _messages.find(target); mess_it != _messages.end()) {
-      mess_it->second[id] = std::tie(cmd, callback);
-    } else {
-      _messages[target][id] = std::tie(cmd, callback);
-    }
+
+    _messages[target][id] = callback;
 
     auto out_con = _diallers[it->second];
     _logger->dbg("send command to ", target);
@@ -369,7 +358,7 @@ void mesh_connection::on_write_status(rft::cluster_node &target,
   if (auto mess_it = _messages.find(target); mess_it != _messages.end()) {
     auto pos = mess_it->second.find(mess_id);
     if (pos != mess_it->second.end()) {
-      std::get<1>(pos->second)(status);
+      pos->second(status);
     } else {
       THROW_EXCEPTION("mess_id ", mess_id, " not found");
     }

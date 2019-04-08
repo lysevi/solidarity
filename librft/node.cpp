@@ -288,12 +288,16 @@ void node::on_message_sended_status(uint64_t client,
   std::lock_guard l(_locker);
   // TODO if!is_ok?
   // TODO refact
-  auto pos = std::find_if(_message_resend[client].begin(),
-                          _message_resend[client].end(),
-                          [message](auto p) { return p.first = message; });
-  if (pos != _message_resend[client].end()) {
-    status_t s(message, status, std::string());
-    _listener->send_to(client, s.to_message());
-    _message_resend[client].erase(pos);
+  if (status == ERROR_CODE::OK) {
+    auto pos = std::find_if(_message_resend[client].begin(),
+                            _message_resend[client].end(),
+                            [message](auto p) { return p.first = message; });
+    if (pos != _message_resend[client].end()) {
+      status_t s(message, status, std::string());
+      _listener->send_to(client, s.to_message());
+      _message_resend[client].erase(pos);
+    }
+  } else {
+    NOT_IMPLEMENTED;
   }
 }
