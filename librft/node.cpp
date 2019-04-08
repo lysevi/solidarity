@@ -269,15 +269,18 @@ void node::heartbeat_timer() {
 }
 
 void node::send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd) {
-  _logger->dbg("resend query #", client_id, " to leader");
+  auto leader = _consensus->state().leader;
+  if (leader.is_empty()) {
+    NOT_IMPLEMENTED;
+  }
+  _logger->dbg("resend query #", client_id, " to leader ", leader);
   std::lock_guard l(_locker);
   _message_resend[client_id].push_back(std::pair(message_id, cmd));
 
-  _cluster_con->send_to(
-      _consensus->state().leader, cmd, [client_id, message_id, this](ERROR_CODE s) {
-        // TODO use shared_from_this;
-        this->on_message_sended_status(client_id, message_id, s);
-      });
+  _cluster_con->send_to(leader, cmd, [client_id, message_id, this](ERROR_CODE s) {
+    // TODO use shared_from_this;
+    this->on_message_sended_status(client_id, message_id, s);
+  });
 }
 
 void node::on_message_sended_status(uint64_t client,
