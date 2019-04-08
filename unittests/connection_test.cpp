@@ -4,17 +4,17 @@
 #include <catch.hpp>
 
 struct mock_cluster_client : rft::abstract_cluster_client {
-  void recv(const rft::cluster_node &, const rft::append_entries &e) override {
+  void recv(const rft::node_name &, const rft::append_entries &e) override {
     std::lock_guard l(locker);
     data = e.cmd.data;
   }
 
-  void lost_connection_with(const rft::cluster_node &addr) override {
+  void lost_connection_with(const rft::node_name &addr) override {
     std::lock_guard l(locker);
     losted.insert(addr);
   }
 
-  void new_connection_with(const rft::cluster_node &addr) override {
+  void new_connection_with(const rft::node_name &addr) override {
     std::lock_guard l(locker);
     connected.insert(addr);
   }
@@ -26,7 +26,7 @@ struct mock_cluster_client : rft::abstract_cluster_client {
     return std::equal(data.cbegin(), data.cend(), o.cbegin(), o.cend());
   }
 
-  bool is_connection_losted(const rft::cluster_node &addr) const {
+  bool is_connection_losted(const rft::node_name &addr) const {
     std::lock_guard l(locker);
     return losted.find(addr) != losted.end();
   }
@@ -42,8 +42,8 @@ struct mock_cluster_client : rft::abstract_cluster_client {
 
   std::vector<std::uint8_t> data;
   mutable std::mutex locker;
-  std::unordered_set<rft::cluster_node> losted;
-  std::unordered_set<rft::cluster_node> connected;
+  std::unordered_set<rft::node_name> losted;
+  std::unordered_set<rft::node_name> connected;
 };
 
 TEST_CASE("mesh_connection", "[network]") {
@@ -80,7 +80,7 @@ TEST_CASE("mesh_connection", "[network]") {
   std::iota(ports.begin(), ports.end(), unsigned short(8000));
 
   std::vector<std::shared_ptr<rft::mesh_connection>> connections;
-  std::unordered_map<rft::cluster_node, std::shared_ptr<mock_cluster_client>> clients;
+  std::unordered_map<rft::node_name, std::shared_ptr<mock_cluster_client>> clients;
   connections.reserve(cluster_size);
   clients.reserve(cluster_size);
 
@@ -108,7 +108,7 @@ TEST_CASE("mesh_connection", "[network]") {
     auto logger = std::make_shared<utils::logging::prefix_logger>(
         utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
 
-    auto addr = rft::cluster_node().set_name(utils::strings::args_to_string("node_", p));
+    auto addr = rft::node_name().set_name(utils::strings::args_to_string("node_", p));
     auto clnt = std::make_shared<mock_cluster_client>();
     auto c = std::make_shared<rft::mesh_connection>(addr, clnt, logger, params);
     connections.push_back(c);

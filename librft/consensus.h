@@ -42,16 +42,16 @@ public:
   EXPORT void set_cluster(abstract_cluster *cluster);
   EXPORT void heartbeat() override;
 
-  EXPORT void recv(const cluster_node &from, const append_entries &e) override;
-  EXPORT void lost_connection_with(const cluster_node &addr) override;
-  EXPORT void new_connection_with(const rft::cluster_node &addr) override;
+  EXPORT void recv(const node_name &from, const append_entries &e) override;
+  EXPORT void lost_connection_with(const node_name &addr) override;
+  EXPORT void new_connection_with(const rft::node_name &addr) override;
   EXPORT ERROR_CODE add_command(const command &cmd) override;
 
-  cluster_node get_leader() const {
+  node_name get_leader() const {
     std::lock_guard l(_locker);
     return _state.leader;
   }
-  cluster_node self_addr() const {
+  node_name self_addr() const {
     std::lock_guard l(_locker);
     return _self_addr;
   }
@@ -67,13 +67,13 @@ protected:
   append_entries make_append_entries(const logdb::index_t lsn_to_replicate,
                                      const logdb::index_t prev_lsn);
   void send_all(const ENTRIES_KIND kind);
-  void send(const cluster_node &to, const ENTRIES_KIND kind);
+  void send(const node_name &to, const ENTRIES_KIND kind);
 
-  void on_heartbeat(const cluster_node &from, const append_entries &e);
-  void on_vote(const cluster_node &from, const append_entries &e);
-  void on_append_entries(const cluster_node &from, const append_entries &e);
-  void on_answer_ok(const cluster_node &from, const append_entries &e);
-  void on_answer_failed(const cluster_node &from, const append_entries &e);
+  void on_heartbeat(const node_name &from, const append_entries &e);
+  void on_vote(const node_name &from, const append_entries &e);
+  void on_append_entries(const node_name &from, const append_entries &e);
+  void on_answer_ok(const node_name &from, const append_entries &e);
+  void on_answer_failed(const node_name &from, const append_entries &e);
 
   void update_next_heartbeat_interval();
 
@@ -89,14 +89,14 @@ private:
   std::mt19937 _rnd_eng;
 
   node_settings _settings;
-  cluster_node _self_addr;
+  node_name _self_addr;
   abstract_cluster *_cluster;
   logdb::journal_ptr _jrn;
 
   node_state_t _state;
 
-  std::unordered_map<cluster_node, log_state_t> _logs_state;
-  std::unordered_map<cluster_node, logdb::reccord_info> _last_sended;
+  std::unordered_map<node_name, log_state_t> _logs_state;
+  std::unordered_map<node_name, logdb::reccord_info> _last_sended;
 
   utils::logging::abstract_logger_ptr _logger;
 };

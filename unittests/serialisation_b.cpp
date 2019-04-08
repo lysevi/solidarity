@@ -47,7 +47,7 @@ TEST_CASE("serialisation", "[bench]") {
     ae.cmd.data.resize(1000);
     std::iota(ae.cmd.data.begin(), ae.cmd.data.end(), uint8_t(0));
 
-    command_t cmd(rft::cluster_node("long cluster node name"), ae);
+    command_t cmd(rft::node_name("long cluster node name"), ae);
     BENCHMARK("command_t::to_message") { UNUSED(cmd.to_message()); }
 
     auto cmd_msg = cmd.to_message();

@@ -20,13 +20,13 @@ std::string rft::to_string(const node_state_t &s) {
 
 void node_state_t::change_state(const NODE_KIND s,
                                 const term_t r,
-                                const cluster_node &leader_) {
+                                const node_name &leader_) {
   node_kind = s;
   term = r;
   leader = leader_;
 }
 
-void node_state_t::change_state(const cluster_node &leader_, const term_t r) {
+void node_state_t::change_state(const node_name &leader_, const term_t r) {
   term = r;
   leader = leader_;
 }
@@ -41,10 +41,10 @@ bool node_state_t::is_my_jrn_biggest(const node_state_t &self,
 
 changed_state_t node_state_t::on_vote(const node_state_t &self,
                                       const node_settings &settings,
-                                      const cluster_node &self_addr,
+                                      const node_name &self_addr,
                                       const logdb::reccord_info commited,
                                       const size_t cluster_size,
-                                      const cluster_node &from,
+                                      const node_name &from,
                                       const append_entries &e) {
   node_state_t result = self;
   NOTIFY_TARGET target = NOTIFY_TARGET::NOBODY;
@@ -130,7 +130,7 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
 }
 
 node_state_t node_state_t::on_append_entries(const node_state_t &self,
-                                             const cluster_node &from,
+                                             const node_name &from,
                                              const logdb::abstract_journal *jrn,
                                              const append_entries &e) {
   node_state_t result = self;
@@ -180,7 +180,7 @@ node_state_t node_state_t::on_append_entries(const node_state_t &self,
 }
 
 node_state_t node_state_t::heartbeat(const node_state_t &self,
-                                     const cluster_node &self_addr,
+                                     const node_name &self_addr,
                                      const size_t cluster_size) {
   node_state_t result = self;
   if (result.node_kind != NODE_KIND::LEADER && result.is_heartbeat_missed()) {

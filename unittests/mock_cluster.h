@@ -10,8 +10,8 @@
 #include <unordered_set>
 
 struct message_t {
-  rft::cluster_node from;
-  rft::cluster_node to;
+  rft::node_name from;
+  rft::node_name to;
   rft::append_entries m;
 };
 
@@ -25,7 +25,7 @@ class worker_t {
   bool _is_node_stoped = false;
 
   volatile bool _is_stoped = false;
-  rft::cluster_node self_addr;
+  rft::node_name self_addr;
 
 public:
   worker_t(std::shared_ptr<rft::consensus> t);
@@ -44,15 +44,15 @@ public:
 
   ~mock_cluster() override;
 
-  void send_to(const rft::cluster_node &from,
-               const rft::cluster_node &to,
+  void send_to(const rft::node_name &from,
+               const rft::node_name &to,
                const rft::append_entries &m) override;
 
-  void send_all(const rft::cluster_node &from, const rft::append_entries &m) override;
+  void send_all(const rft::node_name &from, const rft::append_entries &m) override;
   size_t size() override;
-  std::vector<rft::cluster_node> all_nodes() const override;
+  std::vector<rft::node_name> all_nodes() const override;
 
-  void add_new(const rft::cluster_node &addr, const std::shared_ptr<rft::consensus> &c);
+  void add_new(const rft::node_name &addr, const std::shared_ptr<rft::consensus> &c);
 
   std::vector<std::shared_ptr<rft::consensus>>
   by_filter(std::function<bool(const std::shared_ptr<rft::consensus>)> pred);
@@ -70,8 +70,8 @@ public:
   void wait_leader_eletion(size_t max_leaders = 1);
   bool is_leader_eletion_complete(size_t max_leaders = 1);
 
-  void stop_node(const rft::cluster_node &addr);
-  void restart_node(const rft::cluster_node &addr);
+  void stop_node(const rft::node_name &addr);
+  void restart_node(const rft::node_name &addr);
 
   std::shared_ptr<mock_cluster> split(size_t count_to_move);
   void union_with(std::shared_ptr<mock_cluster> other);
@@ -82,9 +82,9 @@ protected:
 
 private:
   mutable std::shared_mutex _cluster_locker;
-  std::unordered_map<rft::cluster_node, std::shared_ptr<rft::consensus>> _cluster;
-  std::unordered_map<rft::cluster_node, std::shared_ptr<worker_t>> _workers;
-  std::unordered_set<rft::cluster_node> _stoped;
+  std::unordered_map<rft::node_name, std::shared_ptr<rft::consensus>> _cluster;
+  std::unordered_map<rft::node_name, std::shared_ptr<worker_t>> _workers;
+  std::unordered_set<rft::node_name> _stoped;
 
   size_t _size = 0;
 };

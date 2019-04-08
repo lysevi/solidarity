@@ -58,8 +58,8 @@ struct status_t {
 
 struct command_t {
   append_entries cmd;
-  cluster_node from;
-  EXPORT command_t(const cluster_node &from_, append_entries cmd_) {
+  node_name from;
+  EXPORT command_t(const node_name &from_, append_entries cmd_) {
     cmd = cmd_;
     from = from_;
   }

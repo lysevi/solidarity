@@ -100,8 +100,8 @@ void mock_cluster::stop_workers() {
   _workers.clear();
 }
 
-void mock_cluster::send_to(const rft::cluster_node &from,
-                           const rft::cluster_node &to,
+void mock_cluster::send_to(const rft::node_name &from,
+                           const rft::node_name &to,
                            const rft::append_entries &m) {
   std::shared_lock ul(_cluster_locker);
 
@@ -110,7 +110,7 @@ void mock_cluster::send_to(const rft::cluster_node &from,
   }
 }
 
-void mock_cluster::send_all(const rft::cluster_node &from, const rft::append_entries &m) {
+void mock_cluster::send_all(const rft::node_name &from, const rft::append_entries &m) {
   std::shared_lock lg(_cluster_locker);
   ENSURE(!from.is_empty());
   for (const auto &kv : _cluster) {
@@ -121,7 +121,7 @@ void mock_cluster::send_all(const rft::cluster_node &from, const rft::append_ent
   }
 }
 
-void mock_cluster::add_new(const rft::cluster_node &addr,
+void mock_cluster::add_new(const rft::node_name &addr,
                            const std::shared_ptr<rft::consensus> &c) {
   std::lock_guard<std::shared_mutex> lg(_cluster_locker);
   if (_workers.find(addr) != _workers.end()) {
@@ -183,7 +183,7 @@ void mock_cluster::print_cluster() {
 void mock_cluster::erase_if(
     std::function<bool(const std::shared_ptr<rft::consensus>)> pred) {
 
-  rft::cluster_node target;
+  rft::node_name target;
   {
     _cluster_locker.lock_shared();
     auto it = std::find_if(
@@ -214,9 +214,9 @@ size_t mock_cluster::size() {
   return _size;
 }
 
-std::vector<rft::cluster_node> mock_cluster::all_nodes() const {
+std::vector<rft::node_name> mock_cluster::all_nodes() const {
   std::shared_lock lg(_cluster_locker);
-  std::vector<rft::cluster_node> result;
+  std::vector<rft::node_name> result;
   if (_cluster.size() != _stoped.size()) {
     result.reserve(_cluster.size() - _stoped.size());
     for (const auto &kv : _cluster) {
@@ -260,13 +260,13 @@ bool mock_cluster::is_leader_eletion_complete(size_t max_leaders) {
   return false;
 }
 
-void mock_cluster::stop_node(const rft::cluster_node &addr) {
+void mock_cluster::stop_node(const rft::node_name &addr) {
   std::lock_guard<std::shared_mutex> lg(_cluster_locker);
   _stoped.insert(addr);
   update_size();
 }
 
-void mock_cluster::restart_node(const rft::cluster_node &addr) {
+void mock_cluster::restart_node(const rft::node_name &addr) {
   std::lock_guard<std::shared_mutex> lg(_cluster_locker);
   _stoped.erase(addr);
   update_size();

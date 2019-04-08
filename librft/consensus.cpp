@@ -131,12 +131,12 @@ void consensus::send_all(const ENTRIES_KIND kind) {
   _cluster->send_all(_self_addr, make_append_entries(kind));
 }
 
-void consensus::send(const cluster_node &to, const ENTRIES_KIND kind) {
+void consensus::send(const node_name &to, const ENTRIES_KIND kind) {
   ENSURE(to != _self_addr);
   _cluster->send_to(_self_addr, to, make_append_entries(kind));
 }
 
-void consensus::lost_connection_with(const cluster_node &addr) {
+void consensus::lost_connection_with(const node_name &addr) {
   std::lock_guard lg(_locker);
   _logger->info("lost connection with ", addr);
   _logs_state.erase(addr);
@@ -144,11 +144,11 @@ void consensus::lost_connection_with(const cluster_node &addr) {
   _state.votes_to_me.erase(addr);
 }
 
-void consensus::new_connection_with(const rft::cluster_node &addr) {
+void consensus::new_connection_with(const rft::node_name &addr) {
   // TODO need implementation
 }
 
-void consensus::on_heartbeat(const cluster_node &from, const append_entries &e) {
+void consensus::on_heartbeat(const node_name &from, const append_entries &e) {
   const auto old_s = _state;
   const auto ns = node_state_t::on_append_entries(_state, from, _jrn.get(), e);
   _state = ns;
@@ -197,7 +197,7 @@ void consensus::log_fsck(const append_entries &e) {
   }
 }
 
-void consensus::on_vote(const cluster_node &from, const append_entries &e) {
+void consensus::on_vote(const node_name &from, const append_entries &e) {
   const auto old_s = _state;
   const changed_state_t change_state_v = node_state_t::on_vote(
       _state, _settings, _self_addr, _jrn->commited_rec(), _cluster->size(), from, e);
@@ -246,7 +246,7 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
   }
 }
 
-void consensus::recv(const cluster_node &from, const append_entries &e) {
+void consensus::recv(const node_name &from, const append_entries &e) {
   std::lock_guard l(_locker);
 #ifdef DOUBLE_CHECKS
   if (from == _self_addr) {
@@ -311,7 +311,7 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
   }
 }
 
-void consensus::on_append_entries(const cluster_node &from, const append_entries &e) {
+void consensus::on_append_entries(const node_name &from, const append_entries &e) {
   const auto ns = node_state_t::on_append_entries(_state, from, _jrn.get(), e);
 
   if (ns.term != _state.term) {
@@ -379,7 +379,7 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
   _cluster->send_to(_self_addr, from, ae);
 }
 
-void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) {
+void consensus::on_answer_ok(const node_name &from, const append_entries &e) {
   _logger->info("answer 'OK' from:",
                 from,
                 " cur:",
@@ -430,7 +430,7 @@ void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) 
   // replicate_log();
 }
 
-void consensus::on_answer_failed(const cluster_node &from, const append_entries &e) {
+void consensus::on_answer_failed(const node_name &from, const append_entries &e) {
   _logger->warn("answer 'FAILED' from:",
                 from,
                 " cur:",

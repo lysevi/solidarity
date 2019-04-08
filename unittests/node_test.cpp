@@ -80,7 +80,7 @@ TEST_CASE("node", "[network]") {
     clients[params.name] = c;
   }
 
-  std::unordered_set<rft::cluster_node> leaders;
+  std::unordered_set<rft::node_name> leaders;
   while (true) {
     leaders.clear();
     for (auto &kv : nodes) {

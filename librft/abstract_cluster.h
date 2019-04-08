@@ -7,26 +7,26 @@
 
 namespace rft {
 
-class cluster_node {
+class node_name {
   PROPERTY(std::string, name)
 
 public:
-  cluster_node() = default;
-  cluster_node(const cluster_node &) = default;
-  cluster_node(cluster_node &&) = default;
-  cluster_node(const std::string_view &sv)
+  node_name() = default;
+  node_name(const node_name &) = default;
+  node_name(node_name &&) = default;
+  node_name(const std::string_view &sv)
       : _name(sv) {}
 
-  cluster_node &operator=(const cluster_node &) = default;
+  node_name &operator=(const node_name &) = default;
 
   bool is_empty() const { return name().empty(); }
   void clear() { _name = ""; }
-  bool operator!=(const cluster_node &other) const { return _name != other._name; }
-  bool operator==(const cluster_node &other) const { return _name == other._name; }
-  bool operator<(const cluster_node &other) const { return _name < other._name; }
+  bool operator!=(const node_name &other) const { return _name != other._name; }
+  bool operator==(const node_name &other) const { return _name == other._name; }
+  bool operator<(const node_name &other) const { return _name < other._name; }
 };
 
-inline std::string to_string(const cluster_node &s) {
+inline std::string to_string(const node_name &s) {
   return std::string("node:://") + s.name();
 }
 
@@ -47,7 +47,7 @@ struct append_entries {
   /// sender start time;
   uint64_t starttime = {};
   /// leader;
-  cluster_node leader;
+  node_name leader;
   /// cmd
   command cmd;
   logdb::reccord_info current;
@@ -60,9 +60,9 @@ struct append_entries {
 
 struct abstract_cluster_client {
   virtual ~abstract_cluster_client() {}
-  virtual void recv(const cluster_node &from, const append_entries &e) = 0;
-  virtual void lost_connection_with(const cluster_node &addr) = 0;
-  virtual void new_connection_with(const cluster_node &addr) = 0;
+  virtual void recv(const node_name &from, const append_entries &e) = 0;
+  virtual void lost_connection_with(const node_name &addr) = 0;
+  virtual void new_connection_with(const node_name &addr) = 0;
   virtual void heartbeat() = 0;
   virtual ERROR_CODE add_command(const command &cmd) = 0;
 };
@@ -71,20 +71,20 @@ class abstract_cluster {
 public:
   virtual ~abstract_cluster() {}
   virtual void
-  send_to(const cluster_node &from, const cluster_node &to, const append_entries &m)
+  send_to(const node_name &from, const node_name &to, const append_entries &m)
       = 0;
-  virtual void send_all(const cluster_node &from, const append_entries &m) = 0;
+  virtual void send_all(const node_name &from, const append_entries &m) = 0;
   /// total nodes count
   virtual size_t size() = 0;
-  virtual std::vector<cluster_node> all_nodes() const = 0;
+  virtual std::vector<node_name> all_nodes() const = 0;
 };
 
 }; // namespace rft
 
 namespace std {
 template <>
-struct hash<rft::cluster_node> {
-  std::size_t operator()(const rft::cluster_node &k) const {
+struct hash<rft::node_name> {
+  std::size_t operator()(const rft::node_name &k) const {
     return std::hash<string>()(k.name());
   }
 };

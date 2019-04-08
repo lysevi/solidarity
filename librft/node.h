@@ -46,7 +46,7 @@ public:
   EXPORT void start();
   EXPORT void stop();
   EXPORT node_state_t state() const;
-  EXPORT cluster_node self_name() const;
+  EXPORT node_name self_name() const;
 
   void add_client(uint64_t id);
   void rm_client(uint64_t id);

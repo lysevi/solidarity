@@ -151,7 +151,7 @@ node::node(utils::logging::abstract_logger_ptr logger,
   _logger = logger;
 
   auto jrn = std::make_shared<rft::logdb::memory_journal>();
-  auto addr = rft::cluster_node().set_name(_params.name);
+  auto addr = rft::node_name().set_name(_params.name);
   auto s = rft::node_settings().set_name(_params.name);
   _consensus = std::make_shared<rft::consensus>(s, nullptr, jrn, _consumer, _logger);
 
@@ -223,7 +223,7 @@ node_state_t node::state() const {
   return _consensus->state();
 }
 
-cluster_node node::self_name() const {
+node_name node::self_name() const {
   return _consensus->self_addr();
 }
 

@@ -26,7 +26,7 @@ TEST_CASE("consensus.add_nodes", "[raft]") {
                                               rft::logdb::memory_journal::make_new(),
                                               c_0_consumer.get());
 
-  cluster->add_new(rft::cluster_node().set_name("_0"), c_0);
+  cluster->add_new(rft::node_name().set_name("_0"), c_0);
   EXPECT_EQ(c_0->term(), rft::UNDEFINED_TERM);
   EXPECT_EQ(c_0->kind(), rft::NODE_KIND::FOLLOWER);
 
@@ -44,7 +44,7 @@ TEST_CASE("consensus.add_nodes", "[raft]") {
                                               cluster.get(),
                                               rft::logdb::memory_journal::make_new(),
                                               c_1_consumer.get());
-  cluster->add_new(rft::cluster_node().set_name(settings_1.name()), c_1);
+  cluster->add_new(rft::node_name().set_name(settings_1.name()), c_1);
 
   while (c_1->get_leader().name() != c_0->self_addr().name()) {
     cluster->heartbeat();
@@ -64,7 +64,7 @@ TEST_CASE("consensus.add_nodes", "[raft]") {
                                               rft::logdb::memory_journal::make_new(),
                                               c_2_consumer.get());
 
-  cluster->add_new(rft::cluster_node().set_name(settings_2.name()), c_2);
+  cluster->add_new(rft::node_name().set_name(settings_2.name()), c_2);
 
   while (c_1->get_leader().name() != c_0->self_addr().name()
          || c_2->get_leader().name() != c_0->self_addr().name()) {
@@ -118,9 +118,9 @@ TEST_CASE("consensus", "[raft]") {
     consumers.push_back(c);
     auto cons = std::make_shared<rft::consensus>(
         sett, cluster.get(), rft::logdb::memory_journal::make_new(), c.get());
-    cluster->add_new(rft::cluster_node().set_name(sett.name()), cons);
+    cluster->add_new(rft::node_name().set_name(sett.name()), cons);
   }
-  rft::cluster_node last_leader;
+  rft::node_name last_leader;
   rft::command cmd;
   cmd.data.resize(1);
   cmd.data[0] = 0;
@@ -202,7 +202,7 @@ TEST_CASE("consensus", "[raft]") {
 }
 
 TEST_CASE("consensus.replication", "[raft]") {
-  using rft::cluster_node;
+  using rft::node_name;
   using rft::consensus;
   using rft::logdb::memory_journal;
 
@@ -249,7 +249,7 @@ TEST_CASE("consensus.replication", "[raft]") {
     consumers.push_back(consumer);
     auto cons = std::make_shared<consensus>(
         sett, cluster.get(), memory_journal::make_new(), consumer.get());
-    cluster->add_new(cluster_node().set_name(sett.name()), cons);
+    cluster->add_new(node_name().set_name(sett.name()), cons);
   }
   rft::command cmd;
   cmd.data.resize(1);
@@ -285,7 +285,7 @@ TEST_CASE("consensus.replication", "[raft]") {
     consumers.push_back(consumer);
     auto cons = std::make_shared<consensus>(
         sett, cluster.get(), memory_journal::make_new(), consumer.get());
-    cluster->add_new(cluster_node().set_name(sett.name()), cons);
+    cluster->add_new(node_name().set_name(sett.name()), cons);
     cluster->wait_leader_eletion();
   }
 
@@ -322,12 +322,12 @@ TEST_CASE("consensus.log_compaction", "[raft]") {
     consumers.push_back(c);
     auto cons = std::make_shared<rft::consensus>(
         sett, cluster.get(), rft::logdb::memory_journal::make_new(), c.get());
-    cluster->add_new(rft::cluster_node().set_name(sett.name()), cons);
+    cluster->add_new(rft::node_name().set_name(sett.name()), cons);
   }
 
   cluster->wait_leader_eletion();
 
-  rft::cluster_node last_leader;
+  rft::node_name last_leader;
   rft::command cmd;
   cmd.data.resize(1);
   cmd.data[0] = 0;
@@ -389,7 +389,7 @@ bool operator!=(const rft::logdb::log_entry &r, const rft::logdb::log_entry &l) 
 }
 
 TEST_CASE("consensus.apply_journal_on_start", "[raft]") {
-  using rft::cluster_node;
+  using rft::node_name;
   using rft::consensus;
   using rft::logdb::memory_journal;
 
@@ -420,7 +420,7 @@ TEST_CASE("consensus.apply_journal_on_start", "[raft]") {
   auto consumer = std::make_shared<mock_consumer>();
   consumers.push_back(consumer);
   auto cons = std::make_shared<consensus>(sett, cluster.get(), jrn, consumer.get());
-  cluster->add_new(cluster_node().set_name(sett.name()), cons);
+  cluster->add_new(node_name().set_name(sett.name()), cons);
 
   auto data_eq = [&cmd](const std::shared_ptr<mock_consumer> &c) -> bool {
     return c->last_cmd.data == cmd.data;
@@ -430,7 +430,7 @@ TEST_CASE("consensus.apply_journal_on_start", "[raft]") {
 }
 
 TEST_CASE("consensus.rollback", "[raft]") {
-  using rft::cluster_node;
+  using rft::node_name;
   using rft::consensus;
   using rft::logdb::memory_journal;
 

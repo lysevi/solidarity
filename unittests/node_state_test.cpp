@@ -6,12 +6,12 @@ SCENARIO("node_state.vote", "[raft]") {
   rft::node_state_t self;
   rft::node_settings s;
   self.term = 0;
-  rft::cluster_node self_addr;
+  rft::node_name self_addr;
   self_addr.set_name("self_addr");
 
   rft::node_state_t from_s;
   from_s.term = 1;
-  rft::cluster_node from_s_addr;
+  rft::node_name from_s_addr;
   from_s_addr.set_name("from_s_addr");
 
   auto self_ci_rec = rft::logdb::reccord_info();
@@ -229,8 +229,8 @@ SCENARIO("node_state.on_append_entries", "[raft]") {
   rft::node_state_t self;
   rft::node_state_t from_s;
 
-  rft::cluster_node self_addr;
-  rft::cluster_node from_s_addr;
+  rft::node_name self_addr;
+  rft::node_name from_s_addr;
 
   from_s.term = 1;
   from_s_addr.set_name("from_s_addr");
@@ -350,8 +350,8 @@ SCENARIO("node_state.on_heartbeat", "[raft]") {
   rft::node_state_t self;
   rft::node_state_t from_s;
 
-  rft::cluster_node self_addr;
-  rft::cluster_node from_s_addr;
+  rft::node_name self_addr;
+  rft::node_name from_s_addr;
 
   from_s.term = 1;
   from_s_addr.set_name("from_s_addr");

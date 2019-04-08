@@ -26,10 +26,10 @@ struct node_state_t {
   term_t term = UNDEFINED_TERM;
   clock_t::time_point last_heartbeat_time;
   std::chrono::milliseconds next_heartbeat_interval = {};
-  cluster_node leader;
+  node_name leader;
   NODE_KIND node_kind{NODE_KIND::FOLLOWER};
   size_t election_round = 0;
-  std::unordered_set<cluster_node> votes_to_me;
+  std::unordered_set<node_name> votes_to_me;
 
   uint64_t start_time;
 
@@ -67,23 +67,23 @@ struct node_state_t {
     }
   }
 
-  void change_state(const NODE_KIND s, const term_t r, const cluster_node &leader_);
-  void change_state(const cluster_node &cn, const term_t r);
+  void change_state(const NODE_KIND s, const term_t r, const node_name &leader_);
+  void change_state(const node_name &cn, const term_t r);
 
   EXPORT static changed_state_t on_vote(const node_state_t &self,
                                         const node_settings &settings,
-                                        const cluster_node &self_addr,
+                                        const node_name &self_addr,
                                         const logdb::reccord_info commited,
                                         const size_t cluster_size,
-                                        const cluster_node &from,
+                                        const node_name &from,
                                         const append_entries &e);
 
   EXPORT static node_state_t on_append_entries(const node_state_t &self,
-                                               const cluster_node &from,
+                                               const node_name &from,
                                                const logdb::abstract_journal *jrn,
                                                const append_entries &e);
   EXPORT static node_state_t heartbeat(const node_state_t &self,
-                                       const cluster_node &self_addr,
+                                       const node_name &self_addr,
                                        const size_t cluster_size);
 
   EXPORT static bool is_my_jrn_biggest(const node_state_t &self,

@@ -25,7 +25,7 @@ TEST_CASE("serialisation.append_entries", "[network]") {
   rft::append_entries ae;
 
   rft::ENTRIES_KIND kind = rft::ENTRIES_KIND::HEARTBEAT;
-  rft::cluster_node leader;
+  rft::node_name leader;
   rft::logdb::LOG_ENTRY_KIND lk = rft::logdb::LOG_ENTRY_KIND::APPEND;
 
   SECTION("kind=HEARTBEAT") { kind = rft::ENTRIES_KIND::HEARTBEAT; }
@@ -36,7 +36,7 @@ TEST_CASE("serialisation.append_entries", "[network]") {
   SECTION("kind=HELLO") { kind = rft::ENTRIES_KIND::HELLO; }
 
   SECTION("leader=LEADER") { leader.set_name("LEADER"); }
-  SECTION("leader.is_empty()") { leader = rft::cluster_node(); }
+  SECTION("leader.is_empty()") { leader = rft::node_name(); }
 
   SECTION("cmd.is_empty()") { ae.cmd.data.clear(); }
   SECTION("!cmd.is_empty() [small]") {
@@ -126,7 +126,7 @@ TEST_CASE("serialisation.command", "[network]") {
   rft::append_entries ae;
 
   rft::ENTRIES_KIND kind = rft::ENTRIES_KIND::HEARTBEAT;
-  rft::cluster_node leader;
+  rft::node_name leader;
   rft::logdb::LOG_ENTRY_KIND lk = rft::logdb::LOG_ENTRY_KIND::APPEND;
 
   kind = rft::ENTRIES_KIND::HEARTBEAT;
@@ -158,7 +158,7 @@ TEST_CASE("serialisation.command", "[network]") {
   ae.commited.lsn = 11;
   ae.commited.term = 22;
 
-  rft::queries::command_t cmd(rft::cluster_node("from node name"), ae);
+  rft::queries::command_t cmd(rft::node_name("from node name"), ae);
 
   auto msg = cmd.to_message();
   rft::queries::command_t cmd_u(msg);
