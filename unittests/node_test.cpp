@@ -26,6 +26,7 @@ TEST_CASE("node", "[network]") {
   std::unordered_map<std::string, std::shared_ptr<mock_consumer>> consumers;
   std::unordered_map<std::string, std::shared_ptr<rft::client>> clients;
 
+  std::cerr << "start nodes" << std::endl;
   unsigned short client_port = 10000;
   for (auto p : ports) {
     std::vector<unsigned short> out_ports;
@@ -51,7 +52,7 @@ TEST_CASE("node", "[network]") {
     params.thread_count = 1;
     params.cluster = out_addrs;
     params.name = utils::strings::args_to_string("node_", p);
-
+    std::cerr << params.name << " starting..." << std::endl;
     auto log_prefix = utils::strings::args_to_string(params.name, "> ");
     auto node_logger = std::make_shared<utils::logging::prefix_logger>(
         utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
@@ -80,6 +81,7 @@ TEST_CASE("node", "[network]") {
     clients[params.name] = c;
   }
 
+  std::cerr << "wait election" << std::endl;
   std::unordered_set<rft::node_name> leaders;
   while (true) {
     leaders.clear();
@@ -106,6 +108,7 @@ TEST_CASE("node", "[network]") {
     }
   }
 
+  std::cerr << "send over leader" << std::endl;
   auto leader_name = leaders.begin()->name();
   // std::shared_ptr<rft::node> leader_node = nodes[leader_name];
 
@@ -132,9 +135,12 @@ TEST_CASE("node", "[network]") {
   }
 
   leader_client->rm_update_handler(uh_id);
+  std::cerr << "resend test" << std::endl;
   tst_logger->info("resend test");
 
   for (auto &kv : clients) {
+    auto suffix = leader_name == kv.first ? " is a leader" : "";
+    std::cerr << "resend over " << kv.first << suffix << std::endl;
     std::transform(first_cmd.begin(),
                    first_cmd.end(),
                    first_cmd.begin(),
