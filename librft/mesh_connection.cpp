@@ -365,6 +365,11 @@ void mesh_connection::on_write_status(rft::node_name &target,
                                       uint64_t mess_id,
                                       ERROR_CODE status) {
   std::lock_guard l(_locker);
+  if (status != ERROR_CODE::OK) {
+    // TODO IMPLEMENT!
+    THROW_EXCEPTION("not supported status kind: ", status);
+  }
+
   if (auto mess_it = _messages.find(target); mess_it != _messages.end()) {
     auto pos = mess_it->second.find(mess_id);
     if (pos != mess_it->second.end()) {

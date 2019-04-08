@@ -82,7 +82,13 @@ public:
     clients::write_query_t wq(d);
     _logger->dbg("client:", _client_name, " write query #", wq.msg_id);
     bool writed = false;
-    if (_parent->state().node_kind == NODE_KIND::LEADER) {
+    auto nk = _parent->state().node_kind;
+    if (nk != NODE_KIND::LEADER && nk != NODE_KIND::FOLLOWER) {
+      // TODO IMPLEMENT!
+      THROW_EXCEPTION("not supported node kind: ", nk);
+    }
+
+    if (nk == NODE_KIND::LEADER) {
       _parent->get_consensus()->add_command(wq.query);
       if (_parent->state().node_kind != NODE_KIND::LEADER) {
         writed = false;
