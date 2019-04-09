@@ -90,15 +90,11 @@ public:
       i->send_data(st.to_message());
     } else {
       if (nk == NODE_KIND::LEADER) {
-        _parent->get_consensus()->add_command(wq.query);
-        if (_parent->state().node_kind != NODE_KIND::LEADER) {
-          writed = false;
-        } else {
-          status_t s(wq.msg_id, ERROR_CODE::OK, std::string());
-          auto ames = s.to_message();
-          i->send_data(ames);
-          writed = true;
-        }
+        auto ec = _parent->get_consensus()->add_command(wq.query);
+        status_t s(wq.msg_id, ec, std::string());
+        auto ames = s.to_message();
+        i->send_data(ames);
+        writed = true;
       }
 
       if (!writed) {
@@ -279,7 +275,7 @@ void node::heartbeat_timer() {
 void node::send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd) {
   auto leader = _consensus->state().leader;
   if (leader.is_empty()) {
-    queries::status_t s(message_id, rft::ERROR_CODE::UNDER_ELECTION, std::string());
+    queries::status_t s(message_id, rft::ERROR_CODE::UNDER_ELECTION, _params.name);
     _listener->send_to(client_id, s.to_message());
   } else {
     _logger->dbg("resend query #", client_id, " to leader ", leader);
