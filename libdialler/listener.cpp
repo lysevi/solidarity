@@ -17,7 +17,7 @@ void abstract_listener_consumer::set_listener(const std::shared_ptr<listener> &l
   _lstnr = lstnr;
 }
 
-void abstract_listener_consumer::send_to(uint64_t id, message_ptr &d) {
+void abstract_listener_consumer::send_to(uint64_t id, message_ptr d) {
   if (!_lstnr->is_stopping_started()) {
     _lstnr->send_to(id, d);
   }
@@ -153,11 +153,11 @@ void listener::erase_client_description(const listener_client_ptr client) {
   client->stopping_completed();
 }
 
-void listener::send_to(listener_client_ptr i, message_ptr &d) {
+void listener::send_to(listener_client_ptr i, message_ptr d) {
   i->send_data(d);
 }
 
-void listener::send_to(uint64_t id, message_ptr &d) {
+void listener::send_to(uint64_t id, message_ptr d) {
   std::lock_guard lg(this->_locker_connections);
   for (const auto &c : _connections) {
     if (c->get_id() == id) {

@@ -36,7 +36,7 @@ struct mock_cluster_client : rft::abstract_cluster_client {
     return connected.size();
   }
 
-  rft::ERROR_CODE add_command(const rft::command &cmd) override {
+  rft::ERROR_CODE add_command(const rft::command &) override {
     return rft::ERROR_CODE::OK;
   }
 

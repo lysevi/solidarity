@@ -106,6 +106,13 @@ TEST_CASE("serialisation.status_t", "[network]") {
   SECTION("serialisation.status_t::CONNECTION_NOT_FOUND") {
     s = rft::ERROR_CODE::CONNECTION_NOT_FOUND;
   }
+  SECTION("serialisation.status_t::WRONG_PROTOCOL_VERSION") {
+    s = rft::ERROR_CODE::WRONG_PROTOCOL_VERSION;
+  }
+  SECTION("serialisation.status_t::UNDER_ELECTION") {
+    s = rft::ERROR_CODE::UNDER_ELECTION;
+  }
+  SECTION("serialisation.status_t::UNDEFINED") { s = rft::ERROR_CODE::UNDEFINED; }
 
   rft::queries::status_t qc(777, s, "");
 

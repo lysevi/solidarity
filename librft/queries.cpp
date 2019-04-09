@@ -64,12 +64,12 @@ connection_error_t::connection_error_t(const dialler::message_ptr &mptr) {
   pac.next(oh);
   msg = oh.get().as<std::string>();
   pac.next(oh);
-  status = static_cast<ERROR_CODE>(oh.get().as<uint8_t>());
+  status = static_cast<ERROR_CODE>(oh.get().as<uint16_t>());
 }
 
 dialler::message_ptr connection_error_t::to_message() const {
   return pack_to_message(
-      queries::QUERY_KIND::CONNECTION_ERROR, protocol_version, msg, (uint8_t)status);
+      queries::QUERY_KIND::CONNECTION_ERROR, protocol_version, msg, (uint16_t)status);
 }
 
 status_t::status_t(const dialler::message_ptr &mptr) {
@@ -83,12 +83,12 @@ status_t::status_t(const dialler::message_ptr &mptr) {
   pac.next(oh);
   msg = oh.get().as<std::string>();
   pac.next(oh);
-  status = static_cast<ERROR_CODE>(oh.get().as<uint8_t>());
+  status = static_cast<ERROR_CODE>(oh.get().as<uint16_t>());
 }
 
 dialler::message_ptr status_t::to_message() const {
   return pack_to_message(
-      queries::QUERY_KIND::STATUS, id, msg, static_cast<uint8_t>(status));
+      queries::QUERY_KIND::STATUS, id, msg, static_cast<uint16_t>(status));
 }
 
 command_t::command_t(const std::vector<dialler::message_ptr> &mptrs) {
@@ -110,8 +110,8 @@ command_t::command_t(const std::vector<dialler::message_ptr> &mptrs) {
     msgpack::object_handle oh;
 
     pac.next(oh);
-    auto m = oh.get().as<std::string>();
-    from.set_name(m);
+    auto name_str = oh.get().as<std::string>();
+    from.set_name(name_str);
 
     auto s = std::accumulate(mptrs.cbegin(),
                              mptrs.cend(),

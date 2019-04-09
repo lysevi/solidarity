@@ -276,7 +276,8 @@ void node::send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd)
   auto leader = _consensus->state().leader;
   if (leader.is_empty()) {
     queries::status_t s(message_id, rft::ERROR_CODE::UNDER_ELECTION, _params.name);
-    _listener->send_to(client_id, s.to_message());
+    auto answer = s.to_message();
+    _listener->send_to(client_id, answer);
   } else {
     _logger->dbg("resend query #", client_id, " to leader ", leader);
     std::lock_guard l(_locker);
@@ -302,7 +303,8 @@ void node::on_message_sended_status(uint64_t client,
                           [message](auto p) { return p.first = message; });
   if (pos != _message_resend[client].end()) {
     status_t s(message, status, std::string());
-    _listener->send_to(client, s.to_message());
+    auto answer = s.to_message();
+    _listener->send_to(client, answer);
     _message_resend[client].erase(pos);
   }
 }

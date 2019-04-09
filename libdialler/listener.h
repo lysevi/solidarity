@@ -26,7 +26,7 @@ public:
 
   EXPORT void set_listener(const std::shared_ptr<listener> &lstnr);
   EXPORT bool is_listener_exists() const { return _lstnr != nullptr; }
-  EXPORT void send_to(uint64_t id, message_ptr &d);
+  EXPORT void send_to(uint64_t id, message_ptr d);
   EXPORT void stop();
 
 private:
@@ -49,8 +49,8 @@ public:
   EXPORT void start();
   EXPORT void stop();
 
-  EXPORT void send_to(listener_client_ptr i, message_ptr &d);
-  EXPORT void send_to(uint64_t id, message_ptr &d);
+  EXPORT void send_to(listener_client_ptr i, message_ptr d);
+  EXPORT void send_to(uint64_t id, message_ptr d);
 
   EXPORT boost::asio::io_context *context() const { return _context; }
 

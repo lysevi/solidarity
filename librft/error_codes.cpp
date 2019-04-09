@@ -12,6 +12,18 @@ std::string to_string(const ERROR_CODE status) {
   case ERROR_CODE::CONNECTION_NOT_FOUND: {
     return "CONNECTION_NOT_FOUND";
   }
+  case ERROR_CODE::WRONG_PROTOCOL_VERSION: {
+    return "WRONG_PROTOCOL_VERSION";
+  }
+
+  case ERROR_CODE::UNDER_ELECTION: {
+    return "UNDER_ELECTION";
+  }
+
+  case ERROR_CODE::UNDEFINED: {
+    return "UNDER_ELECTION";
+  }
+
   default:
     NOT_IMPLEMENTED;
   }
