@@ -83,7 +83,7 @@ TEST_CASE("serialisation.query_connect", "[network]") {
 }
 
 TEST_CASE("serialisation.connection_error", "[network]") {
-  rft::queries::connection_error_t qc(777, "");
+  rft::queries::connection_error_t qc(777, rft::ERROR_CODE::WRONG_PROTOCOL_VERSION, "");
 
   SECTION("empty message") { qc.msg = std::string(); }
   SECTION("long message") {
@@ -96,6 +96,7 @@ TEST_CASE("serialisation.connection_error", "[network]") {
             (dialler::message::kind_t)rft::queries::QUERY_KIND::CONNECTION_ERROR);
   EXPECT_EQ(qc.protocol_version, qc_u.protocol_version);
   EXPECT_EQ(qc.msg, qc_u.msg);
+  EXPECT_EQ(qc.status, qc_u.status);
 }
 
 TEST_CASE("serialisation.status_t", "[network]") {

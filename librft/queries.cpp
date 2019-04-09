@@ -50,8 +50,7 @@ query_connect_t::query_connect_t(const dialler::message_ptr &msg) {
 }
 
 dialler::message_ptr query_connect_t::query_connect_t::to_message() const {
-  return pack_to_message(
-      queries::QUERY_KIND::CONNECT, protocol_version, node_id);
+  return pack_to_message(queries::QUERY_KIND::CONNECT, protocol_version, node_id);
 }
 
 connection_error_t::connection_error_t(const dialler::message_ptr &mptr) {
@@ -64,10 +63,13 @@ connection_error_t::connection_error_t(const dialler::message_ptr &mptr) {
   protocol_version = oh.get().as<uint16_t>();
   pac.next(oh);
   msg = oh.get().as<std::string>();
+  pac.next(oh);
+  status = static_cast<ERROR_CODE>(oh.get().as<uint8_t>());
 }
 
 dialler::message_ptr connection_error_t::to_message() const {
-  return pack_to_message(queries::QUERY_KIND::CONNECTION_ERROR, protocol_version, msg);
+  return pack_to_message(
+      queries::QUERY_KIND::CONNECTION_ERROR, protocol_version, msg, (uint8_t)status);
 }
 
 status_t::status_t(const dialler::message_ptr &mptr) {

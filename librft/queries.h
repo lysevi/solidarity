@@ -1,6 +1,6 @@
 #include <librft/abstract_cluster.h>
-#include <librft/exports.h>
 #include <librft/error_codes.h>
+#include <librft/exports.h>
 
 #include <libdialler/message.h>
 #include <vector>
@@ -21,8 +21,7 @@ enum class QUERY_KIND : dialler::message::kind_t {
 struct query_connect_t {
   uint16_t protocol_version;
   std::string node_id;
-  EXPORT query_connect_t(uint16_t protocol_version_,
-                         std::string node_id_) {
+  EXPORT query_connect_t(uint16_t protocol_version_, std::string node_id_) {
     protocol_version = protocol_version_;
     node_id = node_id_;
   }
@@ -33,9 +32,14 @@ struct query_connect_t {
 struct connection_error_t {
   uint16_t protocol_version;
   std::string msg;
-  EXPORT connection_error_t(uint16_t protocol_version_, const std::string &m) {
+  ERROR_CODE status;
+
+  EXPORT connection_error_t(uint16_t protocol_version_,
+                            ERROR_CODE status_,
+                            const std::string &m) {
     protocol_version = protocol_version_;
     msg = m;
+    status = status_;
   }
   EXPORT connection_error_t(const dialler::message_ptr &mptr);
   EXPORT dialler::message_ptr to_message() const;

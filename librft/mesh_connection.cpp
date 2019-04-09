@@ -59,7 +59,10 @@ void listener::on_new_message(dialler::listener_client_ptr i,
     query_connect_t qc(d);
     dialler::message_ptr dout;
     if (qc.protocol_version != protocol_version) {
-      dout = connection_error_t(protocol_version, "protocol version error").to_message();
+      dout = connection_error_t(protocol_version,
+                                rft::ERROR_CODE::WRONG_PROTOCOL_VERSION,
+                                "protocol version error")
+                 .to_message();
     } else {
       dout = query_connect_t(protocol_version, _parent->_self_addr.name()).to_message();
       auto addr = rft::node_name().set_name(qc.node_id);

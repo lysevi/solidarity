@@ -16,7 +16,7 @@ public:
     answer_received = false;
   }
 
-  std::vector<uint8_t> result() {
+  void wait() {
     std::unique_lock ul(_mutex);
     while (true) {
       _condition.wait(ul, [this] { return answer_received; });
@@ -24,20 +24,30 @@ public:
         break;
       }
     }
+  }
+
+  std::vector<uint8_t> result() {
+    wait();
     if (err.empty()) {
       return answer;
     }
     throw rft::exception(err);
   }
 
-  void set_result(const std::vector<uint8_t> &r, const std::string &err_) {
+  void
+  set_result(const std::vector<uint8_t> &r, rft::ERROR_CODE ec, const std::string &err_) {
     answer = r;
+    _ec = ec;
     err = err_;
     answer_received = true;
     _condition.notify_all();
   }
 
   uint64_t id() const { return _id; }
+  rft::ERROR_CODE ecode() const {
+    ENSURE(_ec != rft::ERROR_CODE::UNDEFINED);
+    return _ec;
+  }
 
 private:
   uint64_t _id;
@@ -45,6 +55,7 @@ private:
   std::mutex _mutex;
   std::vector<uint8_t> answer;
   std::string err;
+  rft::ERROR_CODE _ec = rft::ERROR_CODE::UNDEFINED;
   bool answer_received;
 };
 
@@ -55,6 +66,7 @@ void rft::inner::client_update_connection_status(client &c, bool status) {
 void rft::inner::client_update_async_result(client &c,
                                             uint64_t id,
                                             const std::vector<uint8_t> &cmd,
+                                            ERROR_CODE ec,
                                             const std::string &err) {
   c._locker.lock();
   if (auto it = c._async_results.find(id); it == c._async_results.end()) {
@@ -67,7 +79,7 @@ void rft::inner::client_update_async_result(client &c,
     c._async_results.erase(it);
     c._locker.unlock();
     ENSURE(id == ares->id());
-    ares->set_result(cmd, err);
+    ares->set_result(cmd, ec, err);
   }
 }
 
@@ -91,24 +103,25 @@ public:
     switch (kind) {
     case QUERY_KIND::CONNECT: {
       // query_connect_t cc(d);
-      inner::client_update_async_result(*_parent, 0, {}, std::string());
+      inner::client_update_async_result(*_parent, 0, {}, ERROR_CODE::OK, std::string());
       break;
     }
     case QUERY_KIND::CONNECTION_ERROR: {
       connection_error_t cc(d);
-      inner::client_update_async_result(*_parent, 0, {}, cc.msg);
+      inner::client_update_async_result(*_parent, 0, {}, cc.status, cc.msg);
       break;
     }
     case QUERY_KIND::READ: {
       clients::read_query_t rq(d);
       inner::client_update_async_result(
-          *_parent, rq.msg_id, rq.query.data, std::string());
+          *_parent, rq.msg_id, rq.query.data, ERROR_CODE::OK, std::string());
       break;
     }
     case QUERY_KIND::STATUS: {
       status_t sq(d);
       // TODO check sq::status
-      inner::client_update_async_result(*_parent, sq.id, std::vector<uint8_t>(), sq.msg);
+      inner::client_update_async_result(
+          *_parent, sq.id, std::vector<uint8_t>(), sq.status, sq.msg);
       break;
     }
     case QUERY_KIND::UPDATE: {
@@ -203,7 +216,7 @@ std::shared_ptr<async_result_t> client::make_waiter() {
   return waiter;
 }
 
-void client::send(const std::vector<uint8_t> &cmd) {
+ERROR_CODE client::send(const std::vector<uint8_t> &cmd) {
   rft::command c;
   c.data = cmd;
 
@@ -211,7 +224,9 @@ void client::send(const std::vector<uint8_t> &cmd) {
   queries::clients::write_query_t rq(waiter->id(), c);
 
   _dialler->send_async(rq.to_message());
-  waiter->result();
+  waiter->wait();
+  auto result= waiter->ecode();
+  return result;
 }
 
 std::vector<uint8_t> client::read(const std::vector<uint8_t> &cmd) {

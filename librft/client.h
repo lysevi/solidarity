@@ -1,5 +1,6 @@
 #pragma once
 
+#include <librft/error_codes.h>
 #include <librft/exports.h>
 #include <atomic>
 #include <mutex>
@@ -24,6 +25,7 @@ void client_update_connection_status(client &c, bool status);
 void client_update_async_result(client &c,
                                 uint64_t id,
                                 const std::vector<uint8_t> &cmd,
+                                rft::ERROR_CODE ec,
                                 const std::string &err);
 void client_notify_update(client &c);
 } // namespace inner
@@ -58,7 +60,7 @@ public:
   EXPORT void connect();
   EXPORT void disconnect();
 
-  EXPORT void send(const std::vector<uint8_t> &cmd);
+  [[nodiscard]] EXPORT ERROR_CODE send(const std::vector<uint8_t> &cmd);
   EXPORT std::vector<uint8_t> read(const std::vector<uint8_t> &cmd);
 
   params_t params() const { return _params; }
@@ -71,6 +73,7 @@ public:
   friend void inner::client_update_async_result(client &c,
                                                 uint64_t id,
                                                 const std::vector<uint8_t> &cmd,
+                                                rft::ERROR_CODE ec,
                                                 const std::string &err);
   friend void inner::client_notify_update(client &c);
 

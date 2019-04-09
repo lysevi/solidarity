@@ -57,7 +57,8 @@ public:
                      " expected:",
                      protocol_version);
       cancel = true;
-      connection_error_t ce(protocol_version, "wrong protocol version");
+      connection_error_t ce(
+          protocol_version, ERROR_CODE::WRONG_PROTOCOL_VERSION, "wrong protocol version");
       answer = ce.to_message();
     } else {
       query_connect_t q(protocol_version, _parent->params().name);
@@ -85,23 +86,24 @@ public:
     auto nk = _parent->state().node_kind;
     if (nk != NODE_KIND::LEADER && nk != NODE_KIND::FOLLOWER) {
       // TODO IMPLEMENT!
-      THROW_EXCEPTION("not supported node kind: ", nk);
-    }
-
-    if (nk == NODE_KIND::LEADER) {
-      _parent->get_consensus()->add_command(wq.query);
-      if (_parent->state().node_kind != NODE_KIND::LEADER) {
-        writed = false;
-      } else {
-        status_t s(wq.msg_id, ERROR_CODE::OK, std::string());
-        auto ames = s.to_message();
-        i->send_data(ames);
-        writed = true;
+      queries::status_t st(wq.msg_id, ERROR_CODE::UNDER_ELECTION, std::string());
+      i->send_data(st.to_message());
+    } else {
+      if (nk == NODE_KIND::LEADER) {
+        _parent->get_consensus()->add_command(wq.query);
+        if (_parent->state().node_kind != NODE_KIND::LEADER) {
+          writed = false;
+        } else {
+          status_t s(wq.msg_id, ERROR_CODE::OK, std::string());
+          auto ames = s.to_message();
+          i->send_data(ames);
+          writed = true;
+        }
       }
-    }
 
-    if (!writed) {
-      _parent->send_to_leader(i->get_id(), wq.msg_id, wq.query);
+      if (!writed) {
+        _parent->send_to_leader(i->get_id(), wq.msg_id, wq.query);
+      }
     }
   }
 
@@ -277,16 +279,18 @@ void node::heartbeat_timer() {
 void node::send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd) {
   auto leader = _consensus->state().leader;
   if (leader.is_empty()) {
-    NOT_IMPLEMENTED;
-  }
-  _logger->dbg("resend query #", client_id, " to leader ", leader);
-  std::lock_guard l(_locker);
-  _message_resend[client_id].push_back(std::pair(message_id, cmd));
+    queries::status_t s(message_id, rft::ERROR_CODE::UNDER_ELECTION, std::string());
+    _listener->send_to(client_id, s.to_message());
+  } else {
+    _logger->dbg("resend query #", client_id, " to leader ", leader);
+    std::lock_guard l(_locker);
+    _message_resend[client_id].push_back(std::pair(message_id, cmd));
 
-  _cluster_con->send_to(leader, cmd, [client_id, message_id, this](ERROR_CODE s) {
-    // TODO use shared_from_this;
-    this->on_message_sended_status(client_id, message_id, s);
-  });
+    _cluster_con->send_to(leader, cmd, [client_id, message_id, this](ERROR_CODE s) {
+      // TODO use shared_from_this;
+      this->on_message_sended_status(client_id, message_id, s);
+    });
+  }
 }
 
 void node::on_message_sended_status(uint64_t client,
@@ -295,18 +299,14 @@ void node::on_message_sended_status(uint64_t client,
   _logger->dbg(
       "on_message_sended_status client:", client, " #", message, " status:", status);
   std::lock_guard l(_locker);
-  // TODO if!is_ok?
   // TODO refact
-  if (status == ERROR_CODE::OK) {
-    auto pos = std::find_if(_message_resend[client].begin(),
-                            _message_resend[client].end(),
-                            [message](auto p) { return p.first = message; });
-    if (pos != _message_resend[client].end()) {
-      status_t s(message, status, std::string());
-      _listener->send_to(client, s.to_message());
-      _message_resend[client].erase(pos);
-    }
-  } else {
-    NOT_IMPLEMENTED;
+
+  auto pos = std::find_if(_message_resend[client].begin(),
+                          _message_resend[client].end(),
+                          [message](auto p) { return p.first = message; });
+  if (pos != _message_resend[client].end()) {
+    status_t s(message, status, std::string());
+    _listener->send_to(client, s.to_message());
+    _message_resend[client].erase(pos);
   }
 }

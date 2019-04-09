@@ -125,7 +125,10 @@ TEST_CASE("node", "[network]") {
     cond.notify_all();
   });
 
-  leader_client->send(first_cmd);
+  {
+    auto ecode = leader_client->send(first_cmd);
+    EXPECT_EQ(ecode, rft::ERROR_CODE::OK);
+  }
 
   while (true) {
     cond.wait(ulock, [&is_on_update_received]() { return is_on_update_received; });
@@ -152,7 +155,11 @@ TEST_CASE("node", "[network]") {
       oss << "]";
       tst_logger->info("send over ", kv.first, " cmd:", oss.str());
     }
-    kv.second->send(first_cmd);
+    
+	rft::ERROR_CODE send_ecode = rft::ERROR_CODE::UNDEFINED;
+    do {
+      send_ecode = kv.second->send(first_cmd);
+    } while (send_ecode != rft::ERROR_CODE::OK);
 
     auto expected_answer = first_cmd;
     std::transform(expected_answer.begin(),
