@@ -1,8 +1,9 @@
 #pragma once
 
-#include <libutils/async/locker.h>
 #include <libutils/utils.h>
 #include <libutils/utils_exports.h>
+
+#include <condition_variable>
 
 namespace utils::async {
 using thread_kind_t = uint16_t;
@@ -30,22 +31,27 @@ struct thread_info {
 
 struct task_result {
   bool runned;
-  /// dont use mutex.
-  /// mutex::lock() requires that the calling thread owns the mutex.
-  locker m;
-  task_result() noexcept {
-    runned = true;
-    m.lock();
-  }
+
+  std::condition_variable _condition;
+  std::mutex _mutex;
+
+  task_result() noexcept { runned = true; }
+
   ~task_result() {}
+
   void wait() {
-    m.lock();
-    m.unlock();
+    std::unique_lock ul(_mutex);
+    while (true) {
+      _condition.wait(ul, [this] { return !runned; });
+      if (!runned) {
+        break;
+      }
+    }
   }
 
   void unlock() {
     runned = false;
-    m.unlock();
+    _condition.notify_all();
   }
 };
 
