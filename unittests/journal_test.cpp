@@ -60,7 +60,7 @@ TEST_CASE("journal.memory") {
     to_rm.lsn = 2;
     jrn->erase_all_to(to_rm.lsn);
     EXPECT_EQ(jrn->prev_rec().lsn, rft::logdb::index_t(3));
-    EXPECT_EQ(jrn->size(), size_t(2));
+    EXPECT_EQ(jrn->reccords_count(), size_t(2));
 
     EXPECT_EQ(jrn->info(rft::logdb::index_t(0)).lsn, rft::logdb::UNDEFINED_INDEX);
     EXPECT_EQ(jrn->info(rft::logdb::index_t(0)).term, rft::logdb::UNDEFINED_TERM);

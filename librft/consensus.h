@@ -45,7 +45,7 @@ public:
   EXPORT void recv(const node_name &from, const append_entries &e) override;
   EXPORT void lost_connection_with(const node_name &addr) override;
   EXPORT void new_connection_with(const rft::node_name &addr) override;
-  EXPORT ERROR_CODE add_command(const command &cmd) override;
+  [[nodiscard]] EXPORT ERROR_CODE add_command(const command &cmd) override;
 
   node_name get_leader() const {
     std::lock_guard l(_locker);

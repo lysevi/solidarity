@@ -181,7 +181,8 @@ TEST_CASE("consensus", "[raft]") {
             leaders = cluster->by_filter(is_leader_pred);
           }
           cmd.data[0]++;
-          leaders[0]->add_command(cmd);
+          auto st = leaders[0]->add_command(cmd);
+          EXPECT_EQ(st, rft::ERROR_CODE::OK);
           for (size_t j = 0; j < attempts_to_add; ++j) {
             cluster->print_cluster();
             cluster->heartbeat();
@@ -202,8 +203,8 @@ TEST_CASE("consensus", "[raft]") {
 }
 
 TEST_CASE("consensus.replication", "[raft]") {
-  using rft::node_name;
   using rft::consensus;
+  using rft::node_name;
   using rft::logdb::memory_journal;
 
   auto cluster = std::make_shared<mock_cluster>();
@@ -267,7 +268,8 @@ TEST_CASE("consensus.replication", "[raft]") {
 
   for (int i = 0; i < 10; ++i) {
     cmd.data[0]++;
-    leaders[0]->add_command(cmd);
+    auto st = leaders[0]->add_command(cmd);
+    EXPECT_EQ(st, rft::ERROR_CODE::OK);
     while (true) {
       cluster->heartbeat();
       cluster->print_cluster();
@@ -343,7 +345,8 @@ TEST_CASE("consensus.log_compaction", "[raft]") {
       cluster->wait_leader_eletion();
     }
     cmd.data[0]++;
-    leaders[0]->add_command(cmd);
+    auto st = leaders[0]->add_command(cmd);
+    EXPECT_EQ(st, rft::ERROR_CODE::OK);
     while (true) {
       cluster->print_cluster();
       cluster->heartbeat();
@@ -360,11 +363,12 @@ TEST_CASE("consensus.log_compaction", "[raft]") {
   while (true) {
     cluster->print_cluster();
     cluster->heartbeat();
-    std::transform(
-        all_nodes.cbegin(),
-        all_nodes.cend(),
-        sizes.begin(),
-        [](const std::shared_ptr<rft::consensus> &c) { return c->journal()->size(); });
+    std::transform(all_nodes.cbegin(),
+                   all_nodes.cend(),
+                   sizes.begin(),
+                   [](const std::shared_ptr<rft::consensus> &c) {
+                     return c->journal()->reccords_count();
+                   });
 
     size_t count_of
         = std::count_if(sizes.cbegin(), sizes.cend(), [max_log_size](const size_t c) {
@@ -389,8 +393,8 @@ bool operator!=(const rft::logdb::log_entry &r, const rft::logdb::log_entry &l) 
 }
 
 TEST_CASE("consensus.apply_journal_on_start", "[raft]") {
-  using rft::node_name;
   using rft::consensus;
+  using rft::node_name;
   using rft::logdb::memory_journal;
 
   auto cluster = std::make_shared<mock_cluster>();
@@ -430,8 +434,8 @@ TEST_CASE("consensus.apply_journal_on_start", "[raft]") {
 }
 
 TEST_CASE("consensus.rollback", "[raft]") {
-  using rft::node_name;
   using rft::consensus;
+  using rft::node_name;
   using rft::logdb::memory_journal;
 
   auto cluster = std::make_shared<mock_cluster>();
@@ -549,7 +553,7 @@ TEST_CASE("consensus.rollback", "[raft]") {
     if (content1.size() == content2.size()) {
       bool contents_is_equal = true;
       for (const auto &kv : content1) {
-        
+
         if (auto it = content2.find(kv.first); it == content2.end()) {
           contents_is_equal = false;
           break;

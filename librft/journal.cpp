@@ -53,6 +53,15 @@ log_entry memory_journal::get(const logdb::index_t lsn) {
 
 size_t memory_journal::size() const {
   std::shared_lock lg(_locker);
+  if (_prev.is_empty()) {
+    return size_t(0);
+  } else {
+    return _prev.lsn + 1;
+  }
+}
+
+size_t memory_journal::reccords_count() const {
+  std::shared_lock lg(_locker);
   return _wal.size();
 }
 

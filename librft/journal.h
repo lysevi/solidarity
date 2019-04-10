@@ -62,7 +62,7 @@ public:
   virtual void commit(const index_t lsn) = 0;
   virtual log_entry get(const logdb::index_t lsn) = 0;
   virtual size_t size() const = 0;
-  
+  virtual size_t reccords_count()const=0;
   virtual void erase_all_after(const index_t lsn) = 0;
   virtual void erase_all_to(const index_t lsn) = 0;
 
@@ -82,23 +82,24 @@ using journal_ptr = std::shared_ptr<abstract_journal>;
 
 class memory_journal final : public abstract_journal {
 public:
-  EXPORT static std::shared_ptr<memory_journal> make_new();
+  [[nodiscard]] EXPORT static std::shared_ptr<memory_journal> make_new();
   EXPORT reccord_info put(const log_entry &e) override;
   EXPORT void commit(const index_t lsn) override;
-  EXPORT log_entry get(const logdb::index_t lsn) override;
-  EXPORT size_t size() const override;
+  [[nodiscard]] EXPORT log_entry get(const logdb::index_t lsn) override;
+  [[nodiscard]] EXPORT size_t size() const override;
+  [[nodiscard]] EXPORT size_t reccords_count() const;
   EXPORT void erase_all_after(const index_t lsn) override;
   EXPORT void erase_all_to(const index_t lsn) override;
   EXPORT void visit(std::function<void(const log_entry &)>) override;
 
-  EXPORT reccord_info prev_rec() const noexcept override;
-  EXPORT reccord_info first_uncommited_rec() const noexcept override;
-  EXPORT reccord_info commited_rec() const noexcept override;
-  EXPORT reccord_info first_rec() const noexcept override;
-  EXPORT reccord_info restore_start_point() const noexcept override;
-  EXPORT reccord_info info(index_t lsn) const noexcept override;
+  [[nodiscard]] EXPORT reccord_info prev_rec() const noexcept override;
+  [[nodiscard]] EXPORT reccord_info first_uncommited_rec() const noexcept override;
+  [[nodiscard]] EXPORT reccord_info commited_rec() const noexcept override;
+  [[nodiscard]] EXPORT reccord_info first_rec() const noexcept override;
+  [[nodiscard]] EXPORT reccord_info restore_start_point() const noexcept override;
+  [[nodiscard]] EXPORT reccord_info info(index_t lsn) const noexcept override;
 
-  EXPORT std::unordered_map<index_t, log_entry> dump() const override;
+  [[nodiscard]] EXPORT std::unordered_map<index_t, log_entry> dump() const override;
 
 protected:
   mutable std::shared_mutex _locker;
