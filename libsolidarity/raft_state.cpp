@@ -1,13 +1,13 @@
-#include <librft/raft_state.h>
+#include <libsolidarity/raft_state.h>
 #include <libutils/logger.h>
 #include <libutils/utils.h>
 #include <cmath>
 #include <sstream>
 
-using namespace rft;
+using namespace solidarity;
 using namespace utils::logging;
 
-std::string rft::to_string(const raft_state_t &s) {
+std::string solidarity::to_string(const raft_state_t &s) {
   std::stringstream ss;
   ss << "{ K:" << to_string(s.node_kind) << ", N:" << s.term
      << ", L:" << to_string(s.leader);

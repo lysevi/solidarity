@@ -1,10 +1,10 @@
-#include <librft/mesh_connection.h>
-#include <librft/queries.h>
+#include <libsolidarity/mesh_connection.h>
+#include <libsolidarity/queries.h>
 #include <libutils/utils.h>
 
-using namespace rft;
+using namespace solidarity;
 
-namespace rft::impl {
+namespace solidarity::impl {
 out_connection::out_connection(const std::shared_ptr<mesh_connection> parent,
                                const std::string &target_addr) {
   _parent = parent;
@@ -62,13 +62,13 @@ void listener::on_new_message(dialler::listener_client_ptr i,
     dialler::message_ptr dout;
     if (qc.protocol_version != protocol_version) {
       dout = connection_error_t(protocol_version,
-                                rft::ERROR_CODE::WRONG_PROTOCOL_VERSION,
+                                solidarity::ERROR_CODE::WRONG_PROTOCOL_VERSION,
                                 "protocol version error")
                  .to_message();
 	  cancel=true;
     } else {
       dout = query_connect_t(protocol_version, _parent->_self_addr.name()).to_message();
-      auto addr = rft::node_name().set_name(qc.node_id);
+      auto addr = solidarity::node_name().set_name(qc.node_id);
       _parent->accept_input_connection(addr, i->get_id());
       _parent->_logger->info("[network] accept connection from ", addr);
     }
@@ -110,7 +110,7 @@ void listener::on_disconnect(const dialler::listener_client_ptr &i) {
   _parent->rm_input_connection(i->get_id());
 }
 
-} // namespace rft::impl
+} // namespace solidarity::impl
 
 mesh_connection::mesh_connection(node_name self_addr,
                                  const std::shared_ptr<abstract_cluster_client> &client,
@@ -329,8 +329,8 @@ void mesh_connection::on_new_command(const std::vector<dialler::message_ptr> &m)
   _client->recv(cmd_q.from, cmd_q.cmd);
 }
 
-void mesh_connection::send_to(rft::node_name &target,
-                              rft::command &cmd,
+void mesh_connection::send_to(solidarity::node_name &target,
+                              solidarity::command &cmd,
                               std::function<void(ERROR_CODE)> callback) {
   // TODO need an unit test
   std::lock_guard l(_locker);
@@ -350,7 +350,7 @@ void mesh_connection::send_to(rft::node_name &target,
 
 void mesh_connection::on_write_resend(const node_name &target,
                                       uint64_t mess_id,
-                                      rft::command &cmd) {
+                                      solidarity::command &cmd) {
   dialler::message_ptr result;
   {
     std::shared_lock l(_locker);
@@ -367,7 +367,7 @@ void mesh_connection::on_write_resend(const node_name &target,
   }
 }
 
-void mesh_connection::on_write_status(rft::node_name &target,
+void mesh_connection::on_write_status(solidarity::node_name &target,
                                       uint64_t mess_id,
                                       ERROR_CODE status) {
   std::lock_guard l(_locker);

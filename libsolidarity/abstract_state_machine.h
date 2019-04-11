@@ -1,7 +1,7 @@
 #pragma once
-#include <librft/command.h>
+#include <libsolidarity/command.h>
 
-namespace rft{
+namespace solidarity{
 class abstract_state_machine {
 public:
   virtual ~abstract_state_machine() {}

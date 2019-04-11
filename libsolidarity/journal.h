@@ -1,15 +1,15 @@
 #pragma once
 
-#include <librft/command.h>
-#include <librft/exports.h>
-#include <librft/types.h>
+#include <libsolidarity/command.h>
+#include <libsolidarity/exports.h>
+#include <libsolidarity/types.h>
 #include <map>
 #include <memory>
 #include <shared_mutex>
 #include <utility>
 #include <unordered_map>
 
-namespace rft::logdb {
+namespace solidarity::logdb {
 /// log sequence numbder;
 using index_t = int64_t;
 const term_t UNDEFINED_TERM = std::numeric_limits<term_t>::min();
@@ -109,14 +109,14 @@ protected:
   reccord_info _prev;
   reccord_info _commited;
 };
-} // namespace rft::logdb
+} // namespace solidarity::logdb
 
 namespace std {
 template <>
-struct hash<rft::logdb::reccord_info> {
-  std::size_t operator()(const rft::logdb::reccord_info &k) const {
-    size_t h1 = std::hash<rft::term_t>()(k.term);
-    size_t h2 = std::hash<rft::logdb::index_t>()(k.lsn);
+struct hash<solidarity::logdb::reccord_info> {
+  std::size_t operator()(const solidarity::logdb::reccord_info &k) const {
+    size_t h1 = std::hash<solidarity::term_t>()(k.term);
+    size_t h2 = std::hash<solidarity::logdb::index_t>()(k.lsn);
     return h1 ^ (h2 << 1);
   }
 };

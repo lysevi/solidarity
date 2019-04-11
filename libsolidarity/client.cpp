@@ -1,17 +1,17 @@
-#include <librft/client.h>
-#include <librft/protocol_version.h>
-#include <librft/queries.h>
+#include <libsolidarity/client.h>
+#include <libsolidarity/protocol_version.h>
+#include <libsolidarity/queries.h>
 #include <libdialler/dialler.h>
 #include <libutils/strings.h>
 #include <libutils/utils.h>
 #include <boost/asio.hpp>
 #include <condition_variable>
 
-using namespace rft;
+using namespace solidarity;
 
-class rft::async_result_t {
+class solidarity::async_result_t {
 public:
-  rft::async_result_t(uint64_t id_) {
+  solidarity::async_result_t(uint64_t id_) {
     _id = id_;
     answer_received = false;
   }
@@ -31,11 +31,11 @@ public:
     if (err.empty()) {
       return answer;
     }
-    throw rft::exception(err);
+    throw solidarity::exception(err);
   }
 
   void
-  set_result(const std::vector<uint8_t> &r, rft::ERROR_CODE ec, const std::string &err_) {
+  set_result(const std::vector<uint8_t> &r, solidarity::ERROR_CODE ec, const std::string &err_) {
     answer = r;
     _ec = ec;
     err = err_;
@@ -44,8 +44,8 @@ public:
   }
 
   uint64_t id() const { return _id; }
-  rft::ERROR_CODE ecode() const {
-    ENSURE(_ec != rft::ERROR_CODE::UNDEFINED);
+  solidarity::ERROR_CODE ecode() const {
+    ENSURE(_ec != solidarity::ERROR_CODE::UNDEFINED);
     return _ec;
   }
 
@@ -55,15 +55,15 @@ private:
   std::mutex _mutex;
   std::vector<uint8_t> answer;
   std::string err;
-  rft::ERROR_CODE _ec = rft::ERROR_CODE::UNDEFINED;
+  solidarity::ERROR_CODE _ec = solidarity::ERROR_CODE::UNDEFINED;
   bool answer_received;
 };
 
-void rft::inner::client_update_connection_status(client &c, bool status) {
+void solidarity::inner::client_update_connection_status(client &c, bool status) {
   c._connected = status;
 }
 
-void rft::inner::client_update_async_result(client &c,
+void solidarity::inner::client_update_async_result(client &c,
                                             uint64_t id,
                                             const std::vector<uint8_t> &cmd,
                                             ERROR_CODE ec,
@@ -83,11 +83,11 @@ void rft::inner::client_update_async_result(client &c,
   }
 }
 
-void rft::inner::client_notify_update(client &c) {
+void solidarity::inner::client_notify_update(client &c) {
   c.notify_on_update();
 }
 
-void rft::inner::client_notify_update(client &c, const client_state_event_t &ev) {
+void solidarity::inner::client_notify_update(client &c, const client_state_event_t &ev) {
   c.notify_on_client_event(ev);
 }
 
@@ -154,7 +154,7 @@ client::client(const params_t &p)
     : _params(p)
     , _io_context((int)p.threads_count) {
   if (p.threads_count == 0) {
-    throw rft::exception("threads count can't be zero");
+    throw solidarity::exception("threads count can't be zero");
   }
   _connected = false;
   _next_query_id.store(0);
@@ -225,7 +225,7 @@ std::shared_ptr<async_result_t> client::make_waiter() {
 }
 
 ERROR_CODE client::send(const std::vector<uint8_t> &cmd) {
-  rft::command c;
+  solidarity::command c;
   c.data = cmd;
 
   auto waiter = make_waiter();
@@ -238,7 +238,7 @@ ERROR_CODE client::send(const std::vector<uint8_t> &cmd) {
 }
 
 std::vector<uint8_t> client::read(const std::vector<uint8_t> &cmd) {
-  rft::command c;
+  solidarity::command c;
   c.data = cmd;
 
   auto waiter = make_waiter();

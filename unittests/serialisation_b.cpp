@@ -1,15 +1,15 @@
-#include <librft/abstract_cluster.h>
-#include <librft/queries.h>
+#include <libsolidarity/abstract_cluster.h>
+#include <libsolidarity/queries.h>
 #include <libutils/utils.h>
 #include <catch.hpp>
 
 #ifdef ENABLE_BENCHMARKS
 
 TEST_CASE("serialisation", "[bench]") {
-  using namespace rft::queries;
+  using namespace solidarity::queries;
   using dialler::message;
   {
-    rft::append_entries ae;
+    solidarity::append_entries ae;
     ae.cmd.data.resize(1000);
     std::iota(ae.cmd.data.begin(), ae.cmd.data.end(), uint8_t(0));
 
@@ -17,7 +17,7 @@ TEST_CASE("serialisation", "[bench]") {
 
     auto ba = ae.to_byte_array();
     BENCHMARK("append_entries:from_byte_array") {
-      auto e = rft::append_entries::from_byte_array(ba);
+      auto e = solidarity::append_entries::from_byte_array(ba);
     }
   }
   {
@@ -28,14 +28,14 @@ TEST_CASE("serialisation", "[bench]") {
     BENCHMARK("query_connect_t:unpack") { query_connect_t unpacked(qcon_msg); }
   }
   {
-    connection_error_t con_error(777, rft::ERROR_CODE::WRONG_PROTOCOL_VERSION, "long error message");
+    connection_error_t con_error(777, solidarity::ERROR_CODE::WRONG_PROTOCOL_VERSION, "long error message");
     BENCHMARK("connection_error_t::to_message") { UNUSED(con_error.to_message()); }
 
     auto qcon_err_msg = con_error.to_message();
     BENCHMARK("connection_error_t:unpack") { connection_error_t unpacked(qcon_err_msg); }
   }
   {
-    status_t status_(777, rft::ERROR_CODE::OK, "long error message");
+    status_t status_(777, solidarity::ERROR_CODE::OK, "long error message");
     BENCHMARK("status_t::to_message") { UNUSED(status_.to_message()); }
 
     auto status_msg = status_.to_message();
@@ -43,11 +43,11 @@ TEST_CASE("serialisation", "[bench]") {
   }
 
   {
-    rft::append_entries ae;
+    solidarity::append_entries ae;
     ae.cmd.data.resize(1000);
     std::iota(ae.cmd.data.begin(), ae.cmd.data.end(), uint8_t(0));
 
-    command_t cmd(rft::node_name("long cluster node name"), ae);
+    command_t cmd(solidarity::node_name("long cluster node name"), ae);
     BENCHMARK("command_t::to_message") { UNUSED(cmd.to_message()); }
 
     auto cmd_msg = cmd.to_message();
@@ -63,7 +63,7 @@ TEST_CASE("serialisation", "[bench]") {
     }
   }
   {
-    rft::command read_q_cmd;
+    solidarity::command read_q_cmd;
     read_q_cmd.data.resize(10);
     std::iota(read_q_cmd.data.begin(), read_q_cmd.data.end(), uint8_t(0));
     clients::read_query_t read_q(777, read_q_cmd);
@@ -73,7 +73,7 @@ TEST_CASE("serialisation", "[bench]") {
     BENCHMARK("read_query_t:unpack") { clients::read_query_t unpacked(read_q_msg); }
   }
   {
-    rft::command w_q_cmd;
+    solidarity::command w_q_cmd;
     w_q_cmd.data.resize(10);
     std::iota(w_q_cmd.data.begin(), w_q_cmd.data.end(), uint8_t(0));
     clients::write_query_t write_q(777, w_q_cmd);

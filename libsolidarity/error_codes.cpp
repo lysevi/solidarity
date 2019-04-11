@@ -1,6 +1,6 @@
-#include <librft/error_codes.h>
+#include <libsolidarity/error_codes.h>
 #include <libutils/utils.h>
-namespace rft {
+namespace solidarity {
 std::string to_string(const ERROR_CODE status) {
   switch (status) {
   case ERROR_CODE::OK: {
@@ -31,4 +31,4 @@ std::string to_string(const ERROR_CODE status) {
     THROW_EXCEPTION("unknow error code: ", static_cast<uint16_t>(status));
   }
 }
-} // namespace rft
+} // namespace solidarity

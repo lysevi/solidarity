@@ -1,10 +1,10 @@
-#include <librft/journal.h>
+#include <libsolidarity/journal.h>
 #include <libutils/exception.h>
 #include <sstream>
-using namespace rft;
+using namespace solidarity;
 using namespace logdb;
 
-namespace rft {
+namespace solidarity {
 namespace logdb {
 
 std::string to_string(const reccord_info &ri) {
@@ -13,7 +13,7 @@ std::string to_string(const reccord_info &ri) {
   return ss.str();
 }
 } // namespace logdb
-} // namespace rft
+} // namespace solidarity
 
 std::shared_ptr<memory_journal> memory_journal::make_new() {
   return std::make_shared<memory_journal>();
@@ -201,7 +201,7 @@ reccord_info memory_journal::info(index_t lsn) const noexcept {
 
 std::unordered_map<index_t, log_entry> memory_journal::dump() const {
   std::shared_lock lg(_locker);
-  std::unordered_map<rft::logdb::index_t, rft::logdb::log_entry> result;
+  std::unordered_map<solidarity::logdb::index_t, solidarity::logdb::log_entry> result;
 
   auto prev = prev_rec();
   if (!prev.is_empty()) {

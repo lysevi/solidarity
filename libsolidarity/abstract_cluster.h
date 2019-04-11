@@ -1,11 +1,11 @@
 #pragma once
 
-#include <librft/journal.h>
-#include <librft/error_codes.h>
+#include <libsolidarity/journal.h>
+#include <libsolidarity/error_codes.h>
 #include <libutils/property.h>
 #include <memory>
 
-namespace rft {
+namespace solidarity {
 
 class node_name {
   PROPERTY(std::string, name)
@@ -79,16 +79,16 @@ public:
   virtual std::vector<node_name> all_nodes() const = 0;
 };
 
-}; // namespace rft
+}; // namespace solidarity
 
 namespace std {
 template <>
-struct hash<rft::node_name> {
-  std::size_t operator()(const rft::node_name &k) const {
+struct hash<solidarity::node_name> {
+  std::size_t operator()(const solidarity::node_name &k) const {
     return std::hash<string>()(k.name());
   }
 };
 
-EXPORT std::string to_string(const rft::append_entries &e);
-EXPORT std::string to_string(const rft::ENTRIES_KIND k);
+EXPORT std::string to_string(const solidarity::append_entries &e);
+EXPORT std::string to_string(const solidarity::ENTRIES_KIND k);
 } // namespace std

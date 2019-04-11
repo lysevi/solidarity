@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cassert>
 
-worker_t::worker_t(std::shared_ptr<rft::raft> t) {
+worker_t::worker_t(std::shared_ptr<solidarity::raft> t) {
   _target = t;
   self_addr = _target->self_addr();
   _tread = std::thread([this]() { this->worker(); });
@@ -100,9 +100,9 @@ void mock_cluster::stop_workers() {
   _workers.clear();
 }
 
-void mock_cluster::send_to(const rft::node_name &from,
-                           const rft::node_name &to,
-                           const rft::append_entries &m) {
+void mock_cluster::send_to(const solidarity::node_name &from,
+                           const solidarity::node_name &to,
+                           const solidarity::append_entries &m) {
   std::shared_lock ul(_cluster_locker);
 
   if (auto it = _workers.find(to); it != _workers.end()) {
@@ -110,7 +110,7 @@ void mock_cluster::send_to(const rft::node_name &from,
   }
 }
 
-void mock_cluster::send_all(const rft::node_name &from, const rft::append_entries &m) {
+void mock_cluster::send_all(const solidarity::node_name &from, const solidarity::append_entries &m) {
   std::shared_lock lg(_cluster_locker);
   ENSURE(!from.is_empty());
   for (const auto &kv : _cluster) {
@@ -121,8 +121,8 @@ void mock_cluster::send_all(const rft::node_name &from, const rft::append_entrie
   }
 }
 
-void mock_cluster::add_new(const rft::node_name &addr,
-                           const std::shared_ptr<rft::raft> &c) {
+void mock_cluster::add_new(const solidarity::node_name &addr,
+                           const std::shared_ptr<solidarity::raft> &c) {
   std::lock_guard<std::shared_mutex> lg(_cluster_locker);
   if (_workers.find(addr) != _workers.end()) {
     THROW_EXCEPTION("_workers.find(addr) != _workers.end()");
@@ -133,10 +133,10 @@ void mock_cluster::add_new(const rft::node_name &addr,
   _size++;
 }
 
-std::vector<std::shared_ptr<rft::raft>>
-mock_cluster::by_filter(std::function<bool(const std::shared_ptr<rft::raft>)> pred) {
+std::vector<std::shared_ptr<solidarity::raft>>
+mock_cluster::by_filter(std::function<bool(const std::shared_ptr<solidarity::raft>)> pred) {
   std::shared_lock lg(_cluster_locker);
-  std::vector<std::shared_ptr<rft::raft>> result;
+  std::vector<std::shared_ptr<solidarity::raft>> result;
   result.reserve(_cluster.size());
   for (const auto &kv : _cluster) {
     if (pred(kv.second)) {
@@ -146,11 +146,11 @@ mock_cluster::by_filter(std::function<bool(const std::shared_ptr<rft::raft>)> pr
   return result;
 }
 
-std::vector<std::shared_ptr<rft::raft>> mock_cluster::get_all() {
+std::vector<std::shared_ptr<solidarity::raft>> mock_cluster::get_all() {
   return by_filter([](auto) { return true; });
 }
 
-void mock_cluster::apply(std::function<void(const std::shared_ptr<rft::raft>)> f) {
+void mock_cluster::apply(std::function<void(const std::shared_ptr<solidarity::raft>)> f) {
   std::shared_lock lg(_cluster_locker);
   for (const auto &kv : _cluster) {
     f(kv.second);
@@ -181,9 +181,9 @@ void mock_cluster::print_cluster() {
 }
 
 void mock_cluster::erase_if(
-    std::function<bool(const std::shared_ptr<rft::raft>)> pred) {
+    std::function<bool(const std::shared_ptr<solidarity::raft>)> pred) {
 
-  rft::node_name target;
+  solidarity::node_name target;
   {
     _cluster_locker.lock_shared();
     auto it = std::find_if(
@@ -214,9 +214,9 @@ size_t mock_cluster::size() {
   return _size;
 }
 
-std::vector<rft::node_name> mock_cluster::all_nodes() const {
+std::vector<solidarity::node_name> mock_cluster::all_nodes() const {
   std::shared_lock lg(_cluster_locker);
-  std::vector<rft::node_name> result;
+  std::vector<solidarity::node_name> result;
   if (_cluster.size() != _stoped.size()) {
     result.reserve(_cluster.size() - _stoped.size());
     for (const auto &kv : _cluster) {
@@ -248,10 +248,10 @@ bool mock_cluster::is_leader_eletion_complete(size_t max_leaders) {
   if (leaders.size() == 1) {
     auto cur_leader = leaders.front()->self_addr();
     auto followers = by_filter([cur_leader](
-                                   const std::shared_ptr<rft::raft> &v) -> bool {
+                                   const std::shared_ptr<solidarity::raft> &v) -> bool {
       auto nkind = v->state().node_kind;
       return v->get_leader() == cur_leader
-             && (nkind == rft::NODE_KIND::LEADER || nkind == rft::NODE_KIND::FOLLOWER);
+             && (nkind == solidarity::NODE_KIND::LEADER || nkind == solidarity::NODE_KIND::FOLLOWER);
     });
     if (followers.size() == size()) {
       return true;
@@ -260,13 +260,13 @@ bool mock_cluster::is_leader_eletion_complete(size_t max_leaders) {
   return false;
 }
 
-void mock_cluster::stop_node(const rft::node_name &addr) {
+void mock_cluster::stop_node(const solidarity::node_name &addr) {
   std::lock_guard<std::shared_mutex> lg(_cluster_locker);
   _stoped.insert(addr);
   update_size();
 }
 
-void mock_cluster::restart_node(const rft::node_name &addr) {
+void mock_cluster::restart_node(const solidarity::node_name &addr) {
   std::lock_guard<std::shared_mutex> lg(_cluster_locker);
   _stoped.erase(addr);
   update_size();

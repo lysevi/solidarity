@@ -1,11 +1,11 @@
-#include <librft/queries.h>
+#include <libsolidarity/queries.h>
 #include <libutils/utils.h>
 
 #include <libdialler/message.h>
 #include <numeric>
 
-using namespace rft::queries;
-using namespace rft::queries::clients;
+using namespace solidarity::queries;
+using namespace solidarity::queries::clients;
 
 namespace {
 
@@ -22,7 +22,7 @@ msgpack::unpacker get_unpacker(const dialler::message_ptr &msg) {
 }
 
 template <typename... Args>
-dialler::message_ptr pack_to_message(rft::queries::QUERY_KIND kind, Args &&... args) {
+dialler::message_ptr pack_to_message(solidarity::queries::QUERY_KIND kind, Args &&... args) {
   msgpack::sbuffer buffer;
   msgpack::packer<msgpack::sbuffer> pk(&buffer);
   (pk.pack(args), ...);

@@ -1,20 +1,20 @@
 #include "helpers.h"
 #include "mock_consumer.h"
-#include <librft/mesh_connection.h>
+#include <libsolidarity/mesh_connection.h>
 #include <catch.hpp>
 
-struct mock_cluster_client : rft::abstract_cluster_client {
-  void recv(const rft::node_name &, const rft::append_entries &e) override {
+struct mock_cluster_client : solidarity::abstract_cluster_client {
+  void recv(const solidarity::node_name &, const solidarity::append_entries &e) override {
     std::lock_guard l(locker);
     data = e.cmd.data;
   }
 
-  void lost_connection_with(const rft::node_name &addr) override {
+  void lost_connection_with(const solidarity::node_name &addr) override {
     std::lock_guard l(locker);
     losted.insert(addr);
   }
 
-  void new_connection_with(const rft::node_name &addr) override {
+  void new_connection_with(const solidarity::node_name &addr) override {
     std::lock_guard l(locker);
     connected.insert(addr);
   }
@@ -26,7 +26,7 @@ struct mock_cluster_client : rft::abstract_cluster_client {
     return std::equal(data.cbegin(), data.cend(), o.cbegin(), o.cend());
   }
 
-  bool is_connection_losted(const rft::node_name &addr) const {
+  bool is_connection_losted(const solidarity::node_name &addr) const {
     std::lock_guard l(locker);
     return losted.find(addr) != losted.end();
   }
@@ -36,14 +36,14 @@ struct mock_cluster_client : rft::abstract_cluster_client {
     return connected.size();
   }
 
-  rft::ERROR_CODE add_command(const rft::command &) override {
-    return rft::ERROR_CODE::OK;
+  solidarity::ERROR_CODE add_command(const solidarity::command &) override {
+    return solidarity::ERROR_CODE::OK;
   }
 
   std::vector<std::uint8_t> data;
   mutable std::mutex locker;
-  std::unordered_set<rft::node_name> losted;
-  std::unordered_set<rft::node_name> connected;
+  std::unordered_set<solidarity::node_name> losted;
+  std::unordered_set<solidarity::node_name> connected;
 };
 
 TEST_CASE("mesh_connection", "[network]") {
@@ -79,8 +79,8 @@ TEST_CASE("mesh_connection", "[network]") {
   std::vector<unsigned short> ports(cluster_size);
   std::iota(ports.begin(), ports.end(), unsigned short(8000));
 
-  std::vector<std::shared_ptr<rft::mesh_connection>> connections;
-  std::unordered_map<rft::node_name, std::shared_ptr<mock_cluster_client>> clients;
+  std::vector<std::shared_ptr<solidarity::mesh_connection>> connections;
+  std::unordered_map<solidarity::node_name, std::shared_ptr<mock_cluster_client>> clients;
   connections.reserve(cluster_size);
   clients.reserve(cluster_size);
 
@@ -94,7 +94,7 @@ TEST_CASE("mesh_connection", "[network]") {
 
     EXPECT_EQ(out_ports.size(), ports.size() - 1);
 
-    rft::mesh_connection::params_t params;
+    solidarity::mesh_connection::params_t params;
     params.listener_params.port = p;
     params.thread_count = 1;
     params.addrs.reserve(out_ports.size());
@@ -108,9 +108,9 @@ TEST_CASE("mesh_connection", "[network]") {
     auto logger = std::make_shared<utils::logging::prefix_logger>(
         utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
 
-    auto addr = rft::node_name().set_name(utils::strings::args_to_string("node_", p));
+    auto addr = solidarity::node_name().set_name(utils::strings::args_to_string("node_", p));
     auto clnt = std::make_shared<mock_cluster_client>();
-    auto c = std::make_shared<rft::mesh_connection>(addr, clnt, logger, params);
+    auto c = std::make_shared<solidarity::mesh_connection>(addr, clnt, logger, params);
     connections.push_back(c);
     clients.insert({addr, clnt});
     c->start();
@@ -137,7 +137,7 @@ TEST_CASE("mesh_connection", "[network]") {
   }
 
   uint8_t cmd_index = 0;
-  rft::append_entries ae;
+  solidarity::append_entries ae;
   ae.cmd.data.resize(data_size);
   for (auto &v : connections) {
     auto other = v->all_nodes();

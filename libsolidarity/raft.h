@@ -1,10 +1,10 @@
 #pragma once
 
-#include <librft/abstract_state_machine.h>
-#include <librft/exports.h>
-#include <librft/journal.h>
-#include <librft/raft_settings.h>
-#include <librft/raft_state.h>
+#include <libsolidarity/abstract_state_machine.h>
+#include <libsolidarity/exports.h>
+#include <libsolidarity/journal.h>
+#include <libsolidarity/raft_settings.h>
+#include <libsolidarity/raft_state.h>
 #include <libutils/logger.h>
 
 #include <memory>
@@ -12,7 +12,7 @@
 #include <shared_mutex>
 #include <unordered_map>
 
-namespace rft {
+namespace solidarity {
 
 class raft : public abstract_cluster_client {
   enum class RDIRECTION { FORWARDS = 0, BACKWARDS };
@@ -44,7 +44,7 @@ public:
 
   EXPORT void recv(const node_name &from, const append_entries &e) override;
   EXPORT void lost_connection_with(const node_name &addr) override;
-  EXPORT void new_connection_with(const rft::node_name &addr) override;
+  EXPORT void new_connection_with(const solidarity::node_name &addr) override;
   [[nodiscard]] EXPORT ERROR_CODE add_command(const command &cmd) override;
 
   node_name get_leader() const {
@@ -101,4 +101,4 @@ private:
   utils::logging::abstract_logger_ptr _logger;
 };
 
-}; // namespace rft
+}; // namespace solidarity

@@ -10,7 +10,7 @@ class abstract_logger;
 }
 } // namespace utils
 
-namespace rft {
+namespace solidarity {
 class raft_settings {
 public:
   raft_settings() {
@@ -30,4 +30,4 @@ public:
   PROPERTY(size_t, cycle_for_replication)
   PROPERTY(size_t, max_log_size)
 };
-}; // namespace rft
+}; // namespace solidarity

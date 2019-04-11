@@ -1,9 +1,9 @@
-#include <librft/raft.h>
+#include <libsolidarity/raft.h>
 #include <libutils/logger.h>
 #include <libutils/utils.h>
 #include <sstream>
 
-using namespace rft;
+using namespace solidarity;
 
 namespace {
 inline std::mt19937 make_seeded_engine() {
@@ -107,7 +107,7 @@ append_entries raft::make_append_entries(const ENTRIES_KIND kind) const noexcept
 
 append_entries raft::make_append_entries(const logdb::index_t lsn_to_replicate,
                                               const logdb::index_t prev_lsn) {
-  auto ae = make_append_entries(rft::ENTRIES_KIND::APPEND);
+  auto ae = make_append_entries(solidarity::ENTRIES_KIND::APPEND);
   auto cur = _jrn->get(lsn_to_replicate);
 
   if (cur.kind == logdb::LOG_ENTRY_KIND::APPEND) {
@@ -144,7 +144,7 @@ void raft::lost_connection_with(const node_name &addr) {
   _state.votes_to_me.erase(addr);
 }
 
-void raft::new_connection_with(const rft::node_name & /*addr*/) {
+void raft::new_connection_with(const solidarity::node_name & /*addr*/) {
   // TODO need implementation
 }
 

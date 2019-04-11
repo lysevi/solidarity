@@ -1,15 +1,15 @@
 #pragma once
 
-#include <librft/abstract_cluster.h>
-#include <librft/exports.h>
-#include <librft/journal.h>
-#include <librft/node_kind.h>
-#include <librft/raft_settings.h>
+#include <libsolidarity/abstract_cluster.h>
+#include <libsolidarity/exports.h>
+#include <libsolidarity/journal.h>
+#include <libsolidarity/node_kind.h>
+#include <libsolidarity/raft_settings.h>
 #include <chrono>
 #include <string>
 #include <unordered_set>
 
-namespace rft {
+namespace solidarity {
 
 struct changed_state_t;
 
@@ -100,4 +100,4 @@ struct changed_state_t {
   NOTIFY_TARGET notify;
 };
 
-} // namespace rft
+} // namespace solidarity

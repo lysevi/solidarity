@@ -1,7 +1,7 @@
-#include <librft/raft_settings.h>
+#include <libsolidarity/raft_settings.h>
 #include <libutils/logger.h>
 
-using namespace rft;
+using namespace solidarity;
 
 void raft_settings::dump_to_log(utils::logging::abstract_logger *const l) {
   l->info("name: ", _name);

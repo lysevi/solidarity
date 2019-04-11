@@ -1,15 +1,15 @@
-#include <librft/raft.h>
-#include <librft/mesh_connection.h>
-#include <librft/node.h>
-#include <librft/protocol_version.h>
-#include <librft/queries.h>
+#include <libsolidarity/raft.h>
+#include <libsolidarity/mesh_connection.h>
+#include <libsolidarity/node.h>
+#include <libsolidarity/protocol_version.h>
+#include <libsolidarity/queries.h>
 #include <libdialler/listener.h>
 #include <libutils/utils.h>
 
 #include <boost/asio.hpp>
 
-using namespace rft;
-using namespace rft::queries;
+using namespace solidarity;
+using namespace solidarity::queries;
 using namespace dialler;
 
 class node_listener : public dialler::abstract_listener_consumer {
@@ -121,9 +121,9 @@ private:
   std::string _client_name;
 };
 
-class consumer_wrapper : public rft::abstract_state_machine {
+class consumer_wrapper : public solidarity::abstract_state_machine {
 public:
-  consumer_wrapper(node *parent, rft::abstract_state_machine *t) {
+  consumer_wrapper(node *parent, solidarity::abstract_state_machine *t) {
     _target = t;
     _parent = parent;
   }
@@ -142,7 +142,7 @@ public:
 
   command read(const command &cmd) override { return _target->read(cmd); }
 
-  rft::abstract_state_machine *_target;
+  solidarity::abstract_state_machine *_target;
   node *_parent;
 };
 
@@ -154,12 +154,12 @@ node::node(utils::logging::abstract_logger_ptr logger,
 
   _logger = logger;
 
-  auto jrn = std::make_shared<rft::logdb::memory_journal>();
-  auto addr = rft::node_name().set_name(_params.name);
-  auto s = rft::raft_settings().set_name(_params.name);
-  _raft = std::make_shared<rft::raft>(s, nullptr, jrn, _state_machine, _logger);
+  auto jrn = std::make_shared<solidarity::logdb::memory_journal>();
+  auto addr = solidarity::node_name().set_name(_params.name);
+  auto s = solidarity::raft_settings().set_name(_params.name);
+  _raft = std::make_shared<solidarity::raft>(s, nullptr, jrn, _state_machine, _logger);
 
-  rft::mesh_connection::params_t params;
+  solidarity::mesh_connection::params_t params;
   params.listener_params.port = p.port;
   params.thread_count = p.thread_count;
   params.addrs.reserve(p.cluster.size());
@@ -174,7 +174,7 @@ node::node(utils::logging::abstract_logger_ptr logger,
                  });
 
   _cluster_con
-      = std::make_shared<rft::mesh_connection>(addr, _raft, _logger, params);
+      = std::make_shared<solidarity::mesh_connection>(addr, _raft, _logger, params);
   _raft->set_cluster(_cluster_con.get());
 
   dialler::listener::params_t lst_params;
@@ -275,7 +275,7 @@ void node::heartbeat_timer() {
 void node::send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd) {
   auto leader = _raft->state().leader;
   if (leader.is_empty()) {
-    queries::status_t s(message_id, rft::ERROR_CODE::UNDER_ELECTION, _params.name);
+    queries::status_t s(message_id, solidarity::ERROR_CODE::UNDER_ELECTION, _params.name);
     auto answer = s.to_message();
     _listener->send_to(client_id, answer);
   } else {

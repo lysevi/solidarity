@@ -1,29 +1,29 @@
-#include <librft/abstract_cluster.h>
+#include <libsolidarity/abstract_cluster.h>
 #include <libutils/strings.h>
 #include <libutils/utils.h>
 
 #include <msgpack.hpp>
 
 namespace std {
-std::string to_string(const rft::ENTRIES_KIND k) {
+std::string to_string(const solidarity::ENTRIES_KIND k) {
   switch (k) {
-  case rft::ENTRIES_KIND::HEARTBEAT:
+  case solidarity::ENTRIES_KIND::HEARTBEAT:
     return "HEARTBEAT";
-  case rft::ENTRIES_KIND::VOTE:
+  case solidarity::ENTRIES_KIND::VOTE:
     return "VOTE";
-  case rft::ENTRIES_KIND::APPEND:
+  case solidarity::ENTRIES_KIND::APPEND:
     return "APPEND";
-  case rft::ENTRIES_KIND::ANSWER_OK:
+  case solidarity::ENTRIES_KIND::ANSWER_OK:
     return "ANSWER_OK";
-  case rft::ENTRIES_KIND::ANSWER_FAILED:
+  case solidarity::ENTRIES_KIND::ANSWER_FAILED:
     return "ANSWER_FAILED";
-  case rft::ENTRIES_KIND::HELLO:
+  case solidarity::ENTRIES_KIND::HELLO:
     return "HELLO";
   }
   NOT_IMPLEMENTED
 }
 
-std::string to_string(const rft::append_entries &e) {
+std::string to_string(const solidarity::append_entries &e) {
   return utils::strings::args_to_string("{cmd:",
                                         e.cmd.data.size(),
                                         " kind:",
@@ -42,7 +42,7 @@ std::string to_string(const rft::append_entries &e) {
 }
 } // namespace std
 
-using namespace rft;
+using namespace solidarity;
 
 void pack_record_info(msgpack::packer<msgpack::sbuffer> &pk,
                       const logdb::reccord_info &ri) {
@@ -54,11 +54,11 @@ void pack_record_info(msgpack::packer<msgpack::sbuffer> &pk,
 void unpack_record_info(msgpack::unpacker &pac, logdb::reccord_info &ri) {
   msgpack::object_handle oh;
   pac.next(oh);
-  ri.kind = static_cast<rft::logdb::LOG_ENTRY_KIND>(oh.get().as<uint8_t>());
+  ri.kind = static_cast<solidarity::logdb::LOG_ENTRY_KIND>(oh.get().as<uint8_t>());
   pac.next(oh);
-  ri.lsn = oh.get().as<rft::logdb::index_t>();
+  ri.lsn = oh.get().as<solidarity::logdb::index_t>();
   pac.next(oh);
-  ri.term = oh.get().as<rft::term_t>();
+  ri.term = oh.get().as<solidarity::term_t>();
 }
 
 std::vector<uint8_t> append_entries::to_byte_array() const {
@@ -88,7 +88,7 @@ append_entries append_entries::from_byte_array(const std::vector<uint8_t> &bytes
   msgpack::object_handle oh;
 
   pac.next(oh);
-  result.kind = static_cast<rft::ENTRIES_KIND>(oh.get().as<uint8_t>());
+  result.kind = static_cast<solidarity::ENTRIES_KIND>(oh.get().as<uint8_t>());
   pac.next(oh);
   result.term = oh.get().as<term_t>();
   pac.next(oh);

@@ -116,7 +116,7 @@ endif()
 SET(solidarity_LIBRARY_DIR ${DIALLER_LIBRARY_DIR})
 SET(solidarity_PRIVATE_LIBRARIES  ${CMAKE_THREAD_LIBS_INIT} ${DIALLER_LIBRARIES} ${Boost_LIBRARIES})
 
-add_subdirectory(librft)
+add_subdirectory(libsolidarity)
 
 if(solidarity_ENABLE_BENCHMARKS)
    add_definitions(-DENABLE_BENCHMARKS)

@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace rft {
+namespace solidarity {
 
 struct command {
   bool is_empty() const { return data.empty(); }
@@ -11,4 +11,4 @@ struct command {
   std::vector<std::uint8_t> data;
 };
 
-} // namespace rft
+} // namespace solidarity

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <librft/abstract_cluster.h>
-#include <librft/config.h>
-#include <librft/raft.h>
-#include <librft/protocol_version.h>
+#include <libsolidarity/abstract_cluster.h>
+#include <libsolidarity/config.h>
+#include <libsolidarity/raft.h>
+#include <libsolidarity/protocol_version.h>
 #include <libdialler/dialler.h>
 #include <libdialler/listener.h>
 #include <libdialler/message.h>
@@ -11,7 +11,7 @@
 
 #include <boost/asio.hpp>
 
-namespace rft {
+namespace solidarity {
 class mesh_connection;
 
 namespace impl {
@@ -86,8 +86,8 @@ public:
 
   boost::asio::io_context *context() { return &_io_context; }
 
-  void send_to(rft::node_name &target,
-               rft::command &cmd,
+  void send_to(solidarity::node_name &target,
+               solidarity::command &cmd,
                std::function<void(ERROR_CODE)> callback);
 
 protected:
@@ -98,8 +98,8 @@ protected:
   void rm_input_connection(uint64_t id);
   void on_new_command(const std::vector<dialler::message_ptr> &m);
 
-  void on_write_resend(const node_name &target, uint64_t mess_id, rft::command &cmd);
-  void on_write_status(rft::node_name &target, uint64_t mess_id, ERROR_CODE status);
+  void on_write_resend(const node_name &target, uint64_t mess_id, solidarity::command &cmd);
+  void on_write_status(solidarity::node_name &target, uint64_t mess_id, ERROR_CODE status);
 
 private:
   utils::logging::abstract_logger_ptr _logger;
@@ -130,6 +130,6 @@ private:
   // TODO dedicated type
   using message_id_to_callback
       = std::unordered_map<uint64_t, std::function<void(ERROR_CODE)>>;
-  std::unordered_map<rft::node_name, message_id_to_callback> _messages;
+  std::unordered_map<solidarity::node_name, message_id_to_callback> _messages;
 };
-} // namespace rft
+} // namespace solidarity

@@ -1,6 +1,6 @@
 #include "helpers.h"
-#include <librft/client.h>
-#include <librft/node.h>
+#include <libsolidarity/client.h>
+#include <libsolidarity/node.h>
 #include <libutils/logger.h>
 #include <libutils/strings.h>
 
@@ -22,9 +22,9 @@ TEST_CASE("node", "[network]") {
   std::vector<unsigned short> ports(cluster_size);
   std::iota(ports.begin(), ports.end(), unsigned short(8000));
 
-  std::unordered_map<std::string, std::shared_ptr<rft::node>> nodes;
+  std::unordered_map<std::string, std::shared_ptr<solidarity::node>> nodes;
   std::unordered_map<std::string, std::shared_ptr<mock_state_machine>> consumers;
-  std::unordered_map<std::string, std::shared_ptr<rft::client>> clients;
+  std::unordered_map<std::string, std::shared_ptr<solidarity::client>> clients;
 
   std::cerr << "start nodes" << std::endl;
   unsigned short client_port = 10000;
@@ -46,7 +46,7 @@ TEST_CASE("node", "[network]") {
         std::back_inserter(out_addrs),
         [](const auto prt) { return utils::strings::args_to_string("localhost:", prt); });
 
-    rft::node::params_t params;
+    solidarity::node::params_t params;
     params.port = p;
     params.client_port = client_port++;
     params.thread_count = 1;
@@ -58,16 +58,16 @@ TEST_CASE("node", "[network]") {
         utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
 
     auto state_machine = std::make_shared<mock_state_machine>();
-    auto n = std::make_shared<rft::node>(node_logger, params, state_machine.get());
+    auto n = std::make_shared<solidarity::node>(node_logger, params, state_machine.get());
 
     n->start();
 
-    rft::client::params_t cpar(utils::strings::args_to_string("client_", params.name));
+    solidarity::client::params_t cpar(utils::strings::args_to_string("client_", params.name));
     cpar.threads_count = 1;
     cpar.host = "localhost";
     cpar.port = params.client_port;
 
-    auto c = std::make_shared<rft::client>(cpar);
+    auto c = std::make_shared<solidarity::client>(cpar);
     c->connect();
 
     while (!c->is_connected()) {
@@ -82,11 +82,11 @@ TEST_CASE("node", "[network]") {
   }
 
   std::cerr << "wait election" << std::endl;
-  std::unordered_set<rft::node_name> leaders;
+  std::unordered_set<solidarity::node_name> leaders;
   while (true) {
     leaders.clear();
     for (auto &kv : nodes) {
-      if (kv.second->state().node_kind == rft::NODE_KIND::LEADER) {
+      if (kv.second->state().node_kind == solidarity::NODE_KIND::LEADER) {
         leaders.insert(kv.second->self_name());
       }
     }
@@ -96,7 +96,7 @@ TEST_CASE("node", "[network]") {
       for (auto &kv : nodes) {
         auto state = kv.second->state();
         auto nkind = state.node_kind;
-        if ((nkind == rft::NODE_KIND::LEADER || nkind == rft::NODE_KIND::FOLLOWER)
+        if ((nkind == solidarity::NODE_KIND::LEADER || nkind == solidarity::NODE_KIND::FOLLOWER)
             && state.leader.name() != leader_name.name()) {
           election_complete = false;
           break;
@@ -110,7 +110,7 @@ TEST_CASE("node", "[network]") {
 
   std::cerr << "send over leader" << std::endl;
   auto leader_name = leaders.begin()->name();
-  // std::shared_ptr<rft::node> leader_node = nodes[leader_name];
+  // std::shared_ptr<solidarity::node> leader_node = nodes[leader_name];
 
   auto leader_client = clients[leader_name];
   std::vector<uint8_t> first_cmd{1, 2, 3, 4, 5};
@@ -127,7 +127,7 @@ TEST_CASE("node", "[network]") {
 
   {
     auto ecode = leader_client->send(first_cmd);
-    EXPECT_EQ(ecode, rft::ERROR_CODE::OK);
+    EXPECT_EQ(ecode, solidarity::ERROR_CODE::OK);
   }
 
   while (true) {
@@ -156,12 +156,12 @@ TEST_CASE("node", "[network]") {
       tst_logger->info("send over ", kv.first, " cmd:", oss.str());
     }
 
-    rft::ERROR_CODE send_ecode = rft::ERROR_CODE::UNDEFINED;
+    solidarity::ERROR_CODE send_ecode = solidarity::ERROR_CODE::UNDEFINED;
     int i = 0;
     do {
       tst_logger->info("try resend cmd. step #", i++);
       send_ecode = kv.second->send(first_cmd);
-    } while (send_ecode != rft::ERROR_CODE::OK);
+    } while (send_ecode != solidarity::ERROR_CODE::OK);
 
     auto expected_answer = first_cmd;
     std::transform(expected_answer.begin(),
@@ -184,12 +184,12 @@ TEST_CASE("node", "[network]") {
     std::cerr << "stop node " << kv.first << std::endl;
     auto client = clients[kv.first];
 
-    rft::ERROR_CODE c = rft::ERROR_CODE::OK;
+    solidarity::ERROR_CODE c = solidarity::ERROR_CODE::OK;
     auto id = client->add_client_event_handler(
-        [&c](const rft::client_state_event_t &ev) mutable { c = ev.ecode; });
+        [&c](const solidarity::client_state_event_t &ev) mutable { c = ev.ecode; });
     kv.second->stop();
 
-    while (c != rft::ERROR_CODE::NETWORK_ERROR) {
+    while (c != solidarity::ERROR_CODE::NETWORK_ERROR) {
       std::this_thread::yield();
     }
     client->rm_client_event_handler(id);

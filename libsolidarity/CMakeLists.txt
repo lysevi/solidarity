@@ -1,4 +1,4 @@
-set(PROJECT "rft")
+set(PROJECT "solidarity")
 project (${PROJECT} VERSION 0.0.1)
 
 include(GenerateExportHeader)
@@ -23,18 +23,18 @@ SET(SRC ${GLOB_HDRS} ${GLOB_SRC}
 
 
 
-add_library(rft ${SRC})
-TARGET_LINK_LIBRARIES(rft solidarity::utils ${solidarity_PRIVATE_LIBRARIES})
-target_link_directories(rft PUBLIC ${solidarity_LIBRARY_DIR})
-target_include_directories(rft PUBLIC ${solidarity_INCLUDE_DIR})
-add_library(solidarity::rft ALIAS rft)
+add_library(solidarity SHARED ${SRC})
+TARGET_LINK_LIBRARIES(solidarity solidarity::utils ${solidarity_PRIVATE_LIBRARIES})
+target_link_directories(solidarity PUBLIC ${solidarity_LIBRARY_DIR})
+target_include_directories(solidarity PUBLIC ${solidarity_INCLUDE_DIR})
+add_library(solidarity::solidarity ALIAS solidarity)
 
-PRECOMPILED_HEADERS(rft)
+PRECOMPILED_HEADERS(solidarity)
 
-SET(solidarity_LIBRARIES rft utils ${solidarity_PRIVATE_LIBRARIES} CACHE STRING "rft libs")
+SET(solidarity_LIBRARIES solidarity utils ${solidarity_PRIVATE_LIBRARIES} CACHE STRING "solidarity libs")
 
-GENERATE_EXPORT_HEADER(rft
-    BASE_NAME rft
+GENERATE_EXPORT_HEADER(solidarity
+    BASE_NAME solidarity
     EXPORT_MACRO_NAME EXPORT
     EXPORT_FILE_NAME exports.h
     STATIC_DEFINE SHARED_EXPORTS_BUILT_AS_STATIC)

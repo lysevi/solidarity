@@ -1,9 +1,9 @@
 #pragma once
 
-#include <librft/abstract_state_machine.h>
-#include <librft/command.h>
-#include <librft/exports.h>
-#include <librft/raft_state.h>
+#include <libsolidarity/abstract_state_machine.h>
+#include <libsolidarity/command.h>
+#include <libsolidarity/exports.h>
+#include <libsolidarity/raft_state.h>
 #include <libutils/logger.h>
 
 #include <string>
@@ -16,7 +16,7 @@ class abstract_listener_consumer;
 
 } // namespace dialler
 
-namespace rft {
+namespace solidarity {
 class mesh_connection;
 class raft;
 class state;
@@ -76,7 +76,7 @@ private:
 
   uint32_t _timer_period;
   std::unique_ptr<boost::asio::deadline_timer> _timer;
-  std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, rft::command>>>
+  std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, solidarity::command>>>
       _message_resend;
 };
-} // namespace rft
+} // namespace solidarity

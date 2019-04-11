@@ -1,70 +1,70 @@
 #include "helpers.h"
 #include "mock_cluster.h"
 #include "mock_consumer.h"
-#include <librft/raft.h>
+#include <libsolidarity/raft.h>
 #include <libutils/logger.h>
 #include <catch.hpp>
 
 TEST_CASE("raft.quorum calculation", "[raft]") {
-  EXPECT_EQ(rft::quorum_for_cluster(3, 0.5), 2);
-  EXPECT_EQ(rft::quorum_for_cluster(4, 0.5), 3);
-  EXPECT_EQ(rft::quorum_for_cluster(4, 1.0), 4);
-  EXPECT_EQ(rft::quorum_for_cluster(2, 0.5), 2);
-  EXPECT_EQ(rft::quorum_for_cluster(5, 0.5), 3);
+  EXPECT_EQ(solidarity::quorum_for_cluster(3, 0.5), 2);
+  EXPECT_EQ(solidarity::quorum_for_cluster(4, 0.5), 3);
+  EXPECT_EQ(solidarity::quorum_for_cluster(4, 1.0), 4);
+  EXPECT_EQ(solidarity::quorum_for_cluster(2, 0.5), 2);
+  EXPECT_EQ(solidarity::quorum_for_cluster(5, 0.5), 3);
 }
 
 TEST_CASE("raft.add_nodes", "[raft]") {
   auto cluster = std::make_shared<mock_cluster>();
 
   /// SINGLE
-  auto settings_0 = rft::raft_settings().set_name("_0").set_election_timeout(
+  auto settings_0 = solidarity::raft_settings().set_name("_0").set_election_timeout(
       std::chrono::milliseconds(300));
 
   auto c_0_consumer = std::make_shared<mock_state_machine>();
-  auto c_0 = std::make_shared<rft::raft>(settings_0,
+  auto c_0 = std::make_shared<solidarity::raft>(settings_0,
                                               cluster.get(),
-                                              rft::logdb::memory_journal::make_new(),
+                                              solidarity::logdb::memory_journal::make_new(),
                                               c_0_consumer.get());
 
-  cluster->add_new(rft::node_name().set_name("_0"), c_0);
-  EXPECT_EQ(c_0->term(), rft::UNDEFINED_TERM);
-  EXPECT_EQ(c_0->kind(), rft::NODE_KIND::FOLLOWER);
+  cluster->add_new(solidarity::node_name().set_name("_0"), c_0);
+  EXPECT_EQ(c_0->term(), solidarity::UNDEFINED_TERM);
+  EXPECT_EQ(c_0->kind(), solidarity::NODE_KIND::FOLLOWER);
 
-  while (c_0->kind() != rft::NODE_KIND::LEADER) {
+  while (c_0->kind() != solidarity::NODE_KIND::LEADER) {
     c_0->heartbeat();
     cluster->print_cluster();
   }
-  EXPECT_EQ(c_0->term(), rft::term_t(0));
+  EXPECT_EQ(c_0->term(), solidarity::term_t(0));
 
   /// TWO NODES
-  auto settings_1 = rft::raft_settings().set_name("_1").set_election_timeout(
+  auto settings_1 = solidarity::raft_settings().set_name("_1").set_election_timeout(
       std::chrono::milliseconds(300));
   auto c_1_consumer = std::make_shared<mock_state_machine>();
-  auto c_1 = std::make_shared<rft::raft>(settings_1,
+  auto c_1 = std::make_shared<solidarity::raft>(settings_1,
                                               cluster.get(),
-                                              rft::logdb::memory_journal::make_new(),
+                                              solidarity::logdb::memory_journal::make_new(),
                                               c_1_consumer.get());
-  cluster->add_new(rft::node_name().set_name(settings_1.name()), c_1);
+  cluster->add_new(solidarity::node_name().set_name(settings_1.name()), c_1);
 
   while (c_1->get_leader().name() != c_0->self_addr().name()) {
     cluster->heartbeat();
     cluster->print_cluster();
   }
-  EXPECT_EQ(c_0->kind(), rft::NODE_KIND::LEADER);
-  EXPECT_EQ(c_1->kind(), rft::NODE_KIND::FOLLOWER);
+  EXPECT_EQ(c_0->kind(), solidarity::NODE_KIND::LEADER);
+  EXPECT_EQ(c_1->kind(), solidarity::NODE_KIND::FOLLOWER);
   EXPECT_EQ(c_0->term(), c_1->term());
   EXPECT_EQ(c_1->get_leader(), c_0->get_leader());
 
   /// THREE NODES
-  auto settings_2 = rft::raft_settings().set_name("_2").set_election_timeout(
+  auto settings_2 = solidarity::raft_settings().set_name("_2").set_election_timeout(
       std::chrono::milliseconds(300));
   auto c_2_consumer = std::make_shared<mock_state_machine>();
-  auto c_2 = std::make_shared<rft::raft>(settings_2,
+  auto c_2 = std::make_shared<solidarity::raft>(settings_2,
                                               cluster.get(),
-                                              rft::logdb::memory_journal::make_new(),
+                                              solidarity::logdb::memory_journal::make_new(),
                                               c_2_consumer.get());
 
-  cluster->add_new(rft::node_name().set_name(settings_2.name()), c_2);
+  cluster->add_new(solidarity::node_name().set_name(settings_2.name()), c_2);
 
   while (c_1->get_leader().name() != c_0->self_addr().name()
          || c_2->get_leader().name() != c_0->self_addr().name()) {
@@ -72,8 +72,8 @@ TEST_CASE("raft.add_nodes", "[raft]") {
     cluster->print_cluster();
   }
 
-  EXPECT_EQ(c_0->kind(), rft::NODE_KIND::LEADER);
-  EXPECT_EQ(c_1->kind(), rft::NODE_KIND::FOLLOWER);
+  EXPECT_EQ(c_0->kind(), solidarity::NODE_KIND::LEADER);
+  EXPECT_EQ(c_1->kind(), solidarity::NODE_KIND::FOLLOWER);
   EXPECT_EQ(c_0->term(), c_1->term());
   EXPECT_EQ(c_2->term(), c_1->term());
   EXPECT_EQ(c_1->get_leader().name(), c_0->get_leader().name());
@@ -113,15 +113,15 @@ TEST_CASE("raft", "[raft]") {
   auto et = std::chrono::milliseconds(300);
   for (size_t i = 0; i < nodes_count; ++i) {
     auto nname = "_" + std::to_string(i);
-    auto sett = rft::raft_settings().set_name(nname).set_election_timeout(et);
+    auto sett = solidarity::raft_settings().set_name(nname).set_election_timeout(et);
     auto c = std::make_shared<mock_state_machine>();
     consumers.push_back(c);
-    auto cons = std::make_shared<rft::raft>(
-        sett, cluster.get(), rft::logdb::memory_journal::make_new(), c.get());
-    cluster->add_new(rft::node_name().set_name(sett.name()), cons);
+    auto cons = std::make_shared<solidarity::raft>(
+        sett, cluster.get(), solidarity::logdb::memory_journal::make_new(), c.get());
+    cluster->add_new(solidarity::node_name().set_name(sett.name()), cons);
   }
-  rft::node_name last_leader;
-  rft::command cmd;
+  solidarity::node_name last_leader;
+  solidarity::command cmd;
   cmd.data.resize(1);
   cmd.data[0] = 0;
 
@@ -130,11 +130,11 @@ TEST_CASE("raft", "[raft]") {
   };
 
   while (cluster->size() > 2) {
-    std::vector<std::shared_ptr<rft::raft>> leaders;
+    std::vector<std::shared_ptr<solidarity::raft>> leaders;
     while (true) {
       leaders = cluster->by_filter(is_leader_pred);
       if (leaders.size() > 1) {
-        std::unordered_set<rft::term_t> terms;
+        std::unordered_set<solidarity::term_t> terms;
         for (auto &c : leaders) {
           terms.insert(c->state().term);
         }
@@ -148,7 +148,7 @@ TEST_CASE("raft", "[raft]") {
       if (leaders.size() == 1) {
         auto cur_leader = leaders.front()->self_addr();
         auto followers
-            = cluster->by_filter([cur_leader](const std::shared_ptr<rft::raft> &v) {
+            = cluster->by_filter([cur_leader](const std::shared_ptr<solidarity::raft> &v) {
                 return v->get_leader() == cur_leader;
               });
         if (last_leader.is_empty() && followers.size() == cluster->size()) {
@@ -182,7 +182,7 @@ TEST_CASE("raft", "[raft]") {
           }
           cmd.data[0]++;
           auto st = leaders[0]->add_command(cmd);
-          EXPECT_EQ(st, rft::ERROR_CODE::OK);
+          EXPECT_EQ(st, solidarity::ERROR_CODE::OK);
           for (size_t j = 0; j < attempts_to_add; ++j) {
             cluster->print_cluster();
             cluster->heartbeat();
@@ -203,9 +203,9 @@ TEST_CASE("raft", "[raft]") {
 }
 
 TEST_CASE("raft.replication", "[raft]") {
-  using rft::raft;
-  using rft::node_name;
-  using rft::logdb::memory_journal;
+  using solidarity::raft;
+  using solidarity::node_name;
+  using solidarity::logdb::memory_journal;
 
   auto cluster = std::make_shared<mock_cluster>();
 
@@ -245,14 +245,14 @@ TEST_CASE("raft.replication", "[raft]") {
 
   for (size_t i = 0; i < exists_nodes_count; ++i) {
     auto nname = "_" + std::to_string(i);
-    auto sett = rft::raft_settings().set_name(nname).set_election_timeout(et);
+    auto sett = solidarity::raft_settings().set_name(nname).set_election_timeout(et);
     auto state_machine = std::make_shared<mock_state_machine>();
     consumers.push_back(state_machine);
     auto cons = std::make_shared<raft>(
         sett, cluster.get(), memory_journal::make_new(), state_machine.get());
     cluster->add_new(node_name().set_name(sett.name()), cons);
   }
-  rft::command cmd;
+  solidarity::command cmd;
   cmd.data.resize(1);
   cmd.data[0] = 0;
 
@@ -262,14 +262,14 @@ TEST_CASE("raft.replication", "[raft]") {
 
   cluster->wait_leader_eletion();
 
-  std::vector<std::shared_ptr<rft::raft>> leaders
+  std::vector<std::shared_ptr<solidarity::raft>> leaders
       = cluster->by_filter(is_leader_pred);
   EXPECT_EQ(leaders.size(), size_t(1));
 
   for (int i = 0; i < 10; ++i) {
     cmd.data[0]++;
     auto st = leaders[0]->add_command(cmd);
-    EXPECT_EQ(st, rft::ERROR_CODE::OK);
+    EXPECT_EQ(st, solidarity::ERROR_CODE::OK);
     while (true) {
       cluster->heartbeat();
       cluster->print_cluster();
@@ -282,7 +282,7 @@ TEST_CASE("raft.replication", "[raft]") {
 
   for (size_t i = 0; i < new_nodes_count; ++i) {
     auto nname = "_" + std::to_string(i + 1 + exists_nodes_count);
-    auto sett = rft::raft_settings().set_name(nname).set_election_timeout(et);
+    auto sett = solidarity::raft_settings().set_name(nname).set_election_timeout(et);
     auto state_machine = std::make_shared<mock_state_machine>();
     consumers.push_back(state_machine);
     auto cons = std::make_shared<raft>(
@@ -306,7 +306,7 @@ TEST_CASE("raft.replication", "[raft]") {
 }
 
 TEST_CASE("raft.log_compaction", "[raft]") {
-  using rft::raft_settings;
+  using solidarity::raft_settings;
   auto cluster = std::make_shared<mock_cluster>();
 
   size_t nodes_count = 4;
@@ -322,15 +322,15 @@ TEST_CASE("raft.log_compaction", "[raft]") {
 
     auto c = std::make_shared<mock_state_machine>();
     consumers.push_back(c);
-    auto cons = std::make_shared<rft::raft>(
-        sett, cluster.get(), rft::logdb::memory_journal::make_new(), c.get());
-    cluster->add_new(rft::node_name().set_name(sett.name()), cons);
+    auto cons = std::make_shared<solidarity::raft>(
+        sett, cluster.get(), solidarity::logdb::memory_journal::make_new(), c.get());
+    cluster->add_new(solidarity::node_name().set_name(sett.name()), cons);
   }
 
   cluster->wait_leader_eletion();
 
-  rft::node_name last_leader;
-  rft::command cmd;
+  solidarity::node_name last_leader;
+  solidarity::command cmd;
   cmd.data.resize(1);
   cmd.data[0] = 0;
 
@@ -338,7 +338,7 @@ TEST_CASE("raft.log_compaction", "[raft]") {
     return c->last_cmd.data == cmd.data;
   };
 
-  std::vector<std::shared_ptr<rft::raft>> leaders;
+  std::vector<std::shared_ptr<solidarity::raft>> leaders;
   for (int i = 0; i < 10; ++i) {
     leaders = cluster->by_filter(is_leader_pred);
     if (leaders.size() != size_t(1)) {
@@ -346,7 +346,7 @@ TEST_CASE("raft.log_compaction", "[raft]") {
     }
     cmd.data[0]++;
     auto st = leaders[0]->add_command(cmd);
-    EXPECT_EQ(st, rft::ERROR_CODE::OK);
+    EXPECT_EQ(st, solidarity::ERROR_CODE::OK);
     while (true) {
       cluster->print_cluster();
       cluster->heartbeat();
@@ -366,7 +366,7 @@ TEST_CASE("raft.log_compaction", "[raft]") {
     std::transform(all_nodes.cbegin(),
                    all_nodes.cend(),
                    sizes.begin(),
-                   [](const std::shared_ptr<rft::raft> &c) {
+                   [](const std::shared_ptr<solidarity::raft> &c) {
                      return c->journal()->reccords_count();
                    });
 
@@ -383,19 +383,19 @@ TEST_CASE("raft.log_compaction", "[raft]") {
   consumers.clear();
 }
 
-bool operator==(const rft::logdb::log_entry &r, const rft::logdb::log_entry &l) {
+bool operator==(const solidarity::logdb::log_entry &r, const solidarity::logdb::log_entry &l) {
   return r.term == l.term && r.kind == l.kind && r.cmd.data.size() == l.cmd.data.size()
          && std::equal(r.cmd.data.cbegin(), r.cmd.data.cend(), l.cmd.data.cbegin());
 }
 
-bool operator!=(const rft::logdb::log_entry &r, const rft::logdb::log_entry &l) {
+bool operator!=(const solidarity::logdb::log_entry &r, const solidarity::logdb::log_entry &l) {
   return !(r == l);
 }
 
 TEST_CASE("raft.apply_journal_on_start", "[raft]") {
-  using rft::raft;
-  using rft::node_name;
-  using rft::logdb::memory_journal;
+  using solidarity::raft;
+  using solidarity::node_name;
+  using solidarity::logdb::memory_journal;
 
   auto cluster = std::make_shared<mock_cluster>();
 
@@ -406,13 +406,13 @@ TEST_CASE("raft.apply_journal_on_start", "[raft]") {
   auto et = std::chrono::milliseconds(300);
   auto jrn = memory_journal::make_new();
 
-  rft::command cmd;
+  solidarity::command cmd;
   cmd.data.resize(1);
   cmd.data[0] = 0;
 
   for (int i = 0; i < 10; ++i) {
     cmd.data[0] += 2;
-    rft::logdb::log_entry le;
+    solidarity::logdb::log_entry le;
     le.cmd = cmd;
     le.term = 1;
     auto ri = jrn->put(le);
@@ -420,7 +420,7 @@ TEST_CASE("raft.apply_journal_on_start", "[raft]") {
   }
 
   auto nname = "_" + std::to_string(size_t(1));
-  auto sett = rft::raft_settings().set_name(nname).set_election_timeout(et);
+  auto sett = solidarity::raft_settings().set_name(nname).set_election_timeout(et);
   auto state_machine = std::make_shared<mock_state_machine>();
   consumers.push_back(state_machine);
   auto cons = std::make_shared<raft>(sett, cluster.get(), jrn, state_machine.get());
@@ -434,9 +434,9 @@ TEST_CASE("raft.apply_journal_on_start", "[raft]") {
 }
 
 TEST_CASE("raft.rollback", "[raft]") {
-  using rft::raft;
-  using rft::node_name;
-  using rft::logdb::memory_journal;
+  using solidarity::raft;
+  using solidarity::node_name;
+  using solidarity::logdb::memory_journal;
 
   auto cluster = std::make_shared<mock_cluster>();
 
@@ -445,20 +445,20 @@ TEST_CASE("raft.rollback", "[raft]") {
   consumers.reserve(exists_nodes_count);
 
   auto et = std::chrono::milliseconds(300);
-  rft::command cmd;
+  solidarity::command cmd;
   cmd.data.resize(1);
 
-  std::shared_ptr<rft::raft> n1, n2;
-  std::shared_ptr<rft::logdb::memory_journal> jrn1, jrn2;
+  std::shared_ptr<solidarity::raft> n1, n2;
+  std::shared_ptr<solidarity::logdb::memory_journal> jrn1, jrn2;
   {
     auto nname = "_0";
-    auto sett = rft::raft_settings().set_name(nname).set_election_timeout(et);
+    auto sett = solidarity::raft_settings().set_name(nname).set_election_timeout(et);
     auto state_machine = std::make_shared<mock_state_machine>();
     consumers.push_back(state_machine);
     jrn1 = memory_journal::make_new();
 
-    rft::logdb::log_entry le;
-    le.kind = rft::logdb::LOG_ENTRY_KIND::APPEND;
+    solidarity::logdb::log_entry le;
+    le.kind = solidarity::logdb::LOG_ENTRY_KIND::APPEND;
     le.cmd = cmd;
 
     for (size_t i = 0; i < 10; ++i) {
@@ -471,13 +471,13 @@ TEST_CASE("raft.rollback", "[raft]") {
   }
   {
     auto nname = "_1";
-    auto sett = rft::raft_settings().set_name(nname).set_election_timeout(et);
+    auto sett = solidarity::raft_settings().set_name(nname).set_election_timeout(et);
     auto state_machine = std::make_shared<mock_state_machine>();
     consumers.push_back(state_machine);
     jrn2 = memory_journal::make_new();
 
-    rft::logdb::log_entry le;
-    le.kind = rft::logdb::LOG_ENTRY_KIND::APPEND;
+    solidarity::logdb::log_entry le;
+    le.kind = solidarity::logdb::LOG_ENTRY_KIND::APPEND;
     le.cmd = cmd;
     for (size_t i = 0; i < 10; ++i) {
       le.cmd.data[0] = static_cast<uint8_t>(i);
@@ -495,8 +495,8 @@ TEST_CASE("raft.rollback", "[raft]") {
 
   SECTION("from equal journal") { n2->rw_state().term = 100500; }
   SECTION("from big to small journal") {
-    rft::logdb::log_entry le;
-    le.kind = rft::logdb::LOG_ENTRY_KIND::APPEND;
+    solidarity::logdb::log_entry le;
+    le.kind = solidarity::logdb::LOG_ENTRY_KIND::APPEND;
     le.cmd = cmd;
     for (size_t i = 0; i < 20; ++i) {
       le.cmd.data[0] = static_cast<uint8_t>(i);
@@ -507,8 +507,8 @@ TEST_CASE("raft.rollback", "[raft]") {
   }
 
   SECTION("from small to big journal") {
-    rft::logdb::log_entry le;
-    le.kind = rft::logdb::LOG_ENTRY_KIND::APPEND;
+    solidarity::logdb::log_entry le;
+    le.kind = solidarity::logdb::LOG_ENTRY_KIND::APPEND;
     le.cmd = cmd;
     for (size_t i = 11; i < 15; ++i) {
       le.cmd.data[0] = static_cast<uint8_t>(i);
@@ -520,10 +520,10 @@ TEST_CASE("raft.rollback", "[raft]") {
 
   SECTION("rewrite all journal") {
     n2->rw_state().term = 100500;
-    jrn1->erase_all_after(rft::logdb::index_t(-1));
+    jrn1->erase_all_after(solidarity::logdb::index_t(-1));
 
-    rft::logdb::log_entry le;
-    le.kind = rft::logdb::LOG_ENTRY_KIND::APPEND;
+    solidarity::logdb::log_entry le;
+    le.kind = solidarity::logdb::LOG_ENTRY_KIND::APPEND;
     le.cmd = cmd;
     for (size_t i = 0; i < 2; ++i) {
       le.cmd.data[0] = static_cast<uint8_t>(i);

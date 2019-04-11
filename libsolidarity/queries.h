@@ -1,11 +1,11 @@
-#include <librft/abstract_cluster.h>
-#include <librft/error_codes.h>
-#include <librft/exports.h>
+#include <libsolidarity/abstract_cluster.h>
+#include <libsolidarity/error_codes.h>
+#include <libsolidarity/exports.h>
 
 #include <libdialler/message.h>
 #include <vector>
 
-namespace rft::queries {
+namespace solidarity::queries {
 const uint64_t UNDEFINED_QUERY_ID = std::numeric_limits<uint64_t>::max();
 
 enum class QUERY_KIND : dialler::message::kind_t {
@@ -85,8 +85,8 @@ struct client_connect_t {
 
 struct read_query_t {
   uint64_t msg_id;
-  rft::command query;
-  EXPORT read_query_t(uint64_t id, const rft::command &q) {
+  solidarity::command query;
+  EXPORT read_query_t(uint64_t id, const solidarity::command &q) {
     msg_id = id;
     query = q;
   }
@@ -96,8 +96,8 @@ struct read_query_t {
 
 struct write_query_t {
   uint64_t msg_id;
-  rft::command query;
-  EXPORT write_query_t(uint64_t id, const rft::command &q) {
+  solidarity::command query;
+  EXPORT write_query_t(uint64_t id, const solidarity::command &q) {
     msg_id = id;
     query = q;
   }
@@ -113,4 +113,4 @@ struct state_machine_updated_t {
 };
 } // namespace clients
 
-} // namespace rft::queries
+} // namespace solidarity::queries

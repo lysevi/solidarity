@@ -1,7 +1,7 @@
 #pragma once
 
-#include <librft/error_codes.h>
-#include <librft/exports.h>
+#include <libsolidarity/error_codes.h>
+#include <libsolidarity/exports.h>
 #include <atomic>
 #include <mutex>
 #include <string>
@@ -15,7 +15,7 @@ namespace dialler {
 class dial;
 }
 
-namespace rft {
+namespace solidarity {
 
 class client;
 struct client_state_event_t;
@@ -26,7 +26,7 @@ void client_update_connection_status(client &c, bool status);
 void client_update_async_result(client &c,
                                 uint64_t id,
                                 const std::vector<uint8_t> &cmd,
-                                rft::ERROR_CODE ec,
+                                solidarity::ERROR_CODE ec,
                                 const std::string &err);
 void client_notify_update(client &c);
 void client_notify_update(client &c, const client_state_event_t &ev);
@@ -84,7 +84,7 @@ public:
   friend void inner::client_update_async_result(client &c,
                                                 uint64_t id,
                                                 const std::vector<uint8_t> &cmd,
-                                                rft::ERROR_CODE ec,
+                                                solidarity::ERROR_CODE ec,
                                                 const std::string &err);
   friend void inner::client_notify_update(client &c);
   friend void inner::client_notify_update(client &c,
@@ -114,4 +114,4 @@ private:
 protected:
   bool _connected;
 };
-} // namespace rft
+} // namespace solidarity

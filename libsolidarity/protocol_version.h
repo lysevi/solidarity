@@ -1,6 +1,6 @@
 #pragma once
 #include <cstdint>
 
-namespace rft {
+namespace solidarity {
 const uint16_t protocol_version = 1;
 }

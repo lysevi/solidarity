@@ -1,10 +1,10 @@
-#include <librft/abstract_cluster.h>
-#include <librft/queries.h>
+#include <libsolidarity/abstract_cluster.h>
+#include <libsolidarity/queries.h>
 
 #include "helpers.h"
 #include <catch.hpp>
 
-void check_append_entries(const rft::append_entries &ae, const rft::append_entries &res) {
+void check_append_entries(const solidarity::append_entries &ae, const solidarity::append_entries &res) {
   EXPECT_EQ(ae.term, res.term);
   EXPECT_EQ(ae.kind, res.kind);
   EXPECT_EQ(ae.starttime, res.starttime);
@@ -22,21 +22,21 @@ void check_append_entries(const rft::append_entries &ae, const rft::append_entri
 }
 
 TEST_CASE("serialisation.append_entries", "[network]") {
-  rft::append_entries ae;
+  solidarity::append_entries ae;
 
-  rft::ENTRIES_KIND kind = rft::ENTRIES_KIND::HEARTBEAT;
-  rft::node_name leader;
-  rft::logdb::LOG_ENTRY_KIND lk = rft::logdb::LOG_ENTRY_KIND::APPEND;
+  solidarity::ENTRIES_KIND kind = solidarity::ENTRIES_KIND::HEARTBEAT;
+  solidarity::node_name leader;
+  solidarity::logdb::LOG_ENTRY_KIND lk = solidarity::logdb::LOG_ENTRY_KIND::APPEND;
 
-  SECTION("kind=HEARTBEAT") { kind = rft::ENTRIES_KIND::HEARTBEAT; }
-  SECTION("kind=VOTE") { kind = rft::ENTRIES_KIND::VOTE; }
-  SECTION("kind=APPEND") { kind = rft::ENTRIES_KIND::APPEND; }
-  SECTION("kind=ANSWER_OK") { kind = rft::ENTRIES_KIND::ANSWER_OK; }
-  SECTION("kind=ANSWER_FAILED") { kind = rft::ENTRIES_KIND::ANSWER_FAILED; }
-  SECTION("kind=HELLO") { kind = rft::ENTRIES_KIND::HELLO; }
+  SECTION("kind=HEARTBEAT") { kind = solidarity::ENTRIES_KIND::HEARTBEAT; }
+  SECTION("kind=VOTE") { kind = solidarity::ENTRIES_KIND::VOTE; }
+  SECTION("kind=APPEND") { kind = solidarity::ENTRIES_KIND::APPEND; }
+  SECTION("kind=ANSWER_OK") { kind = solidarity::ENTRIES_KIND::ANSWER_OK; }
+  SECTION("kind=ANSWER_FAILED") { kind = solidarity::ENTRIES_KIND::ANSWER_FAILED; }
+  SECTION("kind=HELLO") { kind = solidarity::ENTRIES_KIND::HELLO; }
 
   SECTION("leader=LEADER") { leader.set_name("LEADER"); }
-  SECTION("leader.is_empty()") { leader = rft::node_name(); }
+  SECTION("leader.is_empty()") { leader = solidarity::node_name(); }
 
   SECTION("cmd.is_empty()") { ae.cmd.data.clear(); }
   SECTION("!cmd.is_empty() [small]") {
@@ -47,8 +47,8 @@ TEST_CASE("serialisation.append_entries", "[network]") {
     std::iota(ae.cmd.data.begin(), ae.cmd.data.end(), uint8_t(0));
   }
 
-  SECTION("log_entry_kind:SNAPSHOT") { lk = rft::logdb::LOG_ENTRY_KIND::SNAPSHOT; }
-  SECTION("log_entry_kind:APPEND") { lk = rft::logdb::LOG_ENTRY_KIND::APPEND; }
+  SECTION("log_entry_kind:SNAPSHOT") { lk = solidarity::logdb::LOG_ENTRY_KIND::SNAPSHOT; }
+  SECTION("log_entry_kind:APPEND") { lk = solidarity::logdb::LOG_ENTRY_KIND::APPEND; }
 
   ae.term = 777;
   ae.kind = kind;
@@ -68,22 +68,22 @@ TEST_CASE("serialisation.append_entries", "[network]") {
   ae.commited.term = 22;
 
   auto packed = ae.to_byte_array();
-  auto res = rft::append_entries::from_byte_array(packed);
+  auto res = solidarity::append_entries::from_byte_array(packed);
   check_append_entries(ae, res);
 }
 
 TEST_CASE("serialisation.query_connect", "[network]") {
-  rft::queries::query_connect_t qc(777, "node id");
+  solidarity::queries::query_connect_t qc(777, "node id");
   auto msg = qc.to_message();
-  rft::queries::query_connect_t qc_u(msg);
+  solidarity::queries::query_connect_t qc_u(msg);
   EXPECT_EQ(msg->get_header()->kind,
-            (dialler::message::kind_t)rft::queries::QUERY_KIND::CONNECT);
+            (dialler::message::kind_t)solidarity::queries::QUERY_KIND::CONNECT);
   EXPECT_EQ(qc.protocol_version, qc_u.protocol_version);
   EXPECT_EQ(qc.node_id, qc_u.node_id);
 }
 
 TEST_CASE("serialisation.connection_error", "[network]") {
-  rft::queries::connection_error_t qc(777, rft::ERROR_CODE::WRONG_PROTOCOL_VERSION, "");
+  solidarity::queries::connection_error_t qc(777, solidarity::ERROR_CODE::WRONG_PROTOCOL_VERSION, "");
 
   SECTION("empty message") { qc.msg = std::string(); }
   SECTION("long message") {
@@ -91,30 +91,30 @@ TEST_CASE("serialisation.connection_error", "[network]") {
   }
 
   auto msg = qc.to_message();
-  rft::queries::connection_error_t qc_u(msg);
+  solidarity::queries::connection_error_t qc_u(msg);
   EXPECT_EQ(msg->get_header()->kind,
-            (dialler::message::kind_t)rft::queries::QUERY_KIND::CONNECTION_ERROR);
+            (dialler::message::kind_t)solidarity::queries::QUERY_KIND::CONNECTION_ERROR);
   EXPECT_EQ(qc.protocol_version, qc_u.protocol_version);
   EXPECT_EQ(qc.msg, qc_u.msg);
   EXPECT_EQ(qc.status, qc_u.status);
 }
 
 TEST_CASE("serialisation.status_t", "[network]") {
-  rft::ERROR_CODE s = rft::ERROR_CODE::OK;
-  SECTION("serialisation.status_t::OK") { s = rft::ERROR_CODE::OK; }
-  SECTION("serialisation.status_t::NOT_A_LEADER") { s = rft::ERROR_CODE::NOT_A_LEADER; }
+  solidarity::ERROR_CODE s = solidarity::ERROR_CODE::OK;
+  SECTION("serialisation.status_t::OK") { s = solidarity::ERROR_CODE::OK; }
+  SECTION("serialisation.status_t::NOT_A_LEADER") { s = solidarity::ERROR_CODE::NOT_A_LEADER; }
   SECTION("serialisation.status_t::CONNECTION_NOT_FOUND") {
-    s = rft::ERROR_CODE::CONNECTION_NOT_FOUND;
+    s = solidarity::ERROR_CODE::CONNECTION_NOT_FOUND;
   }
   SECTION("serialisation.status_t::WRONG_PROTOCOL_VERSION") {
-    s = rft::ERROR_CODE::WRONG_PROTOCOL_VERSION;
+    s = solidarity::ERROR_CODE::WRONG_PROTOCOL_VERSION;
   }
   SECTION("serialisation.status_t::UNDER_ELECTION") {
-    s = rft::ERROR_CODE::UNDER_ELECTION;
+    s = solidarity::ERROR_CODE::UNDER_ELECTION;
   }
-  SECTION("serialisation.status_t::UNDEFINED") { s = rft::ERROR_CODE::UNDEFINED; }
+  SECTION("serialisation.status_t::UNDEFINED") { s = solidarity::ERROR_CODE::UNDEFINED; }
 
-  rft::queries::status_t qc(777, s, "");
+  solidarity::queries::status_t qc(777, s, "");
 
   SECTION("empty message") { qc.msg = std::string(); }
   SECTION("long message") {
@@ -122,22 +122,22 @@ TEST_CASE("serialisation.status_t", "[network]") {
   }
 
   auto msg = qc.to_message();
-  rft::queries::status_t qc_u(msg);
+  solidarity::queries::status_t qc_u(msg);
   EXPECT_EQ(msg->get_header()->kind,
-            (dialler::message::kind_t)rft::queries::QUERY_KIND::STATUS);
+            (dialler::message::kind_t)solidarity::queries::QUERY_KIND::STATUS);
   EXPECT_EQ(qc.id, qc_u.id);
   EXPECT_EQ(qc.msg, qc_u.msg);
   EXPECT_EQ(qc.status, s);
 }
 
 TEST_CASE("serialisation.command", "[network]") {
-  rft::append_entries ae;
+  solidarity::append_entries ae;
 
-  rft::ENTRIES_KIND kind = rft::ENTRIES_KIND::HEARTBEAT;
-  rft::node_name leader;
-  rft::logdb::LOG_ENTRY_KIND lk = rft::logdb::LOG_ENTRY_KIND::APPEND;
+  solidarity::ENTRIES_KIND kind = solidarity::ENTRIES_KIND::HEARTBEAT;
+  solidarity::node_name leader;
+  solidarity::logdb::LOG_ENTRY_KIND lk = solidarity::logdb::LOG_ENTRY_KIND::APPEND;
 
-  kind = rft::ENTRIES_KIND::HEARTBEAT;
+  kind = solidarity::ENTRIES_KIND::HEARTBEAT;
   leader.set_name("LEADER");
   SECTION("small cmd") {
     ae.cmd.data.resize(100);
@@ -147,7 +147,7 @@ TEST_CASE("serialisation.command", "[network]") {
     ae.cmd.data.resize(dialler::message::MAX_BUFFER_SIZE * 11);
     std::iota(ae.cmd.data.begin(), ae.cmd.data.end(), uint8_t(0));
   }
-  lk = rft::logdb::LOG_ENTRY_KIND::APPEND;
+  lk = solidarity::logdb::LOG_ENTRY_KIND::APPEND;
 
   ae.term = 777;
   ae.kind = kind;
@@ -166,35 +166,35 @@ TEST_CASE("serialisation.command", "[network]") {
   ae.commited.lsn = 11;
   ae.commited.term = 22;
 
-  rft::queries::command_t cmd(rft::node_name("from node name"), ae);
+  solidarity::queries::command_t cmd(solidarity::node_name("from node name"), ae);
 
   auto msg = cmd.to_message();
-  rft::queries::command_t cmd_u(msg);
+  solidarity::queries::command_t cmd_u(msg);
   EXPECT_EQ(cmd.from, cmd_u.from);
   EXPECT_EQ(msg.front()->get_header()->kind,
-            (dialler::message::kind_t)rft::queries::QUERY_KIND::COMMAND);
+            (dialler::message::kind_t)solidarity::queries::QUERY_KIND::COMMAND);
   check_append_entries(ae, cmd_u.cmd);
 }
 
 TEST_CASE("serialisation.client_connect_t", "[network]") {
-  rft::queries::clients::client_connect_t qc("client name", 777);
+  solidarity::queries::clients::client_connect_t qc("client name", 777);
   auto msg = qc.to_message();
-  rft::queries::clients::client_connect_t qc_u(msg);
+  solidarity::queries::clients::client_connect_t qc_u(msg);
   EXPECT_EQ(msg->get_header()->kind,
-            (dialler::message::kind_t)rft::queries::QUERY_KIND::CONNECT);
+            (dialler::message::kind_t)solidarity::queries::QUERY_KIND::CONNECT);
   EXPECT_EQ(qc.protocol_version, qc_u.protocol_version);
   EXPECT_EQ(qc.client_name, qc_u.client_name);
 }
 
 TEST_CASE("serialisation.read_query_t", "[network]") {
-  rft::command cmd;
+  solidarity::command cmd;
   cmd.data = std::vector<uint8_t>{0, 1, 2, 3};
-  rft::queries::clients::read_query_t qc(777, cmd);
+  solidarity::queries::clients::read_query_t qc(777, cmd);
   auto msg = qc.to_message();
 
-  rft::queries::clients::read_query_t qc_u(msg);
+  solidarity::queries::clients::read_query_t qc_u(msg);
   EXPECT_EQ(msg->get_header()->kind,
-            (dialler::message::kind_t)rft::queries::QUERY_KIND::READ);
+            (dialler::message::kind_t)solidarity::queries::QUERY_KIND::READ);
   EXPECT_EQ(qc.msg_id, qc_u.msg_id);
   EXPECT_TRUE(std::equal(qc.query.data.begin(),
                          qc.query.data.end(),
@@ -205,14 +205,14 @@ TEST_CASE("serialisation.read_query_t", "[network]") {
 }
 
 TEST_CASE("serialisation.write_query_t", "[network]") {
-  rft::command cmd;
+  solidarity::command cmd;
   cmd.data = std::vector<uint8_t>{0, 1, 2, 3};
-  rft::queries::clients::write_query_t qc(777, cmd);
+  solidarity::queries::clients::write_query_t qc(777, cmd);
   auto msg = qc.to_message();
 
-  rft::queries::clients::write_query_t qc_u(msg);
+  solidarity::queries::clients::write_query_t qc_u(msg);
   EXPECT_EQ(msg->get_header()->kind,
-            (dialler::message::kind_t)rft::queries::QUERY_KIND::WRITE);
+            (dialler::message::kind_t)solidarity::queries::QUERY_KIND::WRITE);
   EXPECT_EQ(qc.msg_id, qc_u.msg_id);
   EXPECT_TRUE(std::equal(qc.query.data.begin(),
                          qc.query.data.end(),
@@ -223,12 +223,12 @@ TEST_CASE("serialisation.write_query_t", "[network]") {
 }
 
 TEST_CASE("serialisation.state_machine_updated_t", "[network]") {
-  rft::queries::clients::state_machine_updated_t qc;
+  solidarity::queries::clients::state_machine_updated_t qc;
   auto msg = qc.to_message();
 
-  rft::queries::clients::state_machine_updated_t qc_u(msg);
+  solidarity::queries::clients::state_machine_updated_t qc_u(msg);
   EXPECT_EQ(msg->get_header()->kind,
-            (dialler::message::kind_t)rft::queries::QUERY_KIND::UPDATE);
+            (dialler::message::kind_t)solidarity::queries::QUERY_KIND::UPDATE);
   EXPECT_TRUE(qc_u.f);
   EXPECT_TRUE(qc.f);
 }
