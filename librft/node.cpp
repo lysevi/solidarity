@@ -1,4 +1,4 @@
-#include <librft/consensus.h>
+#include <librft/raft.h>
 #include <librft/mesh_connection.h>
 #include <librft/node.h>
 #include <librft/protocol_version.h>
@@ -90,7 +90,7 @@ public:
       i->send_data(st.to_message());
     } else {
       if (nk == NODE_KIND::LEADER) {
-        auto ec = _parent->get_consensus()->add_command(wq.query);
+        auto ec = _parent->get_raft()->add_command(wq.query);
         status_t s(wq.msg_id, ec, std::string());
         auto ames = s.to_message();
         i->send_data(ames);
@@ -156,8 +156,8 @@ node::node(utils::logging::abstract_logger_ptr logger,
 
   auto jrn = std::make_shared<rft::logdb::memory_journal>();
   auto addr = rft::node_name().set_name(_params.name);
-  auto s = rft::node_settings().set_name(_params.name);
-  _consensus = std::make_shared<rft::consensus>(s, nullptr, jrn, _state_machine, _logger);
+  auto s = rft::raft_settings().set_name(_params.name);
+  _raft = std::make_shared<rft::raft>(s, nullptr, jrn, _state_machine, _logger);
 
   rft::mesh_connection::params_t params;
   params.listener_params.port = p.port;
@@ -174,8 +174,8 @@ node::node(utils::logging::abstract_logger_ptr logger,
                  });
 
   _cluster_con
-      = std::make_shared<rft::mesh_connection>(addr, _consensus, _logger, params);
-  _consensus->set_cluster(_cluster_con.get());
+      = std::make_shared<rft::mesh_connection>(addr, _raft, _logger, params);
+  _raft->set_cluster(_cluster_con.get());
 
   dialler::listener::params_t lst_params;
   lst_params.port = _params.client_port;
@@ -183,7 +183,7 @@ node::node(utils::logging::abstract_logger_ptr logger,
   _listener_consumer = std::make_shared<node_listener>(this, _logger);
   _listener->add_consumer(_listener_consumer.get());
 
-  auto original_period = _consensus->settings().election_timeout().count();
+  auto original_period = _raft->settings().election_timeout().count();
   _timer_period = uint32_t(original_period * 0.1);
   _timer = std::make_unique<boost::asio::deadline_timer>(
       *_cluster_con->context(), boost::posix_time::milliseconds(_timer_period));
@@ -223,12 +223,12 @@ void node::stop() {
   }
 }
 
-node_state_t node::state() const {
-  return _consensus->state();
+raft_state_t node::state() const {
+  return _raft->state();
 }
 
 node_name node::self_name() const {
-  return _consensus->self_addr();
+  return _raft->self_addr();
 }
 
 void node::add_client(uint64_t id) {
@@ -259,12 +259,12 @@ abstract_state_machine *node::state_machine() {
   return dynamic_cast<consumer_wrapper *>(_state_machine)->_target;
 }
 
-std::shared_ptr<consensus> node::get_consensus() {
-  return _consensus;
+std::shared_ptr<raft> node::get_raft() {
+  return _raft;
 }
 
 void node::heartbeat_timer() {
-  _consensus->heartbeat();
+  _raft->heartbeat();
   if (!_stoped) {
     _timer->expires_at(_timer->expires_at()
                        + boost::posix_time::milliseconds(_timer_period));
@@ -273,7 +273,7 @@ void node::heartbeat_timer() {
 }
 
 void node::send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd) {
-  auto leader = _consensus->state().leader;
+  auto leader = _raft->state().leader;
   if (leader.is_empty()) {
     queries::status_t s(message_id, rft::ERROR_CODE::UNDER_ELECTION, _params.name);
     auto answer = s.to_message();

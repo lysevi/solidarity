@@ -2,7 +2,7 @@
 
 #include <librft/abstract_cluster.h>
 #include <librft/config.h>
-#include <librft/consensus.h>
+#include <librft/raft.h>
 #include <librft/protocol_version.h>
 #include <libdialler/dialler.h>
 #include <libdialler/listener.h>

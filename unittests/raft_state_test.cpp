@@ -1,15 +1,15 @@
 #include "helpers.h"
-#include <librft/state.h>
+#include <librft/raft_state.h>
 #include <catch.hpp>
 
-SCENARIO("node_state.vote", "[raft]") {
-  rft::node_state_t self;
-  rft::node_settings s;
+SCENARIO("raft_state_t.vote", "[raft]") {
+  rft::raft_state_t self;
+  rft::raft_settings s;
   self.term = 0;
   rft::node_name self_addr;
   self_addr.set_name("self_addr");
 
-  rft::node_state_t from_s;
+  rft::raft_state_t from_s;
   from_s.term = 1;
   rft::node_name from_s_addr;
   from_s_addr.set_name("from_s_addr");
@@ -25,7 +25,7 @@ SCENARIO("node_state.vote", "[raft]") {
 
       WHEN("leader.is_empty") {
         self.leader.clear();
-        auto c = rft::node_state_t::on_vote(
+        auto c = rft::raft_state_t::on_vote(
             self, s, self_addr, self_ci_rec, 2, from_s_addr, ae);
         THEN("vote to sender") {
           EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
@@ -36,7 +36,7 @@ SCENARIO("node_state.vote", "[raft]") {
 
       WHEN("!leader.is_empty") {
         self.leader.set_name("some name");
-        auto c = rft::node_state_t::on_vote(
+        auto c = rft::raft_state_t::on_vote(
             self, s, self_addr, self_ci_rec, 2, from_s_addr, ae);
         THEN("vote to sender") {
           EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
@@ -49,7 +49,7 @@ SCENARIO("node_state.vote", "[raft]") {
       self.node_kind = rft::NODE_KIND::FOLLOWER;
       /*WHEN("leader.term>self.term") {
         self.term = 0;
-        auto c = rft::node_state_t::on_vote(self, s, self_addr, self_ci_rec, 2,
+        auto c = rft::raft_state_t::on_vote(self, s, self_addr, self_ci_rec, 2,
                                             from_s_addr, ae);
         THEN("vote to sender") {
           EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
@@ -64,7 +64,7 @@ SCENARIO("node_state.vote", "[raft]") {
         ae.commited.lsn = 2;
         ae.commited.term = 2;
         auto c
-            = rft::node_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
+            = rft::raft_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
         THEN("vote to sender") {
           EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
           EXPECT_EQ(c.new_state.term, from_s.term);
@@ -79,7 +79,7 @@ SCENARIO("node_state.vote", "[raft]") {
         self.term = ae.term = 3;
         ae.commited.lsn = 3;
         auto c
-            = rft::node_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
+            = rft::raft_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
         THEN("vote to sender") {
           EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
           EXPECT_EQ(c.new_state.term, ae.term);
@@ -94,7 +94,7 @@ SCENARIO("node_state.vote", "[raft]") {
         ae.commited.lsn = rft::logdb::UNDEFINED_INDEX;
         ae.commited.term = 2;
         auto c
-            = rft::node_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
+            = rft::raft_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
         THEN("vote to sender") {
           EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
           EXPECT_EQ(c.new_state.term, from_s.term);
@@ -108,7 +108,7 @@ SCENARIO("node_state.vote", "[raft]") {
         ae.commited.lsn = rft::logdb::UNDEFINED_INDEX;
         ae.commited.term = 2;
         auto c
-            = rft::node_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
+            = rft::raft_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
         THEN("vote to sender") {
           EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
           EXPECT_EQ(c.new_state.term, from_s.term);
@@ -122,7 +122,7 @@ SCENARIO("node_state.vote", "[raft]") {
         ae.commited.lsn = 3;
         ae.commited.term = 2;
         auto c
-            = rft::node_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
+            = rft::raft_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
         THEN("vote to sender") {
           EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
           EXPECT_EQ(c.new_state.term, from_s.term);
@@ -137,7 +137,7 @@ SCENARIO("node_state.vote", "[raft]") {
         self.leader.set_name(self_addr.name());
         self.term = 0;
         from_s.term = 1;
-        auto c = rft::node_state_t::on_vote(
+        auto c = rft::raft_state_t::on_vote(
             self, s, self_addr, self_ci_rec, 2, from_s_addr, ae);
         THEN("vote to sender") {
           EXPECT_EQ(c.new_state.node_kind, rft::NODE_KIND::ELECTION);
@@ -151,7 +151,7 @@ SCENARIO("node_state.vote", "[raft]") {
         self.leader.set_name(self_addr.name());
         self.term = 1;
         from_s.term = 1;
-        auto c = rft::node_state_t::on_vote(
+        auto c = rft::raft_state_t::on_vote(
             self, s, self_addr, self_ci_rec, 2, from_s_addr, ae);
         THEN("vote to self.leader") {
           EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
@@ -171,7 +171,7 @@ SCENARIO("node_state.vote", "[raft]") {
     WHEN("self == ELECTION") {
       self.node_kind = rft::NODE_KIND::ELECTION;
       self.term = from_s.term;
-      auto c = rft::node_state_t::on_vote(
+      auto c = rft::raft_state_t::on_vote(
           self, s, self_addr, self_ci_rec, 2, from_s_addr, ae);
       THEN("vote to self.leader") {
         EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
@@ -184,7 +184,7 @@ SCENARIO("node_state.vote", "[raft]") {
       self.node_kind = rft::NODE_KIND::FOLLOWER;
       self.term = from_s.term;
 
-      auto c = rft::node_state_t::on_vote(
+      auto c = rft::raft_state_t::on_vote(
           self, s, self_addr, self_ci_rec, 2, from_s_addr, ae);
       THEN("vote to self.leader") {
         EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
@@ -200,7 +200,7 @@ SCENARIO("node_state.vote", "[raft]") {
       self.leader = self_addr;
       WHEN("quorum") {
         self.votes_to_me.insert(self_addr);
-        auto c = rft::node_state_t::on_vote(
+        auto c = rft::raft_state_t::on_vote(
             self, s, self_addr, self_ci_rec, 2, from_s_addr, ae);
         THEN("make self a self.leader") {
           EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
@@ -212,7 +212,7 @@ SCENARIO("node_state.vote", "[raft]") {
 
       WHEN("not a quorum") {
         self.votes_to_me.clear();
-        auto c = rft::node_state_t::on_vote(
+        auto c = rft::raft_state_t::on_vote(
             self, s, self_addr, self_ci_rec, 3, from_s_addr, ae);
         THEN("wait") {
           EXPECT_EQ(c.new_state.leader.name(), self.leader.name());
@@ -225,9 +225,9 @@ SCENARIO("node_state.vote", "[raft]") {
   }
 }
 
-SCENARIO("node_state.on_append_entries", "[raft]") {
-  rft::node_state_t self;
-  rft::node_state_t from_s;
+SCENARIO("raft_state_t.on_append_entries", "[raft]") {
+  rft::raft_state_t self;
+  rft::raft_state_t from_s;
 
   rft::node_name self_addr;
   rft::node_name from_s_addr;
@@ -250,7 +250,7 @@ SCENARIO("node_state.on_append_entries", "[raft]") {
 
     WHEN("from==self.leader") {
       auto new_state
-          = rft::node_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
+          = rft::raft_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
       THEN("follow to sender") {
         EXPECT_EQ(new_state.node_kind, rft::NODE_KIND::FOLLOWER);
         EXPECT_EQ(new_state.leader.name(), from_s_addr.name());
@@ -261,7 +261,7 @@ SCENARIO("node_state.on_append_entries", "[raft]") {
     WHEN("different term") {
       self.term = 0;
       auto new_state
-          = rft::node_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
+          = rft::raft_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
       THEN("follow to sender") {
         EXPECT_EQ(new_state.node_kind, rft::NODE_KIND::FOLLOWER);
         EXPECT_EQ(new_state.leader.name(), from_s_addr.name());
@@ -272,7 +272,7 @@ SCENARIO("node_state.on_append_entries", "[raft]") {
     WHEN("from==self.leader") {
       self.leader.set_name("other name");
       auto new_state
-          = rft::node_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
+          = rft::raft_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
       THEN("follow to sender") {
         EXPECT_EQ(new_state.node_kind, rft::NODE_KIND::FOLLOWER);
         EXPECT_EQ(new_state.leader.name(), from_s_addr.name());
@@ -287,7 +287,7 @@ SCENARIO("node_state.on_append_entries", "[raft]") {
     self.term = 0;
     WHEN("term>self.leader") {
       auto new_state
-          = rft::node_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
+          = rft::raft_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
       THEN("follow to sender") {
         EXPECT_EQ(new_state.node_kind, rft::NODE_KIND::FOLLOWER);
         EXPECT_EQ(new_state.leader.name(), from_s_addr.name());
@@ -301,7 +301,7 @@ SCENARIO("node_state.on_append_entries", "[raft]") {
     WHEN("term>self.term") {
       self.term = 0;
       auto new_state
-          = rft::node_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
+          = rft::raft_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
       THEN("follow to sender") {
         EXPECT_EQ(new_state.node_kind, rft::NODE_KIND::FOLLOWER);
         EXPECT_EQ(new_state.leader.name(), from_s_addr.name());
@@ -311,7 +311,7 @@ SCENARIO("node_state.on_append_entries", "[raft]") {
     WHEN("sender.term>self.term") {
       ae.commited.term++;
       auto new_state
-          = rft::node_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
+          = rft::raft_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
       THEN("follow to sender") {
         EXPECT_EQ(new_state.node_kind, rft::NODE_KIND::FOLLOWER);
         EXPECT_EQ(new_state.leader.name(), from_s_addr.name());
@@ -326,7 +326,7 @@ SCENARIO("node_state.on_append_entries", "[raft]") {
     WHEN("term==self.leader") {
       self.term = from_s.term;
       auto new_state
-          = rft::node_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
+          = rft::raft_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
       THEN("follow to sender") {
         EXPECT_EQ(new_state.node_kind, rft::NODE_KIND::FOLLOWER);
         EXPECT_EQ(new_state.leader.name(), from_s_addr.name());
@@ -336,7 +336,7 @@ SCENARIO("node_state.on_append_entries", "[raft]") {
     WHEN("from==self.leader") {
       self.term = from_s.term + 1;
       auto new_state
-          = rft::node_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
+          = rft::raft_state_t::on_append_entries(self, from_s_addr, jrn.get(), ae);
       THEN("do nothing") {
         EXPECT_EQ(new_state.node_kind, self.node_kind);
         EXPECT_EQ(new_state.leader.name(), self.leader.name());
@@ -346,9 +346,9 @@ SCENARIO("node_state.on_append_entries", "[raft]") {
   }
 }
 
-SCENARIO("node_state.on_heartbeat", "[raft]") {
-  rft::node_state_t self;
-  rft::node_state_t from_s;
+SCENARIO("raft_state_t.on_heartbeat", "[raft]") {
+  rft::raft_state_t self;
+  rft::raft_state_t from_s;
 
   rft::node_name self_addr;
   rft::node_name from_s_addr;
@@ -368,7 +368,7 @@ SCENARIO("node_state.on_heartbeat", "[raft]") {
   WHEN("self == ELECTION") {
     self.node_kind = rft::NODE_KIND::ELECTION;
 
-    auto new_state = rft::node_state_t::heartbeat(self, self_addr, 2);
+    auto new_state = rft::raft_state_t::heartbeat(self, self_addr, 2);
     THEN("be a follower") {
       EXPECT_EQ(new_state.node_kind, rft::NODE_KIND::CANDIDATE);
       EXPECT_EQ(new_state.leader, self_addr);
@@ -380,7 +380,7 @@ SCENARIO("node_state.on_heartbeat", "[raft]") {
   WHEN("self == FOLLOWER") {
     self.node_kind = rft::NODE_KIND::FOLLOWER;
     WHEN("alone in cluster") {
-      auto new_state = rft::node_state_t::heartbeat(self, self_addr, 1);
+      auto new_state = rft::raft_state_t::heartbeat(self, self_addr, 1);
       THEN("be a LEADER") {
         EXPECT_EQ(new_state.node_kind, rft::NODE_KIND::LEADER);
         EXPECT_EQ(new_state.leader.name(), self_addr.name());
@@ -389,7 +389,7 @@ SCENARIO("node_state.on_heartbeat", "[raft]") {
     }
 
     WHEN("not alone in cluster") {
-      auto new_state = rft::node_state_t::heartbeat(self, self_addr, 2);
+      auto new_state = rft::raft_state_t::heartbeat(self, self_addr, 2);
       THEN("be a LEADER") {
         EXPECT_EQ(new_state.node_kind, rft::NODE_KIND::CANDIDATE);
         EXPECT_EQ(new_state.leader.name(), self_addr.name());
@@ -404,7 +404,7 @@ SCENARIO("node_state.on_heartbeat", "[raft]") {
     self.node_kind = rft::NODE_KIND::CANDIDATE;
     WHEN("election_round>=5") {
       self.election_round = 5;
-      auto new_state = rft::node_state_t::heartbeat(self, self_addr, 2);
+      auto new_state = rft::raft_state_t::heartbeat(self, self_addr, 2);
       THEN("be a CANDIDATE") {
         EXPECT_EQ(new_state.node_kind, rft::NODE_KIND::CANDIDATE);
         EXPECT_EQ(new_state.leader.name(), self_addr.name());
@@ -415,7 +415,7 @@ SCENARIO("node_state.on_heartbeat", "[raft]") {
 
     WHEN("not alone in cluster") {
       self.election_round = 4;
-      auto new_state = rft::node_state_t::heartbeat(self, self_addr, 2);
+      auto new_state = rft::raft_state_t::heartbeat(self, self_addr, 2);
       THEN("be a CANDIDATE") {
         EXPECT_EQ(new_state.node_kind, rft::NODE_KIND::CANDIDATE);
         EXPECT_EQ(new_state.leader.name(), self_addr.name());

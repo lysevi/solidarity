@@ -1,11 +1,11 @@
 #include "helpers.h"
 #include "mock_cluster.h"
 #include "mock_consumer.h"
-#include <librft/consensus.h>
+#include <librft/raft.h>
 #include <libutils/logger.h>
 #include <catch.hpp>
 
-TEST_CASE("consensus.quorum calculation", "[raft]") {
+TEST_CASE("raft.quorum calculation", "[raft]") {
   EXPECT_EQ(rft::quorum_for_cluster(3, 0.5), 2);
   EXPECT_EQ(rft::quorum_for_cluster(4, 0.5), 3);
   EXPECT_EQ(rft::quorum_for_cluster(4, 1.0), 4);
@@ -13,15 +13,15 @@ TEST_CASE("consensus.quorum calculation", "[raft]") {
   EXPECT_EQ(rft::quorum_for_cluster(5, 0.5), 3);
 }
 
-TEST_CASE("consensus.add_nodes", "[raft]") {
+TEST_CASE("raft.add_nodes", "[raft]") {
   auto cluster = std::make_shared<mock_cluster>();
 
   /// SINGLE
-  auto settings_0 = rft::node_settings().set_name("_0").set_election_timeout(
+  auto settings_0 = rft::raft_settings().set_name("_0").set_election_timeout(
       std::chrono::milliseconds(300));
 
   auto c_0_consumer = std::make_shared<mock_state_machine>();
-  auto c_0 = std::make_shared<rft::consensus>(settings_0,
+  auto c_0 = std::make_shared<rft::raft>(settings_0,
                                               cluster.get(),
                                               rft::logdb::memory_journal::make_new(),
                                               c_0_consumer.get());
@@ -37,10 +37,10 @@ TEST_CASE("consensus.add_nodes", "[raft]") {
   EXPECT_EQ(c_0->term(), rft::term_t(0));
 
   /// TWO NODES
-  auto settings_1 = rft::node_settings().set_name("_1").set_election_timeout(
+  auto settings_1 = rft::raft_settings().set_name("_1").set_election_timeout(
       std::chrono::milliseconds(300));
   auto c_1_consumer = std::make_shared<mock_state_machine>();
-  auto c_1 = std::make_shared<rft::consensus>(settings_1,
+  auto c_1 = std::make_shared<rft::raft>(settings_1,
                                               cluster.get(),
                                               rft::logdb::memory_journal::make_new(),
                                               c_1_consumer.get());
@@ -56,10 +56,10 @@ TEST_CASE("consensus.add_nodes", "[raft]") {
   EXPECT_EQ(c_1->get_leader(), c_0->get_leader());
 
   /// THREE NODES
-  auto settings_2 = rft::node_settings().set_name("_2").set_election_timeout(
+  auto settings_2 = rft::raft_settings().set_name("_2").set_election_timeout(
       std::chrono::milliseconds(300));
   auto c_2_consumer = std::make_shared<mock_state_machine>();
-  auto c_2 = std::make_shared<rft::consensus>(settings_2,
+  auto c_2 = std::make_shared<rft::raft>(settings_2,
                                               cluster.get(),
                                               rft::logdb::memory_journal::make_new(),
                                               c_2_consumer.get());
@@ -80,30 +80,30 @@ TEST_CASE("consensus.add_nodes", "[raft]") {
   cluster = nullptr;
 }
 
-TEST_CASE("consensus", "[raft]") {
+TEST_CASE("raft", "[raft]") {
   auto cluster = std::make_shared<mock_cluster>();
 
   size_t nodes_count = 4;
   bool append_entries = false;
-  SECTION("consensus.append") {
+  SECTION("raft.append") {
     append_entries = true;
-    SECTION("consensus.append.3") { nodes_count = 3; }
-    SECTION("consensus.append.5") { nodes_count = 5; }
-    SECTION("consensus.append.7") { nodes_count = 7; }
-    SECTION("consensus.append.10") { nodes_count = 10; }
+    SECTION("raft.append.3") { nodes_count = 3; }
+    SECTION("raft.append.5") { nodes_count = 5; }
+    SECTION("raft.append.7") { nodes_count = 7; }
+    SECTION("raft.append.10") { nodes_count = 10; }
 #if !defined(DEBUG)
-    SECTION("consensus.append.15") { nodes_count = 15; }
+    SECTION("raft.append.15") { nodes_count = 15; }
 #endif
   }
 
-  SECTION("consensus.election.election") {
+  SECTION("raft.election.election") {
     append_entries = false;
-    SECTION("consensus.election.3") { nodes_count = 3; }
-    SECTION("consensus.election.5") { nodes_count = 5; }
-    SECTION("consensus.election.7") { nodes_count = 7; }
-    SECTION("consensus.election.10") { nodes_count = 10; }
+    SECTION("raft.election.3") { nodes_count = 3; }
+    SECTION("raft.election.5") { nodes_count = 5; }
+    SECTION("raft.election.7") { nodes_count = 7; }
+    SECTION("raft.election.10") { nodes_count = 10; }
 #if !defined(DEBUG)
-    SECTION("consensus.election.15") { nodes_count = 15; }
+    SECTION("raft.election.15") { nodes_count = 15; }
 #endif
   }
 
@@ -113,10 +113,10 @@ TEST_CASE("consensus", "[raft]") {
   auto et = std::chrono::milliseconds(300);
   for (size_t i = 0; i < nodes_count; ++i) {
     auto nname = "_" + std::to_string(i);
-    auto sett = rft::node_settings().set_name(nname).set_election_timeout(et);
+    auto sett = rft::raft_settings().set_name(nname).set_election_timeout(et);
     auto c = std::make_shared<mock_state_machine>();
     consumers.push_back(c);
-    auto cons = std::make_shared<rft::consensus>(
+    auto cons = std::make_shared<rft::raft>(
         sett, cluster.get(), rft::logdb::memory_journal::make_new(), c.get());
     cluster->add_new(rft::node_name().set_name(sett.name()), cons);
   }
@@ -130,7 +130,7 @@ TEST_CASE("consensus", "[raft]") {
   };
 
   while (cluster->size() > 2) {
-    std::vector<std::shared_ptr<rft::consensus>> leaders;
+    std::vector<std::shared_ptr<rft::raft>> leaders;
     while (true) {
       leaders = cluster->by_filter(is_leader_pred);
       if (leaders.size() > 1) {
@@ -139,7 +139,7 @@ TEST_CASE("consensus", "[raft]") {
           terms.insert(c->state().term);
         }
         if (terms.size() == 1) {
-          utils::logging::logger_fatal("consensus error!!!");
+          utils::logging::logger_fatal("raft error!!!");
           cluster->print_cluster();
           EXPECT_FALSE(true);
           return;
@@ -148,7 +148,7 @@ TEST_CASE("consensus", "[raft]") {
       if (leaders.size() == 1) {
         auto cur_leader = leaders.front()->self_addr();
         auto followers
-            = cluster->by_filter([cur_leader](const std::shared_ptr<rft::consensus> &v) {
+            = cluster->by_filter([cur_leader](const std::shared_ptr<rft::raft> &v) {
                 return v->get_leader() == cur_leader;
               });
         if (last_leader.is_empty() && followers.size() == cluster->size()) {
@@ -202,8 +202,8 @@ TEST_CASE("consensus", "[raft]") {
   consumers.clear();
 }
 
-TEST_CASE("consensus.replication", "[raft]") {
-  using rft::consensus;
+TEST_CASE("raft.replication", "[raft]") {
+  using rft::raft;
   using rft::node_name;
   using rft::logdb::memory_journal;
 
@@ -212,28 +212,28 @@ TEST_CASE("consensus.replication", "[raft]") {
   size_t exists_nodes_count = 1;
   size_t new_nodes_count = 1;
 
-  SECTION("consensus.replication.1x1") {
+  SECTION("raft.replication.1x1") {
     exists_nodes_count = 1;
     new_nodes_count = 1;
   }
-  SECTION("consensus.replication.1x2") {
+  SECTION("raft.replication.1x2") {
     exists_nodes_count = 1;
     new_nodes_count = 2;
   }
-  SECTION("consensus.replication.1x3") {
+  SECTION("raft.replication.1x3") {
     exists_nodes_count = 1;
     new_nodes_count = 3;
   }
 
-  SECTION("consensus.replication.2x1") {
+  SECTION("raft.replication.2x1") {
     exists_nodes_count = 2;
     new_nodes_count = 1;
   }
-  SECTION("consensus.replication.2x2") {
+  SECTION("raft.replication.2x2") {
     exists_nodes_count = 2;
     new_nodes_count = 2;
   }
-  SECTION("consensus.replication.3x3") {
+  SECTION("raft.replication.3x3") {
     exists_nodes_count = 3;
     new_nodes_count = 3;
   }
@@ -245,10 +245,10 @@ TEST_CASE("consensus.replication", "[raft]") {
 
   for (size_t i = 0; i < exists_nodes_count; ++i) {
     auto nname = "_" + std::to_string(i);
-    auto sett = rft::node_settings().set_name(nname).set_election_timeout(et);
+    auto sett = rft::raft_settings().set_name(nname).set_election_timeout(et);
     auto state_machine = std::make_shared<mock_state_machine>();
     consumers.push_back(state_machine);
-    auto cons = std::make_shared<consensus>(
+    auto cons = std::make_shared<raft>(
         sett, cluster.get(), memory_journal::make_new(), state_machine.get());
     cluster->add_new(node_name().set_name(sett.name()), cons);
   }
@@ -262,7 +262,7 @@ TEST_CASE("consensus.replication", "[raft]") {
 
   cluster->wait_leader_eletion();
 
-  std::vector<std::shared_ptr<rft::consensus>> leaders
+  std::vector<std::shared_ptr<rft::raft>> leaders
       = cluster->by_filter(is_leader_pred);
   EXPECT_EQ(leaders.size(), size_t(1));
 
@@ -282,10 +282,10 @@ TEST_CASE("consensus.replication", "[raft]") {
 
   for (size_t i = 0; i < new_nodes_count; ++i) {
     auto nname = "_" + std::to_string(i + 1 + exists_nodes_count);
-    auto sett = rft::node_settings().set_name(nname).set_election_timeout(et);
+    auto sett = rft::raft_settings().set_name(nname).set_election_timeout(et);
     auto state_machine = std::make_shared<mock_state_machine>();
     consumers.push_back(state_machine);
-    auto cons = std::make_shared<consensus>(
+    auto cons = std::make_shared<raft>(
         sett, cluster.get(), memory_journal::make_new(), state_machine.get());
     cluster->add_new(node_name().set_name(sett.name()), cons);
     cluster->wait_leader_eletion();
@@ -305,8 +305,8 @@ TEST_CASE("consensus.replication", "[raft]") {
   consumers.clear();
 }
 
-TEST_CASE("consensus.log_compaction", "[raft]") {
-  using rft::node_settings;
+TEST_CASE("raft.log_compaction", "[raft]") {
+  using rft::raft_settings;
   auto cluster = std::make_shared<mock_cluster>();
 
   size_t nodes_count = 4;
@@ -317,12 +317,12 @@ TEST_CASE("consensus.log_compaction", "[raft]") {
   auto et = std::chrono::milliseconds(300);
   for (size_t i = 0; i < nodes_count; ++i) {
     auto nname = "_" + std::to_string(i);
-    auto sett = node_settings().set_name(nname).set_election_timeout(et).set_max_log_size(
+    auto sett = raft_settings().set_name(nname).set_election_timeout(et).set_max_log_size(
         max_log_size);
 
     auto c = std::make_shared<mock_state_machine>();
     consumers.push_back(c);
-    auto cons = std::make_shared<rft::consensus>(
+    auto cons = std::make_shared<rft::raft>(
         sett, cluster.get(), rft::logdb::memory_journal::make_new(), c.get());
     cluster->add_new(rft::node_name().set_name(sett.name()), cons);
   }
@@ -338,7 +338,7 @@ TEST_CASE("consensus.log_compaction", "[raft]") {
     return c->last_cmd.data == cmd.data;
   };
 
-  std::vector<std::shared_ptr<rft::consensus>> leaders;
+  std::vector<std::shared_ptr<rft::raft>> leaders;
   for (int i = 0; i < 10; ++i) {
     leaders = cluster->by_filter(is_leader_pred);
     if (leaders.size() != size_t(1)) {
@@ -366,7 +366,7 @@ TEST_CASE("consensus.log_compaction", "[raft]") {
     std::transform(all_nodes.cbegin(),
                    all_nodes.cend(),
                    sizes.begin(),
-                   [](const std::shared_ptr<rft::consensus> &c) {
+                   [](const std::shared_ptr<rft::raft> &c) {
                      return c->journal()->reccords_count();
                    });
 
@@ -392,8 +392,8 @@ bool operator!=(const rft::logdb::log_entry &r, const rft::logdb::log_entry &l) 
   return !(r == l);
 }
 
-TEST_CASE("consensus.apply_journal_on_start", "[raft]") {
-  using rft::consensus;
+TEST_CASE("raft.apply_journal_on_start", "[raft]") {
+  using rft::raft;
   using rft::node_name;
   using rft::logdb::memory_journal;
 
@@ -420,10 +420,10 @@ TEST_CASE("consensus.apply_journal_on_start", "[raft]") {
   }
 
   auto nname = "_" + std::to_string(size_t(1));
-  auto sett = rft::node_settings().set_name(nname).set_election_timeout(et);
+  auto sett = rft::raft_settings().set_name(nname).set_election_timeout(et);
   auto state_machine = std::make_shared<mock_state_machine>();
   consumers.push_back(state_machine);
-  auto cons = std::make_shared<consensus>(sett, cluster.get(), jrn, state_machine.get());
+  auto cons = std::make_shared<raft>(sett, cluster.get(), jrn, state_machine.get());
   cluster->add_new(node_name().set_name(sett.name()), cons);
 
   auto data_eq = [&cmd](const std::shared_ptr<mock_state_machine> &c) -> bool {
@@ -433,8 +433,8 @@ TEST_CASE("consensus.apply_journal_on_start", "[raft]") {
   EXPECT_EQ(state_machine->last_cmd.data, cmd.data);
 }
 
-TEST_CASE("consensus.rollback", "[raft]") {
-  using rft::consensus;
+TEST_CASE("raft.rollback", "[raft]") {
+  using rft::raft;
   using rft::node_name;
   using rft::logdb::memory_journal;
 
@@ -448,11 +448,11 @@ TEST_CASE("consensus.rollback", "[raft]") {
   rft::command cmd;
   cmd.data.resize(1);
 
-  std::shared_ptr<rft::consensus> n1, n2;
+  std::shared_ptr<rft::raft> n1, n2;
   std::shared_ptr<rft::logdb::memory_journal> jrn1, jrn2;
   {
     auto nname = "_0";
-    auto sett = rft::node_settings().set_name(nname).set_election_timeout(et);
+    auto sett = rft::raft_settings().set_name(nname).set_election_timeout(et);
     auto state_machine = std::make_shared<mock_state_machine>();
     consumers.push_back(state_machine);
     jrn1 = memory_journal::make_new();
@@ -466,12 +466,12 @@ TEST_CASE("consensus.rollback", "[raft]") {
       le.term = 1;
       jrn1->put(le);
     }
-    n1 = std::make_shared<consensus>(sett, cluster.get(), jrn1, state_machine.get());
+    n1 = std::make_shared<raft>(sett, cluster.get(), jrn1, state_machine.get());
     n1->rw_state().term = 1;
   }
   {
     auto nname = "_1";
-    auto sett = rft::node_settings().set_name(nname).set_election_timeout(et);
+    auto sett = rft::raft_settings().set_name(nname).set_election_timeout(et);
     auto state_machine = std::make_shared<mock_state_machine>();
     consumers.push_back(state_machine);
     jrn2 = memory_journal::make_new();
@@ -489,7 +489,7 @@ TEST_CASE("consensus.rollback", "[raft]") {
       jrn2->put(le);
     }
     jrn2->commit(jrn2->prev_rec().lsn);
-    n2 = std::make_shared<consensus>(sett, cluster.get(), jrn2, state_machine.get());
+    n2 = std::make_shared<raft>(sett, cluster.get(), jrn2, state_machine.get());
     n2->rw_state().term = 100500;
   }
 

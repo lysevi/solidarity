@@ -1,4 +1,4 @@
-#include <librft/consensus.h>
+#include <librft/raft.h>
 #include <mutex>
 
 class mock_state_machine final : public rft::abstract_state_machine {

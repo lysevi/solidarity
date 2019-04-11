@@ -1,10 +1,10 @@
 #pragma once
 
-#include <librft/abstract_consumer.h>
+#include <librft/abstract_state_machine.h>
 #include <librft/exports.h>
 #include <librft/journal.h>
-#include <librft/settings.h>
-#include <librft/state.h>
+#include <librft/raft_settings.h>
+#include <librft/raft_state.h>
 #include <libutils/logger.h>
 
 #include <memory>
@@ -14,7 +14,7 @@
 
 namespace rft {
 
-class consensus : public abstract_cluster_client {
+class raft : public abstract_cluster_client {
   enum class RDIRECTION { FORWARDS = 0, BACKWARDS };
   struct log_state_t {
     logdb::reccord_info prev;
@@ -23,16 +23,16 @@ class consensus : public abstract_cluster_client {
   };
 
 public:
-  EXPORT consensus(const node_settings &ns,
+  EXPORT raft(const raft_settings &ns,
                    abstract_cluster *cluster,
                    const logdb::journal_ptr &jrn,
                    abstract_state_machine *state_machine,
                    utils::logging::abstract_logger_ptr logger = nullptr);
-  node_state_t state() const {
+  raft_state_t state() const {
     std::lock_guard l(_locker);
     return _state;
   }
-  node_state_t &rw_state() { return _state; }
+  raft_state_t &rw_state() { return _state; }
 
   NODE_KIND kind() const { return _state.node_kind; }
   term_t term() const { return _state.term; }
@@ -56,7 +56,7 @@ public:
     return _self_addr;
   }
 
-  node_settings settings() const {
+  raft_settings settings() const {
     std::lock_guard l(_locker);
     return _settings;
   }
@@ -88,12 +88,12 @@ private:
   mutable std::mutex _locker;
   std::mt19937 _rnd_eng;
 
-  node_settings _settings;
+  raft_settings _settings;
   node_name _self_addr;
   abstract_cluster *_cluster;
   logdb::journal_ptr _jrn;
 
-  node_state_t _state;
+  raft_state_t _state;
 
   std::unordered_map<node_name, log_state_t> _logs_state;
   std::unordered_map<node_name, logdb::reccord_info> _last_sended;

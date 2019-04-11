@@ -1,4 +1,4 @@
-#include <librft/state.h>
+#include <librft/raft_state.h>
 #include <libutils/logger.h>
 #include <libutils/utils.h>
 #include <cmath>
@@ -7,7 +7,7 @@
 using namespace rft;
 using namespace utils::logging;
 
-std::string rft::to_string(const node_state_t &s) {
+std::string rft::to_string(const raft_state_t &s) {
   std::stringstream ss;
   ss << "{ K:" << to_string(s.node_kind) << ", N:" << s.term
      << ", L:" << to_string(s.leader);
@@ -18,7 +18,7 @@ std::string rft::to_string(const node_state_t &s) {
   return ss.str();
 }
 
-void node_state_t::change_state(const NODE_KIND s,
+void raft_state_t::change_state(const NODE_KIND s,
                                 const term_t r,
                                 const node_name &leader_) {
   node_kind = s;
@@ -26,12 +26,12 @@ void node_state_t::change_state(const NODE_KIND s,
   leader = leader_;
 }
 
-void node_state_t::change_state(const node_name &leader_, const term_t r) {
+void raft_state_t::change_state(const node_name &leader_, const term_t r) {
   term = r;
   leader = leader_;
 }
 
-bool node_state_t::is_my_jrn_biggest(const node_state_t &self,
+bool raft_state_t::is_my_jrn_biggest(const raft_state_t &self,
                                      const logdb::reccord_info commited,
                                      const append_entries &e) {
   return self.term < e.term
@@ -39,14 +39,14 @@ bool node_state_t::is_my_jrn_biggest(const node_state_t &self,
              && !commited.lsn_is_empty() && !e.commited.lsn_is_empty());
 }
 
-changed_state_t node_state_t::on_vote(const node_state_t &self,
-                                      const node_settings &settings,
+changed_state_t raft_state_t::on_vote(const raft_state_t &self,
+                                      const raft_settings &settings,
                                       const node_name &self_addr,
                                       const logdb::reccord_info commited,
                                       const size_t cluster_size,
                                       const node_name &from,
                                       const append_entries &e) {
-  node_state_t result = self;
+  raft_state_t result = self;
   NOTIFY_TARGET target = NOTIFY_TARGET::NOBODY;
 
   if (e.leader != result.leader) {
@@ -129,11 +129,11 @@ changed_state_t node_state_t::on_vote(const node_state_t &self,
   return changed_state_t{result, target};
 }
 
-node_state_t node_state_t::on_append_entries(const node_state_t &self,
+raft_state_t raft_state_t::on_append_entries(const raft_state_t &self,
                                              const node_name &from,
                                              const logdb::abstract_journal *jrn,
                                              const append_entries &e) {
-  node_state_t result = self;
+  raft_state_t result = self;
   switch (result.node_kind) {
   case NODE_KIND::ELECTION: {
     if (from == result.leader || (from == e.leader && e.term >= result.term)) {
@@ -179,10 +179,10 @@ node_state_t node_state_t::on_append_entries(const node_state_t &self,
   return result;
 }
 
-node_state_t node_state_t::heartbeat(const node_state_t &self,
+raft_state_t raft_state_t::heartbeat(const raft_state_t &self,
                                      const node_name &self_addr,
                                      const size_t cluster_size) {
-  node_state_t result = self;
+  raft_state_t result = self;
   if (result.node_kind != NODE_KIND::LEADER && result.is_heartbeat_missed()) {
     result.leader.clear();
     switch (result.node_kind) {

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <librft/abstract_consumer.h>
+#include <librft/abstract_state_machine.h>
 #include <librft/command.h>
 #include <librft/exports.h>
-#include <librft/state.h>
+#include <librft/raft_state.h>
 #include <libutils/logger.h>
 
 #include <string>
@@ -18,7 +18,7 @@ class abstract_listener_consumer;
 
 namespace rft {
 class mesh_connection;
-class consensus;
+class raft;
 class state;
 class node {
 public:
@@ -41,11 +41,11 @@ public:
 
   params_t params() const { return _params; }
   EXPORT abstract_state_machine *state_machine();
-  EXPORT std::shared_ptr<consensus> get_consensus();
+  EXPORT std::shared_ptr<raft> get_raft();
 
   EXPORT void start();
   EXPORT void stop();
-  EXPORT node_state_t state() const;
+  EXPORT raft_state_t state() const;
   EXPORT node_name self_name() const;
 
   void add_client(uint64_t id);
@@ -62,7 +62,7 @@ private:
 private:
   bool _stoped;
   params_t _params;
-  std::shared_ptr<consensus> _consensus;
+  std::shared_ptr<raft> _raft;
   std::shared_ptr<mesh_connection> _cluster_con;
   abstract_state_machine *_state_machine;
 

@@ -1,4 +1,4 @@
-#include <librft/consensus.h>
+#include <librft/raft.h>
 #include <libutils/logger.h>
 #include <libutils/utils.h>
 #include <sstream>
@@ -13,7 +13,7 @@ inline std::mt19937 make_seeded_engine() {
 }
 } // namespace
 
-consensus::consensus(const node_settings &ns,
+raft::raft(const raft_settings &ns,
                      abstract_cluster *cluster,
                      const logdb::journal_ptr &jrn,
                      abstract_state_machine *state_machine,
@@ -53,12 +53,12 @@ consensus::consensus(const node_settings &ns,
   }
 }
 
-void consensus::set_cluster(abstract_cluster *cluster) {
+void raft::set_cluster(abstract_cluster *cluster) {
   std::lock_guard lg(_locker);
   _cluster = cluster;
 }
 
-void consensus::update_next_heartbeat_interval() {
+void raft::update_next_heartbeat_interval() {
   const auto total_mls = _settings.election_timeout().count();
   uint64_t hbi = 0;
   switch (_state.node_kind) {
@@ -94,7 +94,7 @@ void consensus::update_next_heartbeat_interval() {
               _state.next_heartbeat_interval.count());*/
 }
 
-append_entries consensus::make_append_entries(const ENTRIES_KIND kind) const noexcept {
+append_entries raft::make_append_entries(const ENTRIES_KIND kind) const noexcept {
   append_entries ae;
   ae.term = _state.term;
   ae.starttime = _state.start_time;
@@ -105,7 +105,7 @@ append_entries consensus::make_append_entries(const ENTRIES_KIND kind) const noe
   return ae;
 }
 
-append_entries consensus::make_append_entries(const logdb::index_t lsn_to_replicate,
+append_entries raft::make_append_entries(const logdb::index_t lsn_to_replicate,
                                               const logdb::index_t prev_lsn) {
   auto ae = make_append_entries(rft::ENTRIES_KIND::APPEND);
   auto cur = _jrn->get(lsn_to_replicate);
@@ -127,16 +127,16 @@ append_entries consensus::make_append_entries(const logdb::index_t lsn_to_replic
   return ae;
 }
 
-void consensus::send_all(const ENTRIES_KIND kind) {
+void raft::send_all(const ENTRIES_KIND kind) {
   _cluster->send_all(_self_addr, make_append_entries(kind));
 }
 
-void consensus::send(const node_name &to, const ENTRIES_KIND kind) {
+void raft::send(const node_name &to, const ENTRIES_KIND kind) {
   ENSURE(to != _self_addr);
   _cluster->send_to(_self_addr, to, make_append_entries(kind));
 }
 
-void consensus::lost_connection_with(const node_name &addr) {
+void raft::lost_connection_with(const node_name &addr) {
   std::lock_guard lg(_locker);
   _logger->info("lost connection with ", addr);
   _logs_state.erase(addr);
@@ -144,13 +144,13 @@ void consensus::lost_connection_with(const node_name &addr) {
   _state.votes_to_me.erase(addr);
 }
 
-void consensus::new_connection_with(const rft::node_name & /*addr*/) {
+void raft::new_connection_with(const rft::node_name & /*addr*/) {
   // TODO need implementation
 }
 
-void consensus::on_heartbeat(const node_name &from, const append_entries &e) {
+void raft::on_heartbeat(const node_name &from, const append_entries &e) {
   const auto old_s = _state;
-  const auto ns = node_state_t::on_append_entries(_state, from, _jrn.get(), e);
+  const auto ns = raft_state_t::on_append_entries(_state, from, _jrn.get(), e);
   _state = ns;
   if (old_s.leader.is_empty() || old_s.leader != _state.leader
       || old_s.node_kind != _state.node_kind) {
@@ -172,7 +172,7 @@ void consensus::on_heartbeat(const node_name &from, const append_entries &e) {
 }
 
 /// clear uncommited reccord in journal
-void consensus::log_fsck(const append_entries &e) {
+void raft::log_fsck(const append_entries &e) {
   /// TODO really need this?
   bool reset = false;
   logdb::reccord_info to_erase{};
@@ -197,12 +197,12 @@ void consensus::log_fsck(const append_entries &e) {
   }
 }
 
-void consensus::on_vote(const node_name &from, const append_entries &e) {
+void raft::on_vote(const node_name &from, const append_entries &e) {
   const auto old_s = _state;
-  const changed_state_t change_state_v = node_state_t::on_vote(
+  const changed_state_t change_state_v = raft_state_t::on_vote(
       _state, _settings, _self_addr, _jrn->commited_rec(), _cluster->size(), from, e);
 
-  const node_state_t ns = change_state_v.new_state;
+  const raft_state_t ns = change_state_v.new_state;
   _state = ns;
   if (_state.node_kind != old_s.node_kind) {
     if (old_s.node_kind == NODE_KIND::CANDIDATE
@@ -246,7 +246,7 @@ void consensus::on_vote(const node_name &from, const append_entries &e) {
   }
 }
 
-void consensus::recv(const node_name &from, const append_entries &e) {
+void raft::recv(const node_name &from, const append_entries &e) {
   std::lock_guard l(_locker);
 #ifdef DOUBLE_CHECKS
   if (from == _self_addr) {
@@ -311,8 +311,8 @@ void consensus::recv(const node_name &from, const append_entries &e) {
   }
 }
 
-void consensus::on_append_entries(const node_name &from, const append_entries &e) {
-  const auto ns = node_state_t::on_append_entries(_state, from, _jrn.get(), e);
+void raft::on_append_entries(const node_name &from, const append_entries &e) {
+  const auto ns = raft_state_t::on_append_entries(_state, from, _jrn.get(), e);
 
   if (ns.term != _state.term) {
     _state = ns;
@@ -379,7 +379,7 @@ void consensus::on_append_entries(const node_name &from, const append_entries &e
   _cluster->send_to(_self_addr, from, ae);
 }
 
-void consensus::on_answer_ok(const node_name &from, const append_entries &e) {
+void raft::on_answer_ok(const node_name &from, const append_entries &e) {
   _logger->info("answer 'OK' from:",
                 from,
                 " cur:",
@@ -430,7 +430,7 @@ void consensus::on_answer_ok(const node_name &from, const append_entries &e) {
   // replicate_log();
 }
 
-void consensus::on_answer_failed(const node_name &from, const append_entries &e) {
+void raft::on_answer_failed(const node_name &from, const append_entries &e) {
   _logger->warn("answer 'FAILED' from:",
                 from,
                 " cur:",
@@ -450,7 +450,7 @@ void consensus::on_answer_failed(const node_name &from, const append_entries &e)
   }
 }
 
-void consensus::commit_reccord(const logdb::reccord_info &target) {
+void raft::commit_reccord(const logdb::reccord_info &target) {
   auto to_commit = _jrn->first_uncommited_rec();
   if (!to_commit.is_empty()) {
 
@@ -474,7 +474,7 @@ void consensus::commit_reccord(const logdb::reccord_info &target) {
   }
 }
 
-void consensus::heartbeat() {
+void raft::heartbeat() {
   std::lock_guard l(_locker);
 
   if (!_state.is_heartbeat_missed()) {
@@ -484,7 +484,7 @@ void consensus::heartbeat() {
   if (_state.node_kind != NODE_KIND::LEADER) {
     const auto old_s = _state;
     ENSURE(_cluster != nullptr);
-    const auto ns = node_state_t::heartbeat(_state, _self_addr, _cluster->size());
+    const auto ns = raft_state_t::heartbeat(_state, _self_addr, _cluster->size());
     _state = ns;
 
     _logger->info("heartbeat. ", old_s, " => ", _state);
@@ -510,7 +510,7 @@ void consensus::heartbeat() {
   update_next_heartbeat_interval();
 }
 
-void consensus::replicate_log() {
+void raft::replicate_log() {
   _logger->info("log replication");
   auto self_log_state = _logs_state[_self_addr];
   auto all = _cluster->all_nodes();
@@ -589,7 +589,7 @@ void consensus::replicate_log() {
   }
 }
 
-void consensus::add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k) {
+void raft::add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k) {
   ENSURE(!cmd.is_empty());
   logdb::log_entry le;
   le.cmd = cmd;
@@ -607,7 +607,7 @@ void consensus::add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k) {
   }
 }
 
-ERROR_CODE consensus::add_command(const command &cmd) {
+ERROR_CODE raft::add_command(const command &cmd) {
   // TODO global lock for this method. a while cmd not in state_machine;
   std::lock_guard lg(_locker);
 

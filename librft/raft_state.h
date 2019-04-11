@@ -4,7 +4,7 @@
 #include <librft/exports.h>
 #include <librft/journal.h>
 #include <librft/node_kind.h>
-#include <librft/settings.h>
+#include <librft/raft_settings.h>
 #include <chrono>
 #include <string>
 #include <unordered_set>
@@ -22,7 +22,7 @@ inline size_t quorum_for_cluster(size_t cluster_size, float quorum) {
   return quorum_size;
 }
 
-struct node_state_t {
+struct raft_state_t {
   term_t term = UNDEFINED_TERM;
   clock_t::time_point last_heartbeat_time;
   std::chrono::milliseconds next_heartbeat_interval = {};
@@ -33,7 +33,7 @@ struct node_state_t {
 
   uint64_t start_time;
 
-  node_state_t &operator=(const node_state_t &o) {
+  raft_state_t &operator=(const raft_state_t &o) {
     term = o.term;
     last_heartbeat_time = o.last_heartbeat_time;
     next_heartbeat_interval = o.next_heartbeat_interval;
@@ -46,14 +46,14 @@ struct node_state_t {
     return *this;
   }
 
-  bool operator==(const node_state_t &o) const {
+  bool operator==(const raft_state_t &o) const {
     return term == o.term && last_heartbeat_time == o.last_heartbeat_time
            && next_heartbeat_interval == o.next_heartbeat_interval && leader == o.leader
            && node_kind == o.node_kind && election_round == o.election_round
            && votes_to_me == o.votes_to_me && start_time == o.start_time;
   }
 
-  bool operator!=(const node_state_t &o) const { return !(*this == o); }
+  bool operator!=(const raft_state_t &o) const { return !(*this == o); }
 
   bool is_heartbeat_missed() const {
     auto now = clock_t::now();
@@ -70,33 +70,33 @@ struct node_state_t {
   void change_state(const NODE_KIND s, const term_t r, const node_name &leader_);
   void change_state(const node_name &cn, const term_t r);
 
-  EXPORT static changed_state_t on_vote(const node_state_t &self,
-                                        const node_settings &settings,
+  EXPORT static changed_state_t on_vote(const raft_state_t &self,
+                                        const raft_settings &settings,
                                         const node_name &self_addr,
                                         const logdb::reccord_info commited,
                                         const size_t cluster_size,
                                         const node_name &from,
                                         const append_entries &e);
 
-  EXPORT static node_state_t on_append_entries(const node_state_t &self,
+  EXPORT static raft_state_t on_append_entries(const raft_state_t &self,
                                                const node_name &from,
                                                const logdb::abstract_journal *jrn,
                                                const append_entries &e);
-  EXPORT static node_state_t heartbeat(const node_state_t &self,
+  EXPORT static raft_state_t heartbeat(const raft_state_t &self,
                                        const node_name &self_addr,
                                        const size_t cluster_size);
 
-  EXPORT static bool is_my_jrn_biggest(const node_state_t &self,
+  EXPORT static bool is_my_jrn_biggest(const raft_state_t &self,
                                        const logdb::reccord_info commited,
                                        const append_entries &e);
 };
 
-EXPORT std::string to_string(const node_state_t &s);
+EXPORT std::string to_string(const raft_state_t &s);
 
 enum class NOTIFY_TARGET { SENDER, ALL, NOBODY };
 
 struct changed_state_t {
-  node_state_t new_state;
+  raft_state_t new_state;
   NOTIFY_TARGET notify;
 };
 

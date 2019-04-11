@@ -11,9 +11,9 @@ class abstract_logger;
 } // namespace utils
 
 namespace rft {
-class node_settings {
+class raft_settings {
 public:
-  node_settings() {
+  raft_settings() {
     _vote_quorum = 0.5;
     _append_quorum = 1.0;
     _cycle_for_replication = 3;

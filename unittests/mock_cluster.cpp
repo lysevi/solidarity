@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cassert>
 
-worker_t::worker_t(std::shared_ptr<rft::consensus> t) {
+worker_t::worker_t(std::shared_ptr<rft::raft> t) {
   _target = t;
   self_addr = _target->self_addr();
   _tread = std::thread([this]() { this->worker(); });
@@ -122,7 +122,7 @@ void mock_cluster::send_all(const rft::node_name &from, const rft::append_entrie
 }
 
 void mock_cluster::add_new(const rft::node_name &addr,
-                           const std::shared_ptr<rft::consensus> &c) {
+                           const std::shared_ptr<rft::raft> &c) {
   std::lock_guard<std::shared_mutex> lg(_cluster_locker);
   if (_workers.find(addr) != _workers.end()) {
     THROW_EXCEPTION("_workers.find(addr) != _workers.end()");
@@ -133,10 +133,10 @@ void mock_cluster::add_new(const rft::node_name &addr,
   _size++;
 }
 
-std::vector<std::shared_ptr<rft::consensus>>
-mock_cluster::by_filter(std::function<bool(const std::shared_ptr<rft::consensus>)> pred) {
+std::vector<std::shared_ptr<rft::raft>>
+mock_cluster::by_filter(std::function<bool(const std::shared_ptr<rft::raft>)> pred) {
   std::shared_lock lg(_cluster_locker);
-  std::vector<std::shared_ptr<rft::consensus>> result;
+  std::vector<std::shared_ptr<rft::raft>> result;
   result.reserve(_cluster.size());
   for (const auto &kv : _cluster) {
     if (pred(kv.second)) {
@@ -146,11 +146,11 @@ mock_cluster::by_filter(std::function<bool(const std::shared_ptr<rft::consensus>
   return result;
 }
 
-std::vector<std::shared_ptr<rft::consensus>> mock_cluster::get_all() {
+std::vector<std::shared_ptr<rft::raft>> mock_cluster::get_all() {
   return by_filter([](auto) { return true; });
 }
 
-void mock_cluster::apply(std::function<void(const std::shared_ptr<rft::consensus>)> f) {
+void mock_cluster::apply(std::function<void(const std::shared_ptr<rft::raft>)> f) {
   std::shared_lock lg(_cluster_locker);
   for (const auto &kv : _cluster) {
     f(kv.second);
@@ -181,7 +181,7 @@ void mock_cluster::print_cluster() {
 }
 
 void mock_cluster::erase_if(
-    std::function<bool(const std::shared_ptr<rft::consensus>)> pred) {
+    std::function<bool(const std::shared_ptr<rft::raft>)> pred) {
 
   rft::node_name target;
   {
@@ -241,14 +241,14 @@ void mock_cluster::wait_leader_eletion(size_t max_leaders) {
 bool mock_cluster::is_leader_eletion_complete(size_t max_leaders) {
   const auto leaders = by_filter(is_leader_pred);
   if (leaders.size() > max_leaders) {
-    utils::logging::logger_fatal("consensus error!!!");
+    utils::logging::logger_fatal("raft error!!!");
     print_cluster();
-    throw std::logic_error("consensus error");
+    throw std::logic_error("raft error");
   }
   if (leaders.size() == 1) {
     auto cur_leader = leaders.front()->self_addr();
     auto followers = by_filter([cur_leader](
-                                   const std::shared_ptr<rft::consensus> &v) -> bool {
+                                   const std::shared_ptr<rft::raft> &v) -> bool {
       auto nkind = v->state().node_kind;
       return v->get_leader() == cur_leader
              && (nkind == rft::NODE_KIND::LEADER || nkind == rft::NODE_KIND::FOLLOWER);

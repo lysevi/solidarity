@@ -1,7 +1,7 @@
 #pragma once
 
 #include <librft/abstract_cluster.h>
-#include <librft/consensus.h>
+#include <librft/raft.h>
 #include <condition_variable>
 #include <shared_mutex>
 #include <tuple>
@@ -18,7 +18,7 @@ struct message_t {
 class worker_t {
   std::mutex _tasks_locker;
   volatile bool _stop_flag = false;
-  std::shared_ptr<rft::consensus> _target;
+  std::shared_ptr<rft::raft> _target;
   std::condition_variable _cond;
 
   std::thread _tread;
@@ -28,7 +28,7 @@ class worker_t {
   rft::node_name self_addr;
 
 public:
-  worker_t(std::shared_ptr<rft::consensus> t);
+  worker_t(std::shared_ptr<rft::raft> t);
   ~worker_t();
   void add_task(const message_t &mt);
   void worker();
@@ -52,20 +52,20 @@ public:
   size_t size() override;
   std::vector<rft::node_name> all_nodes() const override;
 
-  void add_new(const rft::node_name &addr, const std::shared_ptr<rft::consensus> &c);
+  void add_new(const rft::node_name &addr, const std::shared_ptr<rft::raft> &c);
 
-  std::vector<std::shared_ptr<rft::consensus>>
-  by_filter(std::function<bool(const std::shared_ptr<rft::consensus>)> pred);
+  std::vector<std::shared_ptr<rft::raft>>
+  by_filter(std::function<bool(const std::shared_ptr<rft::raft>)> pred);
 
-  std::vector<std::shared_ptr<rft::consensus>> get_all();
+  std::vector<std::shared_ptr<rft::raft>> get_all();
 
-  void apply(std::function<void(const std::shared_ptr<rft::consensus>)> f);
+  void apply(std::function<void(const std::shared_ptr<rft::raft>)> f);
 
   void heartbeat();
 
   void print_cluster();
 
-  void erase_if(std::function<bool(const std::shared_ptr<rft::consensus>)> pred);
+  void erase_if(std::function<bool(const std::shared_ptr<rft::raft>)> pred);
 
   void wait_leader_eletion(size_t max_leaders = 1);
   bool is_leader_eletion_complete(size_t max_leaders = 1);
@@ -82,17 +82,17 @@ protected:
 
 private:
   mutable std::shared_mutex _cluster_locker;
-  std::unordered_map<rft::node_name, std::shared_ptr<rft::consensus>> _cluster;
+  std::unordered_map<rft::node_name, std::shared_ptr<rft::raft>> _cluster;
   std::unordered_map<rft::node_name, std::shared_ptr<worker_t>> _workers;
   std::unordered_set<rft::node_name> _stoped;
 
   size_t _size = 0;
 };
 
-inline bool is_leader_pred(const std::shared_ptr<rft::consensus> &v) {
+inline bool is_leader_pred(const std::shared_ptr<rft::raft> &v) {
   return v->kind() == rft::NODE_KIND::LEADER;
 };
 
-inline bool is_follower_pred(const std::shared_ptr<rft::consensus> &v) {
+inline bool is_follower_pred(const std::shared_ptr<rft::raft> &v) {
   return v->kind() == rft::NODE_KIND::FOLLOWER;
 };

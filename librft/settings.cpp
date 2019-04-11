@@ -1,9 +1,9 @@
-#include <librft/settings.h>
+#include <librft/raft_settings.h>
 #include <libutils/logger.h>
 
 using namespace rft;
 
-void node_settings::dump_to_log(utils::logging::abstract_logger *const l) {
+void raft_settings::dump_to_log(utils::logging::abstract_logger *const l) {
   l->info("name: ", _name);
   l->info("election_timeout(ms): ", _election_timeout.count());
   l->info("vote_quorum(%): ", _vote_quorum);
