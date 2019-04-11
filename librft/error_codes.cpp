@@ -23,9 +23,12 @@ std::string to_string(const ERROR_CODE status) {
   case ERROR_CODE::UNDEFINED: {
     return "UNDER_ELECTION";
   }
+  case ERROR_CODE::NETWORK_ERROR: {
+    return "NETWORK_ERROR";
+  }
 
   default:
-    NOT_IMPLEMENTED;
+    THROW_EXCEPTION("unknow error code: ", static_cast<uint16_t>(status));
   }
 }
 } // namespace rft

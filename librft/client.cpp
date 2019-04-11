@@ -87,6 +87,10 @@ void rft::inner::client_notify_update(client &c) {
   c.notify_on_update();
 }
 
+void rft::inner::client_notify_update(client &c, const client_state_event_t &ev) {
+  c.notify_on_client_event(ev);
+}
+
 class client_connection : public dialler::abstract_dial {
 public:
   client_connection(client *const parent)
@@ -136,6 +140,9 @@ public:
   void on_network_error(const dialler::message_ptr &d,
                         const boost::system::error_code &err) override {
     inner::client_update_connection_status(*_parent, false);
+	client_state_event_t ev;
+	ev.ecode = ERROR_CODE::NETWORK_ERROR;
+	inner::client_notify_update(*_parent, ev);
   }
 
 private:
@@ -225,7 +232,7 @@ ERROR_CODE client::send(const std::vector<uint8_t> &cmd) {
 
   _dialler->send_async(rq.to_message());
   waiter->wait();
-  auto result= waiter->ecode();
+  auto result = waiter->ecode();
   return result;
 }
 
@@ -259,5 +266,28 @@ void client::notify_on_update() {
   std::lock_guard l(_locker);
   for (auto &kv : _on_update_handlers) {
     kv.second();
+  }
+}
+
+uint64_t client::add_client_event_handler(
+    const std::function<void(const client_state_event_t &)> &f) {
+  std::lock_guard l(_locker);
+  auto id = _next_query_id.fetch_add(1);
+  _on_client_event_handlers[id] = f;
+  return id;
+}
+
+void client::rm_client_event_handler(uint64_t id) {
+  std::lock_guard l(_locker);
+  if (auto it = _on_client_event_handlers.find(id);
+      it != _on_client_event_handlers.end()) {
+    _on_client_event_handlers.erase(it);
+  }
+}
+
+void client::notify_on_client_event(const client_state_event_t &ev) {
+  std::lock_guard l(_locker);
+  for (auto &kv : _on_client_event_handlers) {
+    kv.second(ev);
   }
 }

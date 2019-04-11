@@ -12,7 +12,7 @@ enum class ERROR_CODE : uint16_t {
   CONNECTION_NOT_FOUND,
   WRONG_PROTOCOL_VERSION,
   UNDER_ELECTION,
-
+  NETWORK_ERROR,
   UNDEFINED = std::numeric_limits<uint16_t>::max()
 };
 EXPORT std::string to_string(const ERROR_CODE status);

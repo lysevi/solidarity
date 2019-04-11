@@ -18,6 +18,7 @@ class dial;
 namespace rft {
 
 class client;
+struct client_state_event_t;
 class async_result_t;
 
 namespace inner {
@@ -28,6 +29,7 @@ void client_update_async_result(client &c,
                                 rft::ERROR_CODE ec,
                                 const std::string &err);
 void client_notify_update(client &c);
+void client_notify_update(client &c, const client_state_event_t &ev);
 } // namespace inner
 
 class exception : public std::exception {
@@ -40,8 +42,13 @@ private:
   std::string _message;
 };
 
+struct client_state_event_t {
+  ERROR_CODE ecode = ERROR_CODE::OK;
+};
+
 class client {
 public:
+  
   struct params_t {
     params_t(const std::string &name_) { name = name_; }
 
@@ -66,8 +73,12 @@ public:
   params_t params() const { return _params; }
   bool is_connected() const { return _connected; }
 
-  uint64_t add_update_handler(const std::function<void()> &);
-  void rm_update_handler(uint64_t);
+  EXPORT uint64_t add_update_handler(const std::function<void()> &);
+  EXPORT void rm_update_handler(uint64_t);
+
+  EXPORT uint64_t
+  add_client_event_handler(const std::function<void(const client_state_event_t &)> &);
+  EXPORT void rm_client_event_handler(uint64_t id);
 
   friend void inner::client_update_connection_status(client &c, bool status);
   friend void inner::client_update_async_result(client &c,
@@ -76,10 +87,13 @@ public:
                                                 rft::ERROR_CODE ec,
                                                 const std::string &err);
   friend void inner::client_notify_update(client &c);
+  friend void inner::client_notify_update(client &c,
+                                          const client_state_event_t &ev);
 
 private:
   std::shared_ptr<async_result_t> make_waiter();
   void notify_on_update();
+  void notify_on_client_event(const client_state_event_t &);
 
 private:
   params_t _params;
@@ -94,6 +108,8 @@ private:
   std::unordered_map<uint64_t, std::shared_ptr<async_result_t>> _async_results;
 
   std::unordered_map<uint64_t, std::function<void()>> _on_update_handlers;
+  std::unordered_map<uint64_t, std::function<void(const client_state_event_t &)>>
+      _on_client_event_handlers;
 
 protected:
   bool _connected;

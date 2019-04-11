@@ -155,9 +155,11 @@ TEST_CASE("node", "[network]") {
       oss << "]";
       tst_logger->info("send over ", kv.first, " cmd:", oss.str());
     }
-    
-	rft::ERROR_CODE send_ecode = rft::ERROR_CODE::UNDEFINED;
+
+    rft::ERROR_CODE send_ecode = rft::ERROR_CODE::UNDEFINED;
+    int i = 0;
     do {
+      tst_logger->info("try resend cmd. step #", i++);
       send_ecode = kv.second->send(first_cmd);
     } while (send_ecode != rft::ERROR_CODE::OK);
 
@@ -179,7 +181,18 @@ TEST_CASE("node", "[network]") {
   }
 
   for (auto &kv : nodes) {
+    std::cerr << "stop node " << kv.first << std::endl;
+    auto client = clients[kv.first];
+
+    rft::ERROR_CODE c = rft::ERROR_CODE::OK;
+    auto id = client->add_client_event_handler(
+        [&c](const rft::client_state_event_t &ev) mutable { c = ev.ecode; });
     kv.second->stop();
+
+    while (c != rft::ERROR_CODE::NETWORK_ERROR) {
+      std::this_thread::yield();
+    }
+    client->rm_client_event_handler(id);
   }
 
   for (auto &kv : clients) {
