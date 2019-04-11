@@ -101,7 +101,7 @@ public:
     this->_connection->send_async(qc.to_message());
   }
 
-  void on_new_message(dialler::message_ptr &&d, bool &cancel) override {
+  void on_new_message(dialler::message_ptr &&d, bool & /*cancel*/) override {
     using namespace queries;
     QUERY_KIND kind = static_cast<QUERY_KIND>(d->get_header()->kind);
     switch (kind) {
@@ -137,12 +137,13 @@ public:
     }
   }
 
-  void on_network_error(const dialler::message_ptr &d,
-                        const boost::system::error_code &err) override {
+  void on_network_error(const dialler::message_ptr & /*d*/,
+                        const boost::system::error_code & /*err*/) override {
+    // TODO add message to log err.msg();
     inner::client_update_connection_status(*_parent, false);
-	client_state_event_t ev;
-	ev.ecode = ERROR_CODE::NETWORK_ERROR;
-	inner::client_notify_update(*_parent, ev);
+    client_state_event_t ev;
+    ev.ecode = ERROR_CODE::NETWORK_ERROR;
+    inner::client_notify_update(*_parent, ev);
   }
 
 private:

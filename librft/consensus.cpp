@@ -144,7 +144,7 @@ void consensus::lost_connection_with(const node_name &addr) {
   _state.votes_to_me.erase(addr);
 }
 
-void consensus::new_connection_with(const rft::node_name &addr) {
+void consensus::new_connection_with(const rft::node_name &/*addr*/) {
   // TODO need implementation
 }
 

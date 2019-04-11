@@ -110,8 +110,8 @@ public:
   }
 
   void on_network_error(listener_client_ptr i,
-                        const message_ptr &d,
-                        const boost::system::error_code &err) override {
+                        const message_ptr &/*d*/,
+                        const boost::system::error_code &/*err*/) override {
     _parent->rm_client(i->get_id());
   }
 

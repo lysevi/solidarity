@@ -34,8 +34,9 @@ void out_connection::on_new_message(dialler::message_ptr &&d, bool &cancel) {
   }
 }
 
-void out_connection::on_network_error(const dialler::message_ptr &d,
-                                      const boost::system::error_code &err) {
+void out_connection::on_network_error(const dialler::message_ptr &/*d*/,
+                                      const boost::system::error_code &/*err*/) {
+	//TODO add message to log err.msg();
   _parent->rm_out_connection(_target_addr);
 }
 
@@ -44,8 +45,9 @@ listener::listener(const std::shared_ptr<mesh_connection> parent) {
 }
 
 void listener::on_network_error(dialler::listener_client_ptr i,
-                                const dialler::message_ptr &d,
-                                const boost::system::error_code &err) {
+                                const dialler::message_ptr &/*d*/,
+                                const boost::system::error_code &/*err*/) {
+  // TODO add message to log err.msg();
   _parent->rm_input_connection(i->get_id());
 }
 
@@ -63,6 +65,7 @@ void listener::on_new_message(dialler::listener_client_ptr i,
                                 rft::ERROR_CODE::WRONG_PROTOCOL_VERSION,
                                 "protocol version error")
                  .to_message();
+	  cancel=true;
     } else {
       dout = query_connect_t(protocol_version, _parent->_self_addr.name()).to_message();
       auto addr = rft::node_name().set_name(qc.node_id);
