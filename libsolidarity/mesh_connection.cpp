@@ -1,6 +1,6 @@
 #include <libsolidarity/mesh_connection.h>
 #include <libsolidarity/queries.h>
-#include <libutils/utils.h>
+#include <libsolidarity/utils/utils.h>
 
 using namespace solidarity;
 

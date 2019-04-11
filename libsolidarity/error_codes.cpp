@@ -1,5 +1,5 @@
 #include <libsolidarity/error_codes.h>
-#include <libutils/utils.h>
+#include <libsolidarity/utils/utils.h>
 namespace solidarity {
 std::string to_string(const ERROR_CODE status) {
   switch (status) {

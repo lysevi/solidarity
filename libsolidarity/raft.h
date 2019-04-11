@@ -5,7 +5,7 @@
 #include <libsolidarity/journal.h>
 #include <libsolidarity/raft_settings.h>
 #include <libsolidarity/raft_state.h>
-#include <libutils/logger.h>
+#include <libsolidarity/utils/logger.h>
 
 #include <memory>
 #include <random>

@@ -1,5 +1,5 @@
 #include <libsolidarity/raft_settings.h>
-#include <libutils/logger.h>
+#include <libsolidarity/utils/logger.h>
 
 using namespace solidarity;
 

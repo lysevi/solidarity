@@ -2,7 +2,7 @@
 #include <libsolidarity/error_codes.h>
 #include <libsolidarity/exports.h>
 
-#include <libdialler/message.h>
+#include <libsolidarity/dialler/message.h>
 #include <vector>
 
 namespace solidarity::queries {

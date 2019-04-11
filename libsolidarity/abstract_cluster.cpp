@@ -1,6 +1,6 @@
 #include <libsolidarity/abstract_cluster.h>
-#include <libutils/strings.h>
-#include <libutils/utils.h>
+#include <libsolidarity/utils/strings.h>
+#include <libsolidarity/utils/utils.h>
 
 #include <msgpack.hpp>
 

@@ -2,8 +2,8 @@
 
 #include <boost/asio.hpp>
 
-#include <libdialler/dialler.h>
-#include <libdialler/listener.h>
+#include <libsolidarity/dialler/dialler.h>
+#include <libsolidarity/dialler/listener.h>
 
 #include <catch.hpp>
 
@@ -12,6 +12,8 @@
 #include <thread>
 
 namespace {
+
+using namespace solidarity;
 
 struct Listener final : public dialler::abstract_listener_consumer {
   Listener() { connections.store(0); }
@@ -41,7 +43,8 @@ struct Connection final : public dialler::abstract_dial {
   void on_network_error(const dialler::message_ptr &,
                         const boost::system::error_code &err) override {
     bool isError = err == boost::asio::error::operation_aborted
-        || err == boost::asio::error::connection_reset || err == boost::asio::error::eof;
+                   || err == boost::asio::error::connection_reset
+                   || err == boost::asio::error::eof;
     if (isError && !is_stoped()) {
       auto msg = err.message();
       EXPECT_FALSE(true);

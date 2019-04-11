@@ -1,15 +1,18 @@
 #include <libsolidarity/queries.h>
-#include <libutils/utils.h>
+#include <libsolidarity/utils/utils.h>
 
-#include <libdialler/message.h>
+#include <libsolidarity/dialler/message.h>
 #include <numeric>
+
+#include <msgpack.hpp>
 
 using namespace solidarity::queries;
 using namespace solidarity::queries::clients;
+using namespace solidarity::dialler;
 
 namespace {
 
-msgpack::unpacker get_unpacker(const uint8_t *data, dialler::message::size_t sz) {
+msgpack::unpacker get_unpacker(const uint8_t *data, message::size_t sz) {
   msgpack::unpacker pac;
   pac.reserve_buffer(sz);
   memcpy(pac.buffer(), data, sz);
@@ -17,19 +20,19 @@ msgpack::unpacker get_unpacker(const uint8_t *data, dialler::message::size_t sz)
   return pac;
 }
 
-msgpack::unpacker get_unpacker(const dialler::message_ptr &msg) {
+msgpack::unpacker get_unpacker(const message_ptr &msg) {
   return get_unpacker(msg->value(), msg->values_size());
 }
 
 template <typename... Args>
-dialler::message_ptr pack_to_message(solidarity::queries::QUERY_KIND kind, Args &&... args) {
+message_ptr pack_to_message(solidarity::queries::QUERY_KIND kind, Args &&... args) {
   msgpack::sbuffer buffer;
   msgpack::packer<msgpack::sbuffer> pk(&buffer);
   (pk.pack(args), ...);
 
-  auto needed_size = (dialler::message::size_t)buffer.size();
+  auto needed_size = (message::size_t)buffer.size();
   auto nd
-      = std::make_shared<dialler::message>(needed_size, (dialler::message::kind_t)kind);
+      = std::make_shared<message>(needed_size, (message::kind_t)kind);
 
   memcpy(nd->value(), buffer.data(), buffer.size());
   return nd;
@@ -37,9 +40,9 @@ dialler::message_ptr pack_to_message(solidarity::queries::QUERY_KIND kind, Args 
 
 } // namespace
 
-query_connect_t::query_connect_t(const dialler::message_ptr &msg) {
+query_connect_t::query_connect_t(const message_ptr &msg) {
   ENSURE(msg->get_header()->kind
-         == (dialler::message::kind_t)queries::QUERY_KIND::CONNECT);
+         == (message::kind_t)queries::QUERY_KIND::CONNECT);
   msgpack::unpacker pac = get_unpacker(msg);
   msgpack::object_handle oh;
 
@@ -49,13 +52,13 @@ query_connect_t::query_connect_t(const dialler::message_ptr &msg) {
   node_id = oh.get().as<std::string>();
 }
 
-dialler::message_ptr query_connect_t::query_connect_t::to_message() const {
+message_ptr query_connect_t::query_connect_t::to_message() const {
   return pack_to_message(queries::QUERY_KIND::CONNECT, protocol_version, node_id);
 }
 
-connection_error_t::connection_error_t(const dialler::message_ptr &mptr) {
+connection_error_t::connection_error_t(const message_ptr &mptr) {
   ENSURE(mptr->get_header()->kind
-         == (dialler::message::kind_t)queries::QUERY_KIND::CONNECTION_ERROR);
+         == (message::kind_t)queries::QUERY_KIND::CONNECTION_ERROR);
   msgpack::unpacker pac = get_unpacker(mptr);
   msgpack::object_handle oh;
 
@@ -67,14 +70,14 @@ connection_error_t::connection_error_t(const dialler::message_ptr &mptr) {
   status = static_cast<ERROR_CODE>(oh.get().as<uint16_t>());
 }
 
-dialler::message_ptr connection_error_t::to_message() const {
+message_ptr connection_error_t::to_message() const {
   return pack_to_message(
       queries::QUERY_KIND::CONNECTION_ERROR, protocol_version, msg, (uint16_t)status);
 }
 
-status_t::status_t(const dialler::message_ptr &mptr) {
+status_t::status_t(const message_ptr &mptr) {
   ENSURE(mptr->get_header()->kind
-         == (dialler::message::kind_t)queries::QUERY_KIND::STATUS);
+         == (message::kind_t)queries::QUERY_KIND::STATUS);
   msgpack::unpacker pac = get_unpacker(mptr);
   msgpack::object_handle oh;
 
@@ -86,14 +89,14 @@ status_t::status_t(const dialler::message_ptr &mptr) {
   status = static_cast<ERROR_CODE>(oh.get().as<uint16_t>());
 }
 
-dialler::message_ptr status_t::to_message() const {
+message_ptr status_t::to_message() const {
   return pack_to_message(
       queries::QUERY_KIND::STATUS, id, msg, static_cast<uint16_t>(status));
 }
 
-command_t::command_t(const std::vector<dialler::message_ptr> &mptrs) {
+command_t::command_t(const std::vector<message_ptr> &mptrs) {
   ENSURE(std::all_of(mptrs.cbegin(), mptrs.cend(), [](auto mptr) {
-    return mptr->get_header()->kind == (dialler::message::kind_t)QUERY_KIND::COMMAND;
+    return mptr->get_header()->kind == (message::kind_t)QUERY_KIND::COMMAND;
   }));
   if (mptrs.size() == size_t(1)) {
     msgpack::unpacker pac = get_unpacker(mptrs.front());
@@ -134,7 +137,7 @@ command_t::command_t(const std::vector<dialler::message_ptr> &mptrs) {
   }
 }
 
-std::vector<dialler::message_ptr> command_t::to_message() const {
+std::vector<message_ptr> command_t::to_message() const {
   using namespace dialler;
   auto barray = cmd.to_byte_array();
   auto total_size = barray.size() + from.name().size();
@@ -177,9 +180,9 @@ std::vector<dialler::message_ptr> command_t::to_message() const {
   return result;
 }
 
-client_connect_t::client_connect_t(const dialler::message_ptr &msg) {
+client_connect_t::client_connect_t(const message_ptr &msg) {
   ENSURE(msg->get_header()->kind
-         == (dialler::message::kind_t)queries::QUERY_KIND::CONNECT);
+         == (message::kind_t)queries::QUERY_KIND::CONNECT);
   msgpack::unpacker pac = get_unpacker(msg);
   msgpack::object_handle oh;
 
@@ -189,12 +192,12 @@ client_connect_t::client_connect_t(const dialler::message_ptr &msg) {
   client_name = oh.get().as<std::string>();
 }
 
-dialler::message_ptr client_connect_t::to_message() const {
+message_ptr client_connect_t::to_message() const {
   return pack_to_message(queries::QUERY_KIND::CONNECT, protocol_version, client_name);
 }
 
-read_query_t::read_query_t(const dialler::message_ptr &msg) {
-  ENSURE(msg->get_header()->kind == (dialler::message::kind_t)queries::QUERY_KIND::READ);
+read_query_t::read_query_t(const message_ptr &msg) {
+  ENSURE(msg->get_header()->kind == (message::kind_t)queries::QUERY_KIND::READ);
   msgpack::unpacker pac = get_unpacker(msg);
   msgpack::object_handle oh;
 
@@ -205,12 +208,12 @@ read_query_t::read_query_t(const dialler::message_ptr &msg) {
   query.data = data;
 }
 
-dialler::message_ptr read_query_t::to_message() const {
+message_ptr read_query_t::to_message() const {
   return pack_to_message(queries::QUERY_KIND::READ, msg_id, query.data);
 }
 
-write_query_t::write_query_t(const dialler::message_ptr &msg) {
-  ENSURE(msg->get_header()->kind == (dialler::message::kind_t)queries::QUERY_KIND::WRITE);
+write_query_t::write_query_t(const message_ptr &msg) {
+  ENSURE(msg->get_header()->kind == (message::kind_t)queries::QUERY_KIND::WRITE);
   msgpack::unpacker pac = get_unpacker(msg);
   msgpack::object_handle oh;
 
@@ -221,7 +224,7 @@ write_query_t::write_query_t(const dialler::message_ptr &msg) {
   query.data = data;
 }
 
-dialler::message_ptr write_query_t::to_message() const {
+message_ptr write_query_t::to_message() const {
   return pack_to_message(queries::QUERY_KIND::WRITE, msg_id, query.data);
 }
 
@@ -229,9 +232,9 @@ state_machine_updated_t::state_machine_updated_t() {
   f = true;
 }
 
-state_machine_updated_t::state_machine_updated_t(const dialler::message_ptr &msg) {
+state_machine_updated_t::state_machine_updated_t(const message_ptr &msg) {
   ENSURE(msg->get_header()->kind
-         == (dialler::message::kind_t)queries::QUERY_KIND::UPDATE);
+         == (message::kind_t)queries::QUERY_KIND::UPDATE);
   msgpack::unpacker pac = get_unpacker(msg);
   msgpack::object_handle oh;
 
@@ -239,6 +242,6 @@ state_machine_updated_t::state_machine_updated_t(const dialler::message_ptr &msg
   f = oh.get().as<bool>();
 }
 
-dialler::message_ptr state_machine_updated_t::to_message() const {
+message_ptr state_machine_updated_t::to_message() const {
   return pack_to_message(queries::QUERY_KIND::UPDATE, f);
 }

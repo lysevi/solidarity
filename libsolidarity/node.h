@@ -4,19 +4,19 @@
 #include <libsolidarity/command.h>
 #include <libsolidarity/exports.h>
 #include <libsolidarity/raft_state.h>
-#include <libutils/logger.h>
+#include <libsolidarity/utils/logger.h>
 
 #include <string>
 #include <thread>
 #include <vector>
 
+namespace solidarity {
 namespace dialler {
 class listener;
 class abstract_listener_consumer;
 
 } // namespace dialler
 
-namespace solidarity {
 class mesh_connection;
 class raft;
 class state;
@@ -68,8 +68,8 @@ private:
 
   utils::logging::abstract_logger_ptr _logger;
 
-  std::shared_ptr<dialler::listener> _listener;
-  std::shared_ptr<dialler::abstract_listener_consumer> _listener_consumer;
+  std::shared_ptr<solidarity::dialler::listener> _listener;
+  std::shared_ptr<solidarity::dialler::abstract_listener_consumer> _listener_consumer;
 
   mutable std::shared_mutex _locker;
   std::unordered_set<uint64_t> _clients;

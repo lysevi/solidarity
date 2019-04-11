@@ -3,8 +3,9 @@
 
 #include "helpers.h"
 #include <catch.hpp>
-
-void check_append_entries(const solidarity::append_entries &ae, const solidarity::append_entries &res) {
+#include <numeric>
+void check_append_entries(const solidarity::append_entries &ae,
+                          const solidarity::append_entries &res) {
   EXPECT_EQ(ae.term, res.term);
   EXPECT_EQ(ae.kind, res.kind);
   EXPECT_EQ(ae.starttime, res.starttime);
@@ -76,14 +77,16 @@ TEST_CASE("serialisation.query_connect", "[network]") {
   solidarity::queries::query_connect_t qc(777, "node id");
   auto msg = qc.to_message();
   solidarity::queries::query_connect_t qc_u(msg);
-  EXPECT_EQ(msg->get_header()->kind,
-            (dialler::message::kind_t)solidarity::queries::QUERY_KIND::CONNECT);
+  EXPECT_EQ(
+      msg->get_header()->kind,
+      (solidarity::dialler::message::kind_t)solidarity::queries::QUERY_KIND::CONNECT);
   EXPECT_EQ(qc.protocol_version, qc_u.protocol_version);
   EXPECT_EQ(qc.node_id, qc_u.node_id);
 }
 
 TEST_CASE("serialisation.connection_error", "[network]") {
-  solidarity::queries::connection_error_t qc(777, solidarity::ERROR_CODE::WRONG_PROTOCOL_VERSION, "");
+  solidarity::queries::connection_error_t qc(
+      777, solidarity::ERROR_CODE::WRONG_PROTOCOL_VERSION, "");
 
   SECTION("empty message") { qc.msg = std::string(); }
   SECTION("long message") {
@@ -93,7 +96,8 @@ TEST_CASE("serialisation.connection_error", "[network]") {
   auto msg = qc.to_message();
   solidarity::queries::connection_error_t qc_u(msg);
   EXPECT_EQ(msg->get_header()->kind,
-            (dialler::message::kind_t)solidarity::queries::QUERY_KIND::CONNECTION_ERROR);
+            (solidarity::dialler::message::kind_t)
+                solidarity::queries::QUERY_KIND::CONNECTION_ERROR);
   EXPECT_EQ(qc.protocol_version, qc_u.protocol_version);
   EXPECT_EQ(qc.msg, qc_u.msg);
   EXPECT_EQ(qc.status, qc_u.status);
@@ -102,7 +106,9 @@ TEST_CASE("serialisation.connection_error", "[network]") {
 TEST_CASE("serialisation.status_t", "[network]") {
   solidarity::ERROR_CODE s = solidarity::ERROR_CODE::OK;
   SECTION("serialisation.status_t::OK") { s = solidarity::ERROR_CODE::OK; }
-  SECTION("serialisation.status_t::NOT_A_LEADER") { s = solidarity::ERROR_CODE::NOT_A_LEADER; }
+  SECTION("serialisation.status_t::NOT_A_LEADER") {
+    s = solidarity::ERROR_CODE::NOT_A_LEADER;
+  }
   SECTION("serialisation.status_t::CONNECTION_NOT_FOUND") {
     s = solidarity::ERROR_CODE::CONNECTION_NOT_FOUND;
   }
@@ -123,8 +129,9 @@ TEST_CASE("serialisation.status_t", "[network]") {
 
   auto msg = qc.to_message();
   solidarity::queries::status_t qc_u(msg);
-  EXPECT_EQ(msg->get_header()->kind,
-            (dialler::message::kind_t)solidarity::queries::QUERY_KIND::STATUS);
+  EXPECT_EQ(
+      msg->get_header()->kind,
+      (solidarity::dialler::message::kind_t)solidarity::queries::QUERY_KIND::STATUS);
   EXPECT_EQ(qc.id, qc_u.id);
   EXPECT_EQ(qc.msg, qc_u.msg);
   EXPECT_EQ(qc.status, s);
@@ -144,7 +151,7 @@ TEST_CASE("serialisation.command", "[network]") {
     std::iota(ae.cmd.data.begin(), ae.cmd.data.end(), uint8_t(0));
   }
   SECTION("big cmd") {
-    ae.cmd.data.resize(dialler::message::MAX_BUFFER_SIZE * 11);
+    ae.cmd.data.resize(solidarity::dialler::message::MAX_BUFFER_SIZE * 11);
     std::iota(ae.cmd.data.begin(), ae.cmd.data.end(), uint8_t(0));
   }
   lk = solidarity::logdb::LOG_ENTRY_KIND::APPEND;
@@ -171,8 +178,9 @@ TEST_CASE("serialisation.command", "[network]") {
   auto msg = cmd.to_message();
   solidarity::queries::command_t cmd_u(msg);
   EXPECT_EQ(cmd.from, cmd_u.from);
-  EXPECT_EQ(msg.front()->get_header()->kind,
-            (dialler::message::kind_t)solidarity::queries::QUERY_KIND::COMMAND);
+  EXPECT_EQ(
+      msg.front()->get_header()->kind,
+      (solidarity::dialler::message::kind_t)solidarity::queries::QUERY_KIND::COMMAND);
   check_append_entries(ae, cmd_u.cmd);
 }
 
@@ -180,8 +188,9 @@ TEST_CASE("serialisation.client_connect_t", "[network]") {
   solidarity::queries::clients::client_connect_t qc("client name", 777);
   auto msg = qc.to_message();
   solidarity::queries::clients::client_connect_t qc_u(msg);
-  EXPECT_EQ(msg->get_header()->kind,
-            (dialler::message::kind_t)solidarity::queries::QUERY_KIND::CONNECT);
+  EXPECT_EQ(
+      msg->get_header()->kind,
+      (solidarity::dialler::message::kind_t)solidarity::queries::QUERY_KIND::CONNECT);
   EXPECT_EQ(qc.protocol_version, qc_u.protocol_version);
   EXPECT_EQ(qc.client_name, qc_u.client_name);
 }
@@ -194,7 +203,7 @@ TEST_CASE("serialisation.read_query_t", "[network]") {
 
   solidarity::queries::clients::read_query_t qc_u(msg);
   EXPECT_EQ(msg->get_header()->kind,
-            (dialler::message::kind_t)solidarity::queries::QUERY_KIND::READ);
+            (solidarity::dialler::message::kind_t)solidarity::queries::QUERY_KIND::READ);
   EXPECT_EQ(qc.msg_id, qc_u.msg_id);
   EXPECT_TRUE(std::equal(qc.query.data.begin(),
                          qc.query.data.end(),
@@ -212,7 +221,7 @@ TEST_CASE("serialisation.write_query_t", "[network]") {
 
   solidarity::queries::clients::write_query_t qc_u(msg);
   EXPECT_EQ(msg->get_header()->kind,
-            (dialler::message::kind_t)solidarity::queries::QUERY_KIND::WRITE);
+            (solidarity::dialler::message::kind_t)solidarity::queries::QUERY_KIND::WRITE);
   EXPECT_EQ(qc.msg_id, qc_u.msg_id);
   EXPECT_TRUE(std::equal(qc.query.data.begin(),
                          qc.query.data.end(),
@@ -227,8 +236,9 @@ TEST_CASE("serialisation.state_machine_updated_t", "[network]") {
   auto msg = qc.to_message();
 
   solidarity::queries::clients::state_machine_updated_t qc_u(msg);
-  EXPECT_EQ(msg->get_header()->kind,
-            (dialler::message::kind_t)solidarity::queries::QUERY_KIND::UPDATE);
+  EXPECT_EQ(
+      msg->get_header()->kind,
+      (solidarity::dialler::message::kind_t)solidarity::queries::QUERY_KIND::UPDATE);
   EXPECT_TRUE(qc_u.f);
   EXPECT_TRUE(qc.f);
 }

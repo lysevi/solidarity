@@ -2,7 +2,7 @@
 
 #include <libsolidarity/journal.h>
 #include <libsolidarity/error_codes.h>
-#include <libutils/property.h>
+#include <libsolidarity/utils/property.h>
 #include <memory>
 
 namespace solidarity {

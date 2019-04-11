@@ -1,9 +1,12 @@
 #include <libsolidarity/abstract_cluster.h>
 #include <libsolidarity/queries.h>
-#include <libutils/utils.h>
+#include <libsolidarity/utils/utils.h>
 #include <catch.hpp>
+#include <numeric>
 
 #ifdef ENABLE_BENCHMARKS
+
+using namespace solidarity;
 
 TEST_CASE("serialisation", "[bench]") {
   using namespace solidarity::queries;

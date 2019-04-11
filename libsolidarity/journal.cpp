@@ -1,5 +1,5 @@
 #include <libsolidarity/journal.h>
-#include <libutils/exception.h>
+#include <libsolidarity/utils/exception.h>
 #include <sstream>
 using namespace solidarity;
 using namespace logdb;

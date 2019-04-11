@@ -1,10 +1,9 @@
 #include <libsolidarity/client.h>
 #include <libsolidarity/protocol_version.h>
 #include <libsolidarity/queries.h>
-#include <libdialler/dialler.h>
-#include <libutils/strings.h>
-#include <libutils/utils.h>
-#include <boost/asio.hpp>
+#include <libsolidarity/dialler/dialler.h>
+#include <libsolidarity/utils/strings.h>
+#include <libsolidarity/utils/utils.h>
 #include <condition_variable>
 
 using namespace solidarity;
@@ -91,7 +90,7 @@ void solidarity::inner::client_notify_update(client &c, const client_state_event
   c.notify_on_client_event(ev);
 }
 
-class client_connection : public dialler::abstract_dial {
+class client_connection : public solidarity::dialler::abstract_dial {
 public:
   client_connection(client *const parent)
       : _parent(parent) {}
@@ -101,7 +100,7 @@ public:
     this->_connection->send_async(qc.to_message());
   }
 
-  void on_new_message(dialler::message_ptr &&d, bool & /*cancel*/) override {
+  void on_new_message(solidarity::dialler::message_ptr &&d, bool & /*cancel*/) override {
     using namespace queries;
     QUERY_KIND kind = static_cast<QUERY_KIND>(d->get_header()->kind);
     switch (kind) {
@@ -137,7 +136,7 @@ public:
     }
   }
 
-  void on_network_error(const dialler::message_ptr & /*d*/,
+  void on_network_error(const solidarity::dialler::message_ptr & /*d*/,
                         const boost::system::error_code & /*err*/) override {
     // TODO add message to log err.msg();
     inner::client_update_connection_status(*_parent, false);

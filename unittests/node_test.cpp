@@ -1,13 +1,15 @@
 #include "helpers.h"
 #include <libsolidarity/client.h>
 #include <libsolidarity/node.h>
-#include <libutils/logger.h>
-#include <libutils/strings.h>
+#include <libsolidarity/utils/logger.h>
+#include <libsolidarity/utils/strings.h>
 
 #include "mock_consumer.h"
 
 #include <catch.hpp>
 #include <condition_variable>
+#include <numeric>
+#include <iostream>
 
 TEST_CASE("node", "[network]") {
   size_t cluster_size = 0;
@@ -62,7 +64,8 @@ TEST_CASE("node", "[network]") {
 
     n->start();
 
-    solidarity::client::params_t cpar(utils::strings::args_to_string("client_", params.name));
+    solidarity::client::params_t cpar(
+        utils::strings::args_to_string("client_", params.name));
     cpar.threads_count = 1;
     cpar.host = "localhost";
     cpar.port = params.client_port;
@@ -96,7 +99,8 @@ TEST_CASE("node", "[network]") {
       for (auto &kv : nodes) {
         auto state = kv.second->state();
         auto nkind = state.node_kind;
-        if ((nkind == solidarity::NODE_KIND::LEADER || nkind == solidarity::NODE_KIND::FOLLOWER)
+        if ((nkind == solidarity::NODE_KIND::LEADER
+             || nkind == solidarity::NODE_KIND::FOLLOWER)
             && state.leader.name() != leader_name.name()) {
           election_complete = false;
           break;

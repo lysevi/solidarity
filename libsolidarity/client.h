@@ -6,16 +6,16 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <boost/asio.hpp>
+//namespace boost::asio {
+//class io_context;
+//} // namespace boost::asio
 
-namespace boost::asio {
-class io_context;
-} // namespace boost::asio
 
+namespace solidarity {
 namespace dialler {
 class dial;
 }
-
-namespace solidarity {
 
 class client;
 struct client_state_event_t;

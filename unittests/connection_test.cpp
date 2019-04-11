@@ -2,6 +2,7 @@
 #include "mock_consumer.h"
 #include <libsolidarity/mesh_connection.h>
 #include <catch.hpp>
+#include <numeric>
 
 struct mock_cluster_client : solidarity::abstract_cluster_client {
   void recv(const solidarity::node_name &, const solidarity::append_entries &e) override {
@@ -57,7 +58,7 @@ TEST_CASE("mesh_connection", "[network]") {
     cluster_size = 2;
     SECTION("mesh_connection.small_data") { data_size = 1; }
     SECTION("mesh_connection.big_data") {
-      data_size = size_t(dialler::message::MAX_BUFFER_SIZE * cluster_size * 2);
+      data_size = size_t(solidarity::dialler::message::MAX_BUFFER_SIZE * cluster_size * 2);
     }
   }
 
@@ -65,20 +66,22 @@ TEST_CASE("mesh_connection", "[network]") {
     cluster_size = 3;
     SECTION("mesh_connection.small_data") { data_size = 1; }
     SECTION("mesh_connection.big_data") {
-      data_size = size_t(dialler::message::MAX_BUFFER_SIZE * cluster_size * 3.75);
+      data_size
+          = size_t(solidarity::dialler::message::MAX_BUFFER_SIZE * cluster_size * 3.75);
     }
   }
   SECTION("mesh_connection.5") {
     cluster_size = 5;
     SECTION("mesh_connection.small_data") { data_size = 1; }
     SECTION("mesh_connection.big_data") {
-      data_size = size_t(dialler::message::MAX_BUFFER_SIZE * cluster_size * 1.75);
+      data_size
+          = size_t(solidarity::dialler::message::MAX_BUFFER_SIZE * cluster_size * 1.75);
     }
   }
 
   std::vector<unsigned short> ports(cluster_size);
   std::iota(ports.begin(), ports.end(), unsigned short(8000));
-
+  
   std::vector<std::shared_ptr<solidarity::mesh_connection>> connections;
   std::unordered_map<solidarity::node_name, std::shared_ptr<mock_cluster_client>> clients;
   connections.reserve(cluster_size);
@@ -102,7 +105,7 @@ TEST_CASE("mesh_connection", "[network]") {
         out_ports.begin(),
         out_ports.end(),
         std::back_inserter(params.addrs),
-        [](const auto prt) { return dialler::dial::params_t("localhost", prt); });
+        [](const auto prt) { return solidarity::dialler::dial::params_t("localhost", prt); });
 
     auto log_prefix = utils::strings::args_to_string("localhost_", p, ": ");
     auto logger = std::make_shared<utils::logging::prefix_logger>(

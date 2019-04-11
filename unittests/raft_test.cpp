@@ -2,7 +2,7 @@
 #include "mock_cluster.h"
 #include "mock_consumer.h"
 #include <libsolidarity/raft.h>
-#include <libutils/logger.h>
+#include <libsolidarity/utils/logger.h>
 #include <catch.hpp>
 
 TEST_CASE("raft.quorum calculation", "[raft]") {

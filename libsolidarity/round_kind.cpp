@@ -1,5 +1,5 @@
 #include <libsolidarity/node_kind.h>
-#include <libutils/utils.h>
+#include <libsolidarity/utils/utils.h>
 
 namespace solidarity {
 std::string to_string(const solidarity::NODE_KIND s) {

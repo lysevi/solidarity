@@ -1,9 +1,9 @@
-#include <libutils/async/thread_manager.h>
-#include <libutils/async/thread_pool.h>
-#include <libutils/property.h>
-#include <libutils/strings.h>
-#include <libutils/timer.h>
-#include <libutils/utils.h>
+#include <libsolidarity/utils/async/thread_manager.h>
+#include <libsolidarity/utils/async/thread_pool.h>
+#include <libsolidarity/utils/property.h>
+#include <libsolidarity/utils/strings.h>
+#include <libsolidarity/utils/timer.h>
+#include <libsolidarity/utils/utils.h>
 
 #include "helpers.h"
 #include <array>

@@ -1,6 +1,6 @@
 #include <libsolidarity/raft_state.h>
-#include <libutils/logger.h>
-#include <libutils/utils.h>
+#include <libsolidarity/utils/logger.h>
+#include <libsolidarity/utils/utils.h>
 #include <cmath>
 #include <sstream>
 

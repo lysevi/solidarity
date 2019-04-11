@@ -4,10 +4,10 @@
 #include <libsolidarity/config.h>
 #include <libsolidarity/raft.h>
 #include <libsolidarity/protocol_version.h>
-#include <libdialler/dialler.h>
-#include <libdialler/listener.h>
-#include <libdialler/message.h>
-#include <libutils/logger.h>
+#include <libsolidarity/dialler/dialler.h>
+#include <libsolidarity/dialler/listener.h>
+#include <libsolidarity/dialler/message.h>
+#include <libsolidarity/utils/logger.h>
 
 #include <boost/asio.hpp>
 

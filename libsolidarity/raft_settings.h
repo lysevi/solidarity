@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libutils/property.h>
+#include <libsolidarity/utils/property.h>
 #include <chrono>
 #include <string>
 
