@@ -16,17 +16,21 @@ inline std::mt19937 make_seeded_engine() {
 consensus::consensus(const node_settings &ns,
                      abstract_cluster *cluster,
                      const logdb::journal_ptr &jrn,
-                     abstract_consensus_consumer *consumer)
+                     abstract_consensus_consumer *consumer,
+                     utils::logging::abstract_logger_ptr logger)
     : _consumer(consumer)
     , _rnd_eng(make_seeded_engine())
     , _settings(ns)
     , _cluster(cluster)
     , _jrn(jrn) {
+  if (logger != nullptr) {
+    _logger = std::make_shared<utils::logging::prefix_logger>(logger, "[raft] ");
+  } else {
+    auto log_prefix = utils::strings::args_to_string("node ", ns.name(), ": ");
 
-  auto log_prefix = utils::strings::args_to_string("node ", ns.name(), ": ");
-
-  _logger = std::make_unique<utils::logging::prefix_logger>(
-      utils::logging::logger_manager::instance()->get_logger(), log_prefix);
+    _logger = std::make_shared<utils::logging::prefix_logger>(
+        utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
+  }
 
   ENSURE(_consumer != nullptr);
 
@@ -50,7 +54,7 @@ consensus::consensus(const node_settings &ns,
 }
 
 void consensus::set_cluster(abstract_cluster *cluster) {
-  std::lock_guard<std::mutex> lg(_locker);
+  std::lock_guard lg(_locker);
   _cluster = cluster;
 }
 
@@ -90,7 +94,7 @@ void consensus::update_next_heartbeat_interval() {
               _state.next_heartbeat_interval.count());*/
 }
 
-append_entries consensus::make_append_entries(const entries_kind_t kind) const noexcept {
+append_entries consensus::make_append_entries(const ENTRIES_KIND kind) const noexcept {
   append_entries ae;
   ae.term = _state.term;
   ae.starttime = _state.start_time;
@@ -103,10 +107,10 @@ append_entries consensus::make_append_entries(const entries_kind_t kind) const n
 
 append_entries consensus::make_append_entries(const logdb::index_t lsn_to_replicate,
                                               const logdb::index_t prev_lsn) {
-  auto ae = make_append_entries(rft::entries_kind_t::APPEND);
+  auto ae = make_append_entries(rft::ENTRIES_KIND::APPEND);
   auto cur = _jrn->get(lsn_to_replicate);
 
-  if (cur.kind == logdb::log_entry_kind::APPEND) {
+  if (cur.kind == logdb::LOG_ENTRY_KIND::APPEND) {
     ae.cmd = cur.cmd;
   }
 
@@ -123,24 +127,28 @@ append_entries consensus::make_append_entries(const logdb::index_t lsn_to_replic
   return ae;
 }
 
-void consensus::send_all(const entries_kind_t kind) {
+void consensus::send_all(const ENTRIES_KIND kind) {
   _cluster->send_all(_self_addr, make_append_entries(kind));
 }
 
-void consensus::send(const cluster_node &to, const entries_kind_t kind) {
+void consensus::send(const node_name &to, const ENTRIES_KIND kind) {
   ENSURE(to != _self_addr);
   _cluster->send_to(_self_addr, to, make_append_entries(kind));
 }
 
-void consensus::lost_connection_with(const cluster_node &addr) {
-  std::lock_guard<std::mutex> lg(_locker);
+void consensus::lost_connection_with(const node_name &addr) {
+  std::lock_guard lg(_locker);
   _logger->info("lost connection with ", addr);
   _logs_state.erase(addr);
   _last_sended.erase(addr);
   _state.votes_to_me.erase(addr);
 }
 
-void consensus::on_heartbeat(const cluster_node &from, const append_entries &e) {
+void consensus::new_connection_with(const rft::node_name &/*addr*/) {
+  // TODO need implementation
+}
+
+void consensus::on_heartbeat(const node_name &from, const append_entries &e) {
   const auto old_s = _state;
   const auto ns = node_state_t::on_append_entries(_state, from, _jrn.get(), e);
   _state = ns;
@@ -155,7 +163,7 @@ void consensus::on_heartbeat(const cluster_node &from, const append_entries &e) 
     _logs_state.clear();
     // log_fsck(e);
     _logger->info("send hello to ", from);
-    send(from, entries_kind_t::HELLO);
+    send(from, ENTRIES_KIND::HELLO);
   }
   if (from == _state.leader) {
     _logger->dbg("on_heartbeat: update last_heartbeat from ", from);
@@ -189,7 +197,7 @@ void consensus::log_fsck(const append_entries &e) {
   }
 }
 
-void consensus::on_vote(const cluster_node &from, const append_entries &e) {
+void consensus::on_vote(const node_name &from, const append_entries &e) {
   const auto old_s = _state;
   const changed_state_t change_state_v = node_state_t::on_vote(
       _state, _settings, _self_addr, _jrn->commited_rec(), _cluster->size(), from, e);
@@ -225,11 +233,11 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
 
   switch (change_state_v.notify) {
   case NOTIFY_TARGET::ALL: {
-    send_all(entries_kind_t::VOTE);
+    send_all(ENTRIES_KIND::VOTE);
     break;
   }
   case NOTIFY_TARGET::SENDER: {
-    send(from, entries_kind_t::VOTE);
+    send(from, ENTRIES_KIND::VOTE);
     break;
   }
   case NOTIFY_TARGET::NOBODY: {
@@ -238,8 +246,8 @@ void consensus::on_vote(const cluster_node &from, const append_entries &e) {
   }
 }
 
-void consensus::recv(const cluster_node &from, const append_entries &e) {
-  std::lock_guard<std::mutex> l(_locker);
+void consensus::recv(const node_name &from, const append_entries &e) {
+  std::lock_guard l(_locker);
 #ifdef DOUBLE_CHECKS
   if (from == _self_addr) {
     _logger->fatal("from==self!!! ", e);
@@ -251,26 +259,26 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
   }
   /// if leader receive message from follower with other leader,
   /// but with new election term.
-  if (e.kind != entries_kind_t::VOTE && _self_addr == _state.leader
-      && e.term > _state.term && !e.leader.is_empty()) {
+  if (e.kind != ENTRIES_KIND::VOTE && _self_addr == _state.leader && e.term > _state.term
+      && !e.leader.is_empty()) {
     _logger->info("change state to follower");
     _state.leader.clear();
     _state.change_state(NODE_KIND::FOLLOWER, e.term, e.leader);
     log_fsck(e);
     _logger->info("send hello to ", from);
-    send(e.leader, entries_kind_t::HELLO);
+    send(e.leader, ENTRIES_KIND::HELLO);
     _logs_state.clear();
     _state.votes_to_me.clear();
     return;
   }
 
   switch (e.kind) {
-  case entries_kind_t::HEARTBEAT: {
+  case ENTRIES_KIND::HEARTBEAT: {
     on_heartbeat(from, e);
 
     break;
   }
-  case entries_kind_t::HELLO: {
+  case ENTRIES_KIND::HELLO: {
     auto it = _logs_state.find(from);
 
     /// TODO what if the sender clean log and resend hello? it is possible?
@@ -283,27 +291,27 @@ void consensus::recv(const cluster_node &from, const append_entries &e) {
     // replicate_log();
     break;
   }
-  case entries_kind_t::VOTE: {
+  case ENTRIES_KIND::VOTE: {
     on_vote(from, e);
     _logs_state[from].prev = e.prev;
     break;
   }
-  case entries_kind_t::APPEND: {
+  case ENTRIES_KIND::APPEND: {
     on_append_entries(from, e);
     break;
   }
-  case entries_kind_t::ANSWER_OK: {
+  case ENTRIES_KIND::ANSWER_OK: {
     on_answer_ok(from, e);
     break;
   }
-  case entries_kind_t::ANSWER_FAILED: {
+  case ENTRIES_KIND::ANSWER_FAILED: {
     on_answer_failed(from, e);
     break;
   }
   }
 }
 
-void consensus::on_append_entries(const cluster_node &from, const append_entries &e) {
+void consensus::on_append_entries(const node_name &from, const append_entries &e) {
   const auto ns = node_state_t::on_append_entries(_state, from, _jrn.get(), e);
 
   if (ns.term != _state.term) {
@@ -325,7 +333,7 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
         _jrn->erase_all_after(info.lsn);
       } else {
         _logger->info("wrong entry from:", from, " ", e.prev, ", ", self_prev);
-        send(from, entries_kind_t::ANSWER_FAILED);
+        send(from, ENTRIES_KIND::ANSWER_FAILED);
         return;
       }
     }
@@ -333,10 +341,10 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
   }
 
   // TODO add check prev,cur,commited
-  if ((!e.current.is_empty() || e.current.kind == logdb::log_entry_kind::SNAPSHOT)
+  if ((!e.current.is_empty() || e.current.kind == logdb::LOG_ENTRY_KIND::SNAPSHOT)
       && e.term == _state.term) {
-    ENSURE(!e.current.is_empty() || e.current.kind == logdb::log_entry_kind::SNAPSHOT);
-    _logger->info("new entry from:", from, " cur:", e.current);
+    ENSURE(!e.current.is_empty() || e.current.kind == logdb::LOG_ENTRY_KIND::SNAPSHOT);
+    _logger->info("new entry from:", from, " cur:", e.current, " self_prev:", self_prev);
 
     if (e.current == self_prev) {
       _logger->info("duplicates");
@@ -346,10 +354,10 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
       if (!e.cmd.is_empty()) {
         le.cmd = e.cmd;
       } else {
-        if (e.cmd.is_empty() && e.current.kind == logdb::log_entry_kind::SNAPSHOT) {
+        if (e.cmd.is_empty() && e.current.kind == logdb::LOG_ENTRY_KIND::SNAPSHOT) {
           _logger->info("create snapshot");
           le.cmd = _consumer->snapshot();
-          le.kind = logdb::log_entry_kind::SNAPSHOT;
+          le.kind = logdb::LOG_ENTRY_KIND::SNAPSHOT;
         }
       }
       if (!le.cmd.is_empty()) {
@@ -367,11 +375,11 @@ void consensus::on_append_entries(const cluster_node &from, const append_entries
   }
 
   /// Pong for "heartbeat"
-  auto ae = make_append_entries(entries_kind_t::ANSWER_OK);
+  auto ae = make_append_entries(ENTRIES_KIND::ANSWER_OK);
   _cluster->send_to(_self_addr, from, ae);
 }
 
-void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) {
+void consensus::on_answer_ok(const node_name &from, const append_entries &e) {
   _logger->info("answer 'OK' from:",
                 from,
                 " cur:",
@@ -384,8 +392,8 @@ void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) 
   // TODO check for current>_last_for_cluster[from];
   if (!e.prev.is_empty()) {
     _logs_state[from].prev = e.prev;
-    if (_logs_state[from].direction == rdirection::BACKWARDS) {
-      _logs_state[from].direction = rdirection::FORWARDS;
+    if (_logs_state[from].direction == RDIRECTION::BACKWARDS) {
+      _logs_state[from].direction = RDIRECTION::FORWARDS;
       _logs_state[from].cycle = _settings.cycle_for_replication();
     }
   }
@@ -400,8 +408,7 @@ void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) 
     auto recinfo = kv.second.prev;
     bool is_new = recinfo.lsn > commited.lsn || commited.is_empty();
     if (!recinfo.is_empty() && is_new) {
-      auto it = count.find(recinfo);
-      if (it == count.end()) {
+      if (auto it = count.find(recinfo); it == count.end()) {
         count.insert(std::make_pair(recinfo, size_t(1)));
       } else {
         it->second += 1;
@@ -417,13 +424,13 @@ void consensus::on_answer_ok(const cluster_node &from, const append_entries &e) 
     if (size_t(cnt) >= quorum) {
       _logger->info("append quorum.");
       commit_reccord(target);
-      send_all(entries_kind_t::APPEND);
+      send_all(ENTRIES_KIND::APPEND);
     }
   }
   // replicate_log();
 }
 
-void consensus::on_answer_failed(const cluster_node &from, const append_entries &e) {
+void consensus::on_answer_failed(const node_name &from, const append_entries &e) {
   _logger->warn("answer 'FAILED' from:",
                 from,
                 " cur:",
@@ -432,11 +439,10 @@ void consensus::on_answer_failed(const cluster_node &from, const append_entries 
                 e.prev,
                 ", ci:",
                 e.commited);
-  auto it = _logs_state.find(from);
-  if (it == _logs_state.end()) {
+  if (auto it = _logs_state.find(from); it == _logs_state.end()) {
     _logs_state[from].prev = e.prev;
   } else {
-    it->second.direction = rdirection::BACKWARDS;
+    it->second.direction = RDIRECTION::BACKWARDS;
     it->second.cycle = _settings.cycle_for_replication();
     if (it->second.prev.lsn != logdb::UNDEFINED_INDEX) { /// move replication log backward
       it->second.prev.lsn -= 1;
@@ -455,7 +461,8 @@ void consensus::commit_reccord(const logdb::reccord_info &target) {
       _jrn->commit(i);
       auto commited = _jrn->commited_rec();
       auto le = _jrn->get(commited.lsn);
-      if (info.kind == logdb::log_entry_kind::APPEND) {
+      if (info.kind == logdb::LOG_ENTRY_KIND::APPEND) {
+        ENSURE(_consumer != nullptr);
         _consumer->apply_cmd(le.cmd);
       } else {
         auto erase_point = _jrn->info(i - 1);
@@ -468,7 +475,7 @@ void consensus::commit_reccord(const logdb::reccord_info &target) {
 }
 
 void consensus::heartbeat() {
-  std::lock_guard<std::mutex> l(_locker);
+  std::lock_guard l(_locker);
 
   if (!_state.is_heartbeat_missed()) {
     return;
@@ -476,6 +483,7 @@ void consensus::heartbeat() {
 
   if (_state.node_kind != NODE_KIND::LEADER) {
     const auto old_s = _state;
+    ENSURE(_cluster != nullptr);
     const auto ns = node_state_t::heartbeat(_state, _self_addr, _cluster->size());
     _state = ns;
 
@@ -494,7 +502,7 @@ void consensus::heartbeat() {
       _logs_state[_self_addr].prev = _jrn->prev_rec();
       _last_sended.clear();
       auto ae = make_append_entries();
-      ae.kind = entries_kind_t::VOTE;
+      ae.kind = ENTRIES_KIND::VOTE;
       _logger->info("send vote to all.");
       _cluster->send_all(_self_addr, ae);
     }
@@ -517,12 +525,12 @@ void consensus::replicate_log() {
 
     auto kv = _logs_state.find(naddr);
     if (jrn_is_empty || kv == _logs_state.end()) {
-      send(naddr, entries_kind_t::HEARTBEAT);
+      send(naddr, ENTRIES_KIND::HEARTBEAT);
       continue;
     }
 
     bool is_append = false;
-    if (kv->second.prev.is_empty() || kv->second.prev != self_log_state.prev) {
+    if (kv->second.prev.lsn_is_empty() || kv->second.prev != self_log_state.prev) {
       _logger->info("try replication for ",
                     kv->first,
                     " => prev: ",
@@ -531,19 +539,19 @@ void consensus::replicate_log() {
                     self_log_state.prev);
 
       auto lsn_to_replicate = kv->second.prev.lsn;
-      if (kv->second.prev.is_empty()) {
+      if (kv->second.prev.lsn_is_empty()) {
         lsn_to_replicate = _jrn->first_rec().lsn;
       } else {
         if (kv->second.prev.lsn >= self_log_state.prev.lsn) {
           lsn_to_replicate = _jrn->prev_rec().lsn;
         } else {
           switch (kv->second.direction) {
-          case rdirection::FORWARDS:
+          case RDIRECTION::FORWARDS:
             if (lsn_to_replicate != _jrn->prev_rec().lsn) {
               ++lsn_to_replicate; // we need a next record;
             }
             break;
-          case rdirection::BACKWARDS:
+          case RDIRECTION::BACKWARDS:
             break;
           }
         }
@@ -569,19 +577,19 @@ void consensus::replicate_log() {
                       " to ",
                       kv->first);
         ENSURE(!ae.current.is_empty()
-               || ae.current.kind == logdb::log_entry_kind::SNAPSHOT);
+               || ae.current.kind == logdb::LOG_ENTRY_KIND::SNAPSHOT);
         _cluster->send_to(_self_addr, kv->first, ae);
         is_append = true;
       }
     }
 
     if (!is_append) {
-      send(naddr, entries_kind_t::HEARTBEAT);
+      send(naddr, ENTRIES_KIND::HEARTBEAT);
     }
   }
 }
 
-void consensus::add_command_impl(const command &cmd, logdb::log_entry_kind k) {
+void consensus::add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k) {
   ENSURE(!cmd.is_empty());
   logdb::log_entry le;
   le.cmd = cmd;
@@ -599,18 +607,20 @@ void consensus::add_command_impl(const command &cmd, logdb::log_entry_kind k) {
   }
 }
 
-void consensus::add_command(const command &cmd) {
+ERROR_CODE consensus::add_command(const command &cmd) {
   // TODO global lock for this method. a while cmd not in consumer;
-  std::lock_guard<std::mutex> lg(_locker);
+  std::lock_guard lg(_locker);
 
   if (_state.node_kind != NODE_KIND::LEADER) {
-    THROW_EXCEPTION("only leader-node have rights to add commands into the cluster!");
+    // THROW_EXCEPTION("only leader-node have rights to add commands into the cluster!");
+    return ERROR_CODE::NOT_A_LEADER;
   }
 
   if (_jrn->size() >= _settings.max_log_size()) {
     _logger->info("create snapshot");
-    add_command_impl(_consumer->snapshot(), logdb::log_entry_kind::SNAPSHOT);
+    add_command_impl(_consumer->snapshot(), logdb::LOG_ENTRY_KIND::SNAPSHOT);
   }
 
-  add_command_impl(cmd, logdb::log_entry_kind::APPEND);
+  add_command_impl(cmd, logdb::LOG_ENTRY_KIND::APPEND);
+  return ERROR_CODE::OK;
 }

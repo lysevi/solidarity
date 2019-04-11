@@ -18,6 +18,7 @@ public:
     _append_quorum = 1.0;
     _cycle_for_replication = 3;
     _max_log_size = 100;
+    _election_timeout = std::chrono::milliseconds(300);
   }
 
   void dump_to_log(utils::logging::abstract_logger *const l);

@@ -13,7 +13,9 @@ if (WIN32)
 endif ()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-add_definitions(-DBOOST_ASIO_NO_DEPRECATED)
+
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING
@@ -61,6 +63,27 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+########## BOOST
+IF(NOT HEADER_ONLY)
+    list(FIND CONAN_DEFINES_BOOST "-DBOOST_USE_STATIC_LIBS" IS_STATIC)
+    if(${IS_STATIC} GREATER -1)
+        set(Boost_USE_STATIC_LIBS ON)
+    else()
+        set(Boost_USE_STATIC_LIBS OFF)
+	endif()
+endif()
+
+add_definitions(-DBOOST_ASIO_NO_DEPRECATED)
+find_package(Boost 1.69.0 COMPONENTS system date_time REQUIRED)
+
+IF(Boost_FOUND)
+else()	
+  MESSAGE(FATAL_ERROR "boost not found")
+  EXIT()
+ENDIF()
+######### MSGPACK
+add_definitions(-DMSGPACK_CXX17=ON)
+
 IF(solidarity_ENABLE_DOUBLECHECKS)
  add_definitions(-DDOUBLE_CHECKS)
  if(MSVC)
@@ -78,9 +101,21 @@ endif(solidarity_ENABLE_TESTS)
 
 SET(solidarity_LIBRARY_DIR)
 SET(solidarity_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_BINARY_DIR} )
-SET(solidarity_PRIVATE_LIBRARIES  ${CMAKE_THREAD_LIBS_INIT})	
 
-add_subdirectory(libutils)
+add_subdirectory(libutils)	
+
+add_subdirectory(libdialler)
+
+SET(DIALLER_LIBRARY_DIR ${Boost_LIBRARY_DIRS})
+IF(WIN32)
+ SET(DIALLER_PRIVATE_LIBRARIES  ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} wsock32 ws2_32 )
+else()
+ SET(DIALLER_PRIVATE_LIBRARIES ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} )
+endif()
+
+SET(solidarity_LIBRARY_DIR ${DIALLER_LIBRARY_DIR})
+SET(solidarity_PRIVATE_LIBRARIES  ${CMAKE_THREAD_LIBS_INIT} ${DIALLER_LIBRARIES} ${Boost_LIBRARIES})
+
 add_subdirectory(librft)
 
 if(solidarity_ENABLE_BENCHMARKS)

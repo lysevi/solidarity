@@ -1,18 +1,11 @@
 #include "helpers.h"
 #include "mock_cluster.h"
+#include "mock_consumer.h"
 #include <librft/consensus.h>
 #include <libutils/logger.h>
 #include <catch.hpp>
 
-class mock_consumer final : public rft::abstract_consensus_consumer {
-public:
-  void apply_cmd(const rft::command &cmd) override { last_cmd = cmd; }
-  void reset() override { last_cmd.data.clear(); }
-  rft::command snapshot() override { return last_cmd; }
-  rft::command last_cmd;
-};
-
-TEST_CASE("consensus.quorum calculation") {
+TEST_CASE("consensus.quorum calculation", "[raft]") {
   EXPECT_EQ(rft::quorum_for_cluster(3, 0.5), 2);
   EXPECT_EQ(rft::quorum_for_cluster(4, 0.5), 3);
   EXPECT_EQ(rft::quorum_for_cluster(4, 1.0), 4);
@@ -20,7 +13,7 @@ TEST_CASE("consensus.quorum calculation") {
   EXPECT_EQ(rft::quorum_for_cluster(5, 0.5), 3);
 }
 
-TEST_CASE("consensus.add_nodes") {
+TEST_CASE("consensus.add_nodes", "[raft]") {
   auto cluster = std::make_shared<mock_cluster>();
 
   /// SINGLE
@@ -33,7 +26,7 @@ TEST_CASE("consensus.add_nodes") {
                                               rft::logdb::memory_journal::make_new(),
                                               c_0_consumer.get());
 
-  cluster->add_new(rft::cluster_node().set_name("_0"), c_0);
+  cluster->add_new(rft::node_name().set_name("_0"), c_0);
   EXPECT_EQ(c_0->term(), rft::UNDEFINED_TERM);
   EXPECT_EQ(c_0->kind(), rft::NODE_KIND::FOLLOWER);
 
@@ -51,7 +44,7 @@ TEST_CASE("consensus.add_nodes") {
                                               cluster.get(),
                                               rft::logdb::memory_journal::make_new(),
                                               c_1_consumer.get());
-  cluster->add_new(rft::cluster_node().set_name(settings_1.name()), c_1);
+  cluster->add_new(rft::node_name().set_name(settings_1.name()), c_1);
 
   while (c_1->get_leader().name() != c_0->self_addr().name()) {
     cluster->heartbeat();
@@ -71,7 +64,7 @@ TEST_CASE("consensus.add_nodes") {
                                               rft::logdb::memory_journal::make_new(),
                                               c_2_consumer.get());
 
-  cluster->add_new(rft::cluster_node().set_name(settings_2.name()), c_2);
+  cluster->add_new(rft::node_name().set_name(settings_2.name()), c_2);
 
   while (c_1->get_leader().name() != c_0->self_addr().name()
          || c_2->get_leader().name() != c_0->self_addr().name()) {
@@ -87,7 +80,7 @@ TEST_CASE("consensus.add_nodes") {
   cluster = nullptr;
 }
 
-TEST_CASE("consensus") {
+TEST_CASE("consensus", "[raft]") {
   auto cluster = std::make_shared<mock_cluster>();
 
   size_t nodes_count = 4;
@@ -125,9 +118,9 @@ TEST_CASE("consensus") {
     consumers.push_back(c);
     auto cons = std::make_shared<rft::consensus>(
         sett, cluster.get(), rft::logdb::memory_journal::make_new(), c.get());
-    cluster->add_new(rft::cluster_node().set_name(sett.name()), cons);
+    cluster->add_new(rft::node_name().set_name(sett.name()), cons);
   }
-  rft::cluster_node last_leader;
+  rft::node_name last_leader;
   rft::command cmd;
   cmd.data.resize(1);
   cmd.data[0] = 0;
@@ -188,7 +181,8 @@ TEST_CASE("consensus") {
             leaders = cluster->by_filter(is_leader_pred);
           }
           cmd.data[0]++;
-          leaders[0]->add_command(cmd);
+          auto st = leaders[0]->add_command(cmd);
+          EXPECT_EQ(st, rft::ERROR_CODE::OK);
           for (size_t j = 0; j < attempts_to_add; ++j) {
             cluster->print_cluster();
             cluster->heartbeat();
@@ -208,9 +202,9 @@ TEST_CASE("consensus") {
   consumers.clear();
 }
 
-TEST_CASE("consensus.replication") {
-  using rft::cluster_node;
+TEST_CASE("consensus.replication", "[raft]") {
   using rft::consensus;
+  using rft::node_name;
   using rft::logdb::memory_journal;
 
   auto cluster = std::make_shared<mock_cluster>();
@@ -256,7 +250,7 @@ TEST_CASE("consensus.replication") {
     consumers.push_back(consumer);
     auto cons = std::make_shared<consensus>(
         sett, cluster.get(), memory_journal::make_new(), consumer.get());
-    cluster->add_new(cluster_node().set_name(sett.name()), cons);
+    cluster->add_new(node_name().set_name(sett.name()), cons);
   }
   rft::command cmd;
   cmd.data.resize(1);
@@ -274,7 +268,8 @@ TEST_CASE("consensus.replication") {
 
   for (int i = 0; i < 10; ++i) {
     cmd.data[0]++;
-    leaders[0]->add_command(cmd);
+    auto st = leaders[0]->add_command(cmd);
+    EXPECT_EQ(st, rft::ERROR_CODE::OK);
     while (true) {
       cluster->heartbeat();
       cluster->print_cluster();
@@ -292,7 +287,7 @@ TEST_CASE("consensus.replication") {
     consumers.push_back(consumer);
     auto cons = std::make_shared<consensus>(
         sett, cluster.get(), memory_journal::make_new(), consumer.get());
-    cluster->add_new(cluster_node().set_name(sett.name()), cons);
+    cluster->add_new(node_name().set_name(sett.name()), cons);
     cluster->wait_leader_eletion();
   }
 
@@ -310,7 +305,7 @@ TEST_CASE("consensus.replication") {
   consumers.clear();
 }
 
-TEST_CASE("consensus.log_compaction") {
+TEST_CASE("consensus.log_compaction", "[raft]") {
   using rft::node_settings;
   auto cluster = std::make_shared<mock_cluster>();
 
@@ -329,12 +324,12 @@ TEST_CASE("consensus.log_compaction") {
     consumers.push_back(c);
     auto cons = std::make_shared<rft::consensus>(
         sett, cluster.get(), rft::logdb::memory_journal::make_new(), c.get());
-    cluster->add_new(rft::cluster_node().set_name(sett.name()), cons);
+    cluster->add_new(rft::node_name().set_name(sett.name()), cons);
   }
 
   cluster->wait_leader_eletion();
 
-  rft::cluster_node last_leader;
+  rft::node_name last_leader;
   rft::command cmd;
   cmd.data.resize(1);
   cmd.data[0] = 0;
@@ -350,7 +345,8 @@ TEST_CASE("consensus.log_compaction") {
       cluster->wait_leader_eletion();
     }
     cmd.data[0]++;
-    leaders[0]->add_command(cmd);
+    auto st = leaders[0]->add_command(cmd);
+    EXPECT_EQ(st, rft::ERROR_CODE::OK);
     while (true) {
       cluster->print_cluster();
       cluster->heartbeat();
@@ -367,11 +363,12 @@ TEST_CASE("consensus.log_compaction") {
   while (true) {
     cluster->print_cluster();
     cluster->heartbeat();
-    std::transform(
-        all_nodes.cbegin(),
-        all_nodes.cend(),
-        sizes.begin(),
-        [](const std::shared_ptr<rft::consensus> &c) { return c->journal()->size(); });
+    std::transform(all_nodes.cbegin(),
+                   all_nodes.cend(),
+                   sizes.begin(),
+                   [](const std::shared_ptr<rft::consensus> &c) {
+                     return c->journal()->reccords_count();
+                   });
 
     size_t count_of
         = std::count_if(sizes.cbegin(), sizes.cend(), [max_log_size](const size_t c) {
@@ -395,9 +392,9 @@ bool operator!=(const rft::logdb::log_entry &r, const rft::logdb::log_entry &l) 
   return !(r == l);
 }
 
-TEST_CASE("consensus.apply_journal_on_start") {
-  using rft::cluster_node;
+TEST_CASE("consensus.apply_journal_on_start", "[raft]") {
   using rft::consensus;
+  using rft::node_name;
   using rft::logdb::memory_journal;
 
   auto cluster = std::make_shared<mock_cluster>();
@@ -427,7 +424,7 @@ TEST_CASE("consensus.apply_journal_on_start") {
   auto consumer = std::make_shared<mock_consumer>();
   consumers.push_back(consumer);
   auto cons = std::make_shared<consensus>(sett, cluster.get(), jrn, consumer.get());
-  cluster->add_new(cluster_node().set_name(sett.name()), cons);
+  cluster->add_new(node_name().set_name(sett.name()), cons);
 
   auto data_eq = [&cmd](const std::shared_ptr<mock_consumer> &c) -> bool {
     return c->last_cmd.data == cmd.data;
@@ -436,9 +433,9 @@ TEST_CASE("consensus.apply_journal_on_start") {
   EXPECT_EQ(consumer->last_cmd.data, cmd.data);
 }
 
-TEST_CASE("consensus.rollback") {
-  using rft::cluster_node;
+TEST_CASE("consensus.rollback", "[raft]") {
   using rft::consensus;
+  using rft::node_name;
   using rft::logdb::memory_journal;
 
   auto cluster = std::make_shared<mock_cluster>();
@@ -461,7 +458,7 @@ TEST_CASE("consensus.rollback") {
     jrn1 = memory_journal::make_new();
 
     rft::logdb::log_entry le;
-    le.kind = rft::logdb::log_entry_kind::APPEND;
+    le.kind = rft::logdb::LOG_ENTRY_KIND::APPEND;
     le.cmd = cmd;
 
     for (size_t i = 0; i < 10; ++i) {
@@ -480,7 +477,7 @@ TEST_CASE("consensus.rollback") {
     jrn2 = memory_journal::make_new();
 
     rft::logdb::log_entry le;
-    le.kind = rft::logdb::log_entry_kind::APPEND;
+    le.kind = rft::logdb::LOG_ENTRY_KIND::APPEND;
     le.cmd = cmd;
     for (size_t i = 0; i < 10; ++i) {
       le.cmd.data[0] = static_cast<uint8_t>(i);
@@ -499,7 +496,7 @@ TEST_CASE("consensus.rollback") {
   SECTION("from equal journal") { n2->rw_state().term = 100500; }
   SECTION("from big to small journal") {
     rft::logdb::log_entry le;
-    le.kind = rft::logdb::log_entry_kind::APPEND;
+    le.kind = rft::logdb::LOG_ENTRY_KIND::APPEND;
     le.cmd = cmd;
     for (size_t i = 0; i < 20; ++i) {
       le.cmd.data[0] = static_cast<uint8_t>(i);
@@ -511,7 +508,7 @@ TEST_CASE("consensus.rollback") {
 
   SECTION("from small to big journal") {
     rft::logdb::log_entry le;
-    le.kind = rft::logdb::log_entry_kind::APPEND;
+    le.kind = rft::logdb::LOG_ENTRY_KIND::APPEND;
     le.cmd = cmd;
     for (size_t i = 11; i < 15; ++i) {
       le.cmd.data[0] = static_cast<uint8_t>(i);
@@ -526,7 +523,7 @@ TEST_CASE("consensus.rollback") {
     jrn1->erase_all_after(rft::logdb::index_t(-1));
 
     rft::logdb::log_entry le;
-    le.kind = rft::logdb::log_entry_kind::APPEND;
+    le.kind = rft::logdb::LOG_ENTRY_KIND::APPEND;
     le.cmd = cmd;
     for (size_t i = 0; i < 2; ++i) {
       le.cmd.data[0] = static_cast<uint8_t>(i);
@@ -534,7 +531,7 @@ TEST_CASE("consensus.rollback") {
       jrn1->put(le);
     }
   }
-
+  EXPECT_FALSE(consumers.empty());
   cluster->add_new(n1->self_addr(), n1);
   cluster->add_new(n2->self_addr(), n2);
 
@@ -547,6 +544,7 @@ TEST_CASE("consensus.rollback") {
   EXPECT_EQ(followers.front()->self_addr().name(), n1->self_addr().name());
 
   while (true) {
+    EXPECT_FALSE(consumers.empty());
     cluster->heartbeat();
 
     auto content1 = jrn1->dump();
@@ -555,8 +553,8 @@ TEST_CASE("consensus.rollback") {
     if (content1.size() == content2.size()) {
       bool contents_is_equal = true;
       for (const auto &kv : content1) {
-        auto it = content2.find(kv.first);
-        if (it == content2.end()) {
+
+        if (auto it = content2.find(kv.first); it == content2.end()) {
           contents_is_equal = false;
           break;
         } else {

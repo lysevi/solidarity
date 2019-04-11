@@ -32,7 +32,7 @@ public:
   bool is_stopped() const { return _is_stoped; }
 
   size_t active_workers() const {
-    std::shared_lock<std::shared_mutex> lg(_queue_mutex);
+    std::shared_lock lg(_queue_mutex);
     size_t res = _in_queue.size();
     return res + (_task_runned);
   }

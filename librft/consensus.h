@@ -1,5 +1,6 @@
 #pragma once
 
+#include <librft/abstract_consumer.h>
 #include <librft/exports.h>
 #include <librft/journal.h>
 #include <librft/settings.h>
@@ -13,29 +14,22 @@
 
 namespace rft {
 
-class abstract_consensus_consumer {
-public:
-  virtual ~abstract_consensus_consumer() {}
-  virtual void apply_cmd(const command &cmd) = 0;
-  virtual void reset() = 0;
-  virtual command snapshot() = 0;
-};
-
-class consensus {
-  enum class rdirection { FORWARDS = 0, BACKWARDS };
+class consensus : public abstract_cluster_client {
+  enum class RDIRECTION { FORWARDS = 0, BACKWARDS };
   struct log_state_t {
     logdb::reccord_info prev;
     size_t cycle = 0;
-    rdirection direction = rdirection::FORWARDS;
+    RDIRECTION direction = RDIRECTION::FORWARDS;
   };
 
 public:
   EXPORT consensus(const node_settings &ns,
                    abstract_cluster *cluster,
                    const logdb::journal_ptr &jrn,
-                   abstract_consensus_consumer *consumer);
+                   abstract_consensus_consumer *consumer,
+                   utils::logging::abstract_logger_ptr logger = nullptr);
   node_state_t state() const {
-    std::lock_guard<std::mutex> l(_locker);
+    std::lock_guard l(_locker);
     return _state;
   }
   node_state_t &rw_state() { return _state; }
@@ -46,33 +40,40 @@ public:
   abstract_consensus_consumer *consumer() { return _consumer; }
 
   EXPORT void set_cluster(abstract_cluster *cluster);
-  EXPORT void heartbeat();
-  EXPORT void recv(const cluster_node &from, const append_entries &e);
-  EXPORT void add_command(const command &cmd);
-  EXPORT void lost_connection_with(const cluster_node &addr);
+  EXPORT void heartbeat() override;
 
-  cluster_node get_leader() const {
-    std::lock_guard<std::mutex> l(_locker);
+  EXPORT void recv(const node_name &from, const append_entries &e) override;
+  EXPORT void lost_connection_with(const node_name &addr) override;
+  EXPORT void new_connection_with(const rft::node_name &addr) override;
+  [[nodiscard]] EXPORT ERROR_CODE add_command(const command &cmd) override;
+
+  node_name get_leader() const {
+    std::lock_guard l(_locker);
     return _state.leader;
   }
-  cluster_node self_addr() const {
-    std::lock_guard<std::mutex> l(_locker);
+  node_name self_addr() const {
+    std::lock_guard l(_locker);
     return _self_addr;
   }
 
+  node_settings settings() const {
+    std::lock_guard l(_locker);
+    return _settings;
+  }
+
 protected:
-  append_entries make_append_entries(const entries_kind_t kind
-                                     = entries_kind_t::APPEND) const noexcept;
+  append_entries make_append_entries(const ENTRIES_KIND kind = ENTRIES_KIND::APPEND) const
+      noexcept;
   append_entries make_append_entries(const logdb::index_t lsn_to_replicate,
                                      const logdb::index_t prev_lsn);
-  void send_all(const entries_kind_t kind);
-  void send(const cluster_node &to, const entries_kind_t kind);
+  void send_all(const ENTRIES_KIND kind);
+  void send(const node_name &to, const ENTRIES_KIND kind);
 
-  void on_heartbeat(const cluster_node &from, const append_entries &e);
-  void on_vote(const cluster_node &from, const append_entries &e);
-  void on_append_entries(const cluster_node &from, const append_entries &e);
-  void on_answer_ok(const cluster_node &from, const append_entries &e);
-  void on_answer_failed(const cluster_node &from, const append_entries &e);
+  void on_heartbeat(const node_name &from, const append_entries &e);
+  void on_vote(const node_name &from, const append_entries &e);
+  void on_append_entries(const node_name &from, const append_entries &e);
+  void on_answer_ok(const node_name &from, const append_entries &e);
+  void on_answer_failed(const node_name &from, const append_entries &e);
 
   void update_next_heartbeat_interval();
 
@@ -80,7 +81,7 @@ protected:
   void replicate_log();
   void log_fsck(const append_entries &e);
 
-  void add_command_impl(const command &cmd, logdb::log_entry_kind k);
+  void add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k);
 
 private:
   abstract_consensus_consumer *const _consumer = nullptr;
@@ -88,16 +89,16 @@ private:
   std::mt19937 _rnd_eng;
 
   node_settings _settings;
-  cluster_node _self_addr;
+  node_name _self_addr;
   abstract_cluster *_cluster;
   logdb::journal_ptr _jrn;
 
   node_state_t _state;
 
-  std::unordered_map<cluster_node, log_state_t> _logs_state;
-  std::unordered_map<cluster_node, logdb::reccord_info> _last_sended;
+  std::unordered_map<node_name, log_state_t> _logs_state;
+  std::unordered_map<node_name, logdb::reccord_info> _last_sended;
 
-  utils::logging::abstract_logger_uptr _logger;
+  utils::logging::abstract_logger_ptr _logger;
 };
 
 }; // namespace rft

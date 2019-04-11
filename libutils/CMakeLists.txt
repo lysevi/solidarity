@@ -22,6 +22,8 @@ add_library(utils ${SRC})
 TARGET_LINK_LIBRARIES(utils ${solidarity_PRIVATE_LIBRARIES})
 target_link_directories(utils PUBLIC ${solidarity_LIBRARY_DIR})
 target_include_directories(utils PUBLIC ${solidarity_INCLUDE_DIR})
+add_library(solidarity::utils ALIAS utils)
+
 PRECOMPILED_HEADERS(utils)
 
 GENERATE_EXPORT_HEADER(utils

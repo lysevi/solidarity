@@ -23,7 +23,6 @@ void args_as_string(std::string (&s)[N], size_t pos, size_t &sz, Head &&head) no
   sz += str.size();
   s[pos] = std::move(str);
 }
-
 template <size_t N, class Head, class... Tail>
 void args_as_string(std::string (&s)[N],
                     size_t pos,

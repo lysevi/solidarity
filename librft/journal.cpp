@@ -41,11 +41,10 @@ void memory_journal::commit(const index_t lsn) {
 }
 
 log_entry memory_journal::get(const logdb::index_t lsn) {
-  std::shared_lock<std::shared_mutex> lg(_locker);
+  std::shared_lock lg(_locker);
   // TODO check _prev and _commited for better speed;
 
-  const auto wal_it = _wal.find(lsn);
-  if (wal_it != _wal.end()) {
+  if (const auto wal_it = _wal.find(lsn); wal_it != _wal.end()) {
     return wal_it->second;
   }
 
@@ -53,17 +52,26 @@ log_entry memory_journal::get(const logdb::index_t lsn) {
 }
 
 size_t memory_journal::size() const {
-  std::shared_lock<std::shared_mutex> lg(_locker);
+  std::shared_lock lg(_locker);
+  if (_prev.is_empty()) {
+    return size_t(0);
+  } else {
+    return _prev.lsn + 1;
+  }
+}
+
+size_t memory_journal::reccords_count() const {
+  std::shared_lock lg(_locker);
   return _wal.size();
 }
 
 reccord_info memory_journal::prev_rec() const noexcept {
-  std::shared_lock<std::shared_mutex> lg(_locker);
+  std::shared_lock lg(_locker);
   return _prev;
 }
 
 reccord_info memory_journal::first_uncommited_rec() const noexcept {
-  std::shared_lock<std::shared_mutex> lg(_locker);
+  std::shared_lock lg(_locker);
   reccord_info result;
   if (_wal.empty()) {
     result.lsn = UNDEFINED_INDEX;
@@ -83,12 +91,12 @@ reccord_info memory_journal::first_uncommited_rec() const noexcept {
 }
 
 reccord_info memory_journal::commited_rec() const noexcept {
-  std::shared_lock<std::shared_mutex> lg(_locker);
+  std::shared_lock lg(_locker);
   return _commited;
 }
 
 reccord_info memory_journal::first_rec() const noexcept {
-  std::shared_lock<std::shared_mutex> lg(_locker);
+  std::shared_lock lg(_locker);
   reccord_info result{};
   if (!_wal.empty()) {
     auto f = _wal.cbegin();
@@ -101,7 +109,7 @@ reccord_info memory_journal::first_rec() const noexcept {
 
 reccord_info memory_journal::restore_start_point() const noexcept {
   for (auto it = _wal.crbegin(); it != _wal.crend(); it++) {
-    if (it->second.kind == log_entry_kind::SNAPSHOT) {
+    if (it->second.kind == LOG_ENTRY_KIND::SNAPSHOT) {
       return reccord_info(it->second, it->first);
     }
   }
@@ -115,7 +123,7 @@ void memory_journal::erase_all_after(const index_t lsn) {
   std::vector<rmtype> to_erase;
   to_erase.reserve(_wal.size());
   for (auto it = _wal.rbegin(); it != _wal.rend(); ++it) {
-    if (it->first == lsn /*&& it->second.term == e.term*/) {
+    if (it->first == lsn) {
       break;
     }
     to_erase.push_back(*it);
@@ -177,36 +185,36 @@ void memory_journal::erase_all_to(const index_t lsn) {
 }
 
 void memory_journal::visit(std::function<void(const log_entry &)> f) {
-  std::shared_lock<std::shared_mutex> lg(_locker);
+  std::shared_lock lg(_locker);
   for (const auto &kv : _wal) {
     f(kv.second);
   }
 }
 
 reccord_info memory_journal::info(index_t lsn) const noexcept {
-  std::shared_lock<std::shared_mutex> lg(_locker);
-  auto it = _wal.find(lsn);
-  if (it == _wal.end()) {
-    return reccord_info{};
+  std::shared_lock lg(_locker);
+  if (auto it = _wal.find(lsn); it != _wal.end()) {
+    return reccord_info(it->second, lsn);
   }
-
-  return reccord_info(it->second, lsn);
+  return reccord_info{};
 }
 
 std::unordered_map<index_t, log_entry> memory_journal::dump() const {
-  std::shared_lock<std::shared_mutex> lg(_locker);
+  std::shared_lock lg(_locker);
   std::unordered_map<rft::logdb::index_t, rft::logdb::log_entry> result;
 
   auto prev = prev_rec();
-  result.reserve(prev.lsn);
+  if (!prev.is_empty()) {
+    result.reserve(prev.lsn);
 
-  while (prev.lsn >= 0) {
-    auto it = _wal.find(prev.lsn);
-    if (it == _wal.cend()) {
-      break;
+    while (prev.lsn >= 0) {
+      auto it = _wal.find(prev.lsn);
+      if (it == _wal.cend()) {
+        break;
+      }
+      result.insert(std::pair(prev.lsn, it->second));
+      --prev.lsn;
     }
-    result.insert(std::pair(prev.lsn, it->second));
-    --prev.lsn;
   }
   return result;
 }

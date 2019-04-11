@@ -39,21 +39,21 @@ public:
   }
   ~UnitTestLogger() {}
 
-  void message(utils::logging::message_kind kind, const std::string &msg) noexcept {
-    std::lock_guard<std::mutex> lg(_locker);
+  void message(utils::logging::MESSAGE_KIND kind, const std::string &msg) noexcept {
+    std::lock_guard lg(_locker);
 
     std::stringstream ss;
     switch (kind) {
-    case utils::logging::message_kind::fatal:
+    case utils::logging::MESSAGE_KIND::fatal:
       ss << "[err] " << msg << std::endl;
       break;
-    case utils::logging::message_kind::info:
+    case utils::logging::MESSAGE_KIND::info:
       ss << "[inf] " << msg << std::endl;
       break;
-    case utils::logging::message_kind::warn:
+    case utils::logging::MESSAGE_KIND::warn:
       ss << "[wrn] " << msg << std::endl;
       break;
-    case utils::logging::message_kind::message:
+    case utils::logging::MESSAGE_KIND::message:
       ss << "[dbg] " << msg << std::endl;
       break;
     }
@@ -64,7 +64,7 @@ public:
       _output->flush();
     }
 
-    if (kind == utils::logging::message_kind::fatal) {
+    if (kind == utils::logging::MESSAGE_KIND::fatal) {
       std::cerr << ss.str();
     } else {
       if (verbose) {
