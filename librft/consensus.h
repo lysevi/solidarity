@@ -26,7 +26,7 @@ public:
   EXPORT consensus(const node_settings &ns,
                    abstract_cluster *cluster,
                    const logdb::journal_ptr &jrn,
-                   abstract_consensus_consumer *consumer,
+                   abstract_state_machine *state_machine,
                    utils::logging::abstract_logger_ptr logger = nullptr);
   node_state_t state() const {
     std::lock_guard l(_locker);
@@ -37,7 +37,7 @@ public:
   NODE_KIND kind() const { return _state.node_kind; }
   term_t term() const { return _state.term; }
   logdb::journal_ptr journal() const { return _jrn; }
-  abstract_consensus_consumer *consumer() { return _consumer; }
+  abstract_state_machine *state_machine() { return _state_machine; }
 
   EXPORT void set_cluster(abstract_cluster *cluster);
   EXPORT void heartbeat() override;
@@ -84,7 +84,7 @@ protected:
   void add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k);
 
 private:
-  abstract_consensus_consumer *const _consumer = nullptr;
+  abstract_state_machine *const _state_machine = nullptr;
   mutable std::mutex _locker;
   std::mt19937 _rnd_eng;
 

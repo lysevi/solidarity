@@ -23,7 +23,7 @@ TEST_CASE("node", "[network]") {
   std::iota(ports.begin(), ports.end(), unsigned short(8000));
 
   std::unordered_map<std::string, std::shared_ptr<rft::node>> nodes;
-  std::unordered_map<std::string, std::shared_ptr<mock_consumer>> consumers;
+  std::unordered_map<std::string, std::shared_ptr<mock_state_machine>> consumers;
   std::unordered_map<std::string, std::shared_ptr<rft::client>> clients;
 
   std::cerr << "start nodes" << std::endl;
@@ -57,8 +57,8 @@ TEST_CASE("node", "[network]") {
     auto node_logger = std::make_shared<utils::logging::prefix_logger>(
         utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
 
-    auto consumer = std::make_shared<mock_consumer>();
-    auto n = std::make_shared<rft::node>(node_logger, params, consumer.get());
+    auto state_machine = std::make_shared<mock_state_machine>();
+    auto n = std::make_shared<rft::node>(node_logger, params, state_machine.get());
 
     n->start();
 
@@ -76,7 +76,7 @@ TEST_CASE("node", "[network]") {
 
     EXPECT_EQ(n->connections_count(), size_t(1));
 
-    consumers[params.name] = consumer;
+    consumers[params.name] = state_machine;
     nodes[params.name] = n;
     clients[params.name] = c;
   }

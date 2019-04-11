@@ -16,9 +16,9 @@ inline std::mt19937 make_seeded_engine() {
 consensus::consensus(const node_settings &ns,
                      abstract_cluster *cluster,
                      const logdb::journal_ptr &jrn,
-                     abstract_consensus_consumer *consumer,
+                     abstract_state_machine *state_machine,
                      utils::logging::abstract_logger_ptr logger)
-    : _consumer(consumer)
+    : _state_machine(state_machine)
     , _rnd_eng(make_seeded_engine())
     , _settings(ns)
     , _cluster(cluster)
@@ -32,7 +32,7 @@ consensus::consensus(const node_settings &ns,
         utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
   }
 
-  ENSURE(_consumer != nullptr);
+  ENSURE(_state_machine != nullptr);
 
   _settings.dump_to_log(_logger.get());
 
@@ -42,13 +42,13 @@ consensus::consensus(const node_settings &ns,
   update_next_heartbeat_interval();
   _state.last_heartbeat_time = clock_t::now();
 
-  // consumer->reset();
+  // state_machine->reset();
   auto from = _jrn->restore_start_point();
   auto to = _jrn->commited_rec();
   if (!from.is_empty() && !to.is_empty()) {
     for (auto i = from.lsn; i <= to.lsn; ++i) {
       auto rec = jrn->get(i);
-      consumer->apply_cmd(rec.cmd);
+      state_machine->apply_cmd(rec.cmd);
     }
   }
 }
@@ -144,7 +144,7 @@ void consensus::lost_connection_with(const node_name &addr) {
   _state.votes_to_me.erase(addr);
 }
 
-void consensus::new_connection_with(const rft::node_name &/*addr*/) {
+void consensus::new_connection_with(const rft::node_name & /*addr*/) {
   // TODO need implementation
 }
 
@@ -190,8 +190,8 @@ void consensus::log_fsck(const append_entries &e) {
   }
   if (reset) {
     _jrn->erase_all_after(to_erase.lsn);
-    _consumer->reset();
-    auto f = [this](const logdb::log_entry &le) { _consumer->apply_cmd(le.cmd); };
+    _state_machine->reset();
+    auto f = [this](const logdb::log_entry &le) { _state_machine->apply_cmd(le.cmd); };
     _jrn->visit(f);
     _logger->info("consumer restored ");
   }
@@ -337,7 +337,7 @@ void consensus::on_append_entries(const node_name &from, const append_entries &e
         return;
       }
     }
-    _consumer->reset();
+    _state_machine->reset();
   }
 
   // TODO add check prev,cur,commited
@@ -356,7 +356,7 @@ void consensus::on_append_entries(const node_name &from, const append_entries &e
       } else {
         if (e.cmd.is_empty() && e.current.kind == logdb::LOG_ENTRY_KIND::SNAPSHOT) {
           _logger->info("create snapshot");
-          le.cmd = _consumer->snapshot();
+          le.cmd = _state_machine->snapshot();
           le.kind = logdb::LOG_ENTRY_KIND::SNAPSHOT;
         }
       }
@@ -462,8 +462,8 @@ void consensus::commit_reccord(const logdb::reccord_info &target) {
       auto commited = _jrn->commited_rec();
       auto le = _jrn->get(commited.lsn);
       if (info.kind == logdb::LOG_ENTRY_KIND::APPEND) {
-        ENSURE(_consumer != nullptr);
-        _consumer->apply_cmd(le.cmd);
+        ENSURE(_state_machine != nullptr);
+        _state_machine->apply_cmd(le.cmd);
       } else {
         auto erase_point = _jrn->info(i - 1);
         _logger->info("erase all to ", erase_point);
@@ -608,7 +608,7 @@ void consensus::add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k) {
 }
 
 ERROR_CODE consensus::add_command(const command &cmd) {
-  // TODO global lock for this method. a while cmd not in consumer;
+  // TODO global lock for this method. a while cmd not in state_machine;
   std::lock_guard lg(_locker);
 
   if (_state.node_kind != NODE_KIND::LEADER) {
@@ -618,7 +618,7 @@ ERROR_CODE consensus::add_command(const command &cmd) {
 
   if (_jrn->size() >= _settings.max_log_size()) {
     _logger->info("create snapshot");
-    add_command_impl(_consumer->snapshot(), logdb::LOG_ENTRY_KIND::SNAPSHOT);
+    add_command_impl(_state_machine->snapshot(), logdb::LOG_ENTRY_KIND::SNAPSHOT);
   }
 
   add_command_impl(cmd, logdb::LOG_ENTRY_KIND::APPEND);

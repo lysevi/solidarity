@@ -73,7 +73,7 @@ public:
   void read_handler(listener_client_ptr i, message_ptr &&d) {
     clients::read_query_t rq(d);
     _logger->dbg("client:", _client_name, " read query #", rq.msg_id);
-    command result = _parent->consumer()->read(rq.query);
+    command result = _parent->state_machine()->read(rq.query);
     clients::read_query_t answer(rq.msg_id, result);
     auto ames = answer.to_message();
     i->send_data(ames);
@@ -121,9 +121,9 @@ private:
   std::string _client_name;
 };
 
-class consumer_wrapper : public rft::abstract_consensus_consumer {
+class consumer_wrapper : public rft::abstract_state_machine {
 public:
-  consumer_wrapper(node *parent, rft::abstract_consensus_consumer *t) {
+  consumer_wrapper(node *parent, rft::abstract_state_machine *t) {
     _target = t;
     _parent = parent;
   }
@@ -142,22 +142,22 @@ public:
 
   command read(const command &cmd) override { return _target->read(cmd); }
 
-  rft::abstract_consensus_consumer *_target;
+  rft::abstract_state_machine *_target;
   node *_parent;
 };
 
 node::node(utils::logging::abstract_logger_ptr logger,
            const params_t &p,
-           abstract_consensus_consumer *consumer) {
+           abstract_state_machine *state_machine) {
   _params = p;
-  _consumer = new consumer_wrapper(this, consumer);
+  _state_machine = new consumer_wrapper(this, state_machine);
 
   _logger = logger;
 
   auto jrn = std::make_shared<rft::logdb::memory_journal>();
   auto addr = rft::node_name().set_name(_params.name);
   auto s = rft::node_settings().set_name(_params.name);
-  _consensus = std::make_shared<rft::consensus>(s, nullptr, jrn, _consumer, _logger);
+  _consensus = std::make_shared<rft::consensus>(s, nullptr, jrn, _state_machine, _logger);
 
   rft::mesh_connection::params_t params;
   params.listener_params.port = p.port;
@@ -193,9 +193,9 @@ node::~node() {
   if (_cluster_con != nullptr) {
     stop();
   }
-  if (_consumer != nullptr) {
-    delete _consumer;
-    _consumer = nullptr;
+  if (_state_machine != nullptr) {
+    delete _state_machine;
+    _state_machine = nullptr;
   }
 }
 
@@ -255,8 +255,8 @@ void node::notify_state_machine_update() {
   }
 }
 
-abstract_consensus_consumer *node::consumer() {
-  return dynamic_cast<consumer_wrapper *>(_consumer)->_target;
+abstract_state_machine *node::state_machine() {
+  return dynamic_cast<consumer_wrapper *>(_state_machine)->_target;
 }
 
 std::shared_ptr<consensus> node::get_consensus() {

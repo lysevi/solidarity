@@ -36,11 +36,11 @@ public:
   node &operator=(const node &) = delete;
   EXPORT node(utils::logging::abstract_logger_ptr logger,
               const params_t &p,
-              abstract_consensus_consumer *consumer);
+              abstract_state_machine *state_machine);
   EXPORT ~node();
 
   params_t params() const { return _params; }
-  EXPORT abstract_consensus_consumer *consumer();
+  EXPORT abstract_state_machine *state_machine();
   EXPORT std::shared_ptr<consensus> get_consensus();
 
   EXPORT void start();
@@ -64,7 +64,7 @@ private:
   params_t _params;
   std::shared_ptr<consensus> _consensus;
   std::shared_ptr<mesh_connection> _cluster_con;
-  abstract_consensus_consumer *_consumer;
+  abstract_state_machine *_state_machine;
 
   utils::logging::abstract_logger_ptr _logger;
 

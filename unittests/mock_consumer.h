@@ -1,7 +1,7 @@
 #include <librft/consensus.h>
 #include <mutex>
 
-class mock_consumer final : public rft::abstract_consensus_consumer {
+class mock_state_machine final : public rft::abstract_state_machine {
 public:
   void apply_cmd(const rft::command &cmd) override {
     std::lock_guard l(_locker);

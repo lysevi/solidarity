@@ -2,9 +2,9 @@
 #include <librft/command.h>
 
 namespace rft{
-class abstract_consensus_consumer {
+class abstract_state_machine {
 public:
-  virtual ~abstract_consensus_consumer() {}
+  virtual ~abstract_state_machine() {}
   virtual void apply_cmd(const command &cmd) = 0;
   virtual void reset() = 0;
   virtual command snapshot() = 0;
