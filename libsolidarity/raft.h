@@ -81,7 +81,7 @@ protected:
   void replicate_log();
   void log_fsck(const append_entries &e);
 
-  void add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k);
+  ERROR_CODE add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k);
 
 private:
   abstract_state_machine *const _state_machine = nullptr;

@@ -12,7 +12,7 @@ using namespace solidarity;
 using namespace solidarity::queries;
 using namespace solidarity::dialler;
 
-class node_listener : public abstract_listener_consumer {
+class node_listener final: public abstract_listener_consumer {
 public:
   node_listener(node *const parent, utils::logging::abstract_logger_ptr &l)
       : _parent(parent)
@@ -121,7 +121,7 @@ private:
   std::string _client_name;
 };
 
-class consumer_wrapper : public solidarity::abstract_state_machine {
+class consumer_wrapper final : public solidarity::abstract_state_machine {
 public:
   consumer_wrapper(node *parent, solidarity::abstract_state_machine *t) {
     _target = t;

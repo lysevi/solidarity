@@ -14,10 +14,10 @@ inline std::mt19937 make_seeded_engine() {
 } // namespace
 
 raft::raft(const raft_settings &ns,
-                     abstract_cluster *cluster,
-                     const logdb::journal_ptr &jrn,
-                     abstract_state_machine *state_machine,
-                     utils::logging::abstract_logger_ptr logger)
+           abstract_cluster *cluster,
+           const logdb::journal_ptr &jrn,
+           abstract_state_machine *state_machine,
+           utils::logging::abstract_logger_ptr logger)
     : _state_machine(state_machine)
     , _rnd_eng(make_seeded_engine())
     , _settings(ns)
@@ -106,7 +106,7 @@ append_entries raft::make_append_entries(const ENTRIES_KIND kind) const noexcept
 }
 
 append_entries raft::make_append_entries(const logdb::index_t lsn_to_replicate,
-                                              const logdb::index_t prev_lsn) {
+                                         const logdb::index_t prev_lsn) {
   auto ae = make_append_entries(solidarity::ENTRIES_KIND::APPEND);
   auto cur = _jrn->get(lsn_to_replicate);
 
@@ -589,8 +589,11 @@ void raft::replicate_log() {
   }
 }
 
-void raft::add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k) {
+ERROR_CODE raft::add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k) {
   ENSURE(!cmd.is_empty());
+  if (k != logdb::LOG_ENTRY_KIND::SNAPSHOT && !_state_machine->can_apply(cmd)) {
+    return ERROR_CODE::STATE_MACHINE_CAN_T_APPLY_CMD;
+  }
   logdb::log_entry le;
   le.cmd = cmd;
   le.term = _state.term;
@@ -605,6 +608,7 @@ void raft::add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k) {
   if (_cluster->size() == size_t(1)) {
     commit_reccord(_jrn->first_uncommited_rec());
   }
+  return ERROR_CODE::OK;
 }
 
 ERROR_CODE raft::add_command(const command &cmd) {
@@ -621,6 +625,5 @@ ERROR_CODE raft::add_command(const command &cmd) {
     add_command_impl(_state_machine->snapshot(), logdb::LOG_ENTRY_KIND::SNAPSHOT);
   }
 
-  add_command_impl(cmd, logdb::LOG_ENTRY_KIND::APPEND);
-  return ERROR_CODE::OK;
+  return add_command_impl(cmd, logdb::LOG_ENTRY_KIND::APPEND);
 }

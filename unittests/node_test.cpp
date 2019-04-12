@@ -4,7 +4,7 @@
 #include <libsolidarity/utils/logger.h>
 #include <libsolidarity/utils/strings.h>
 
-#include "mock_consumer.h"
+#include "mock_state_machine.h"
 
 #include <catch.hpp>
 #include <condition_variable>

@@ -2,11 +2,11 @@
 
 #include <libsolidarity/abstract_cluster.h>
 #include <libsolidarity/config.h>
-#include <libsolidarity/raft.h>
-#include <libsolidarity/protocol_version.h>
 #include <libsolidarity/dialler/dialler.h>
 #include <libsolidarity/dialler/listener.h>
 #include <libsolidarity/dialler/message.h>
+#include <libsolidarity/protocol_version.h>
+#include <libsolidarity/raft.h>
 #include <libsolidarity/utils/logger.h>
 
 #include <boost/asio.hpp>
@@ -16,7 +16,7 @@ class mesh_connection;
 
 namespace impl {
 
-class out_connection : public dialler::abstract_dial {
+class out_connection final : public dialler::abstract_dial {
 public:
   out_connection(const std::shared_ptr<mesh_connection> parent,
                  const std::string &target_addr);
@@ -30,7 +30,7 @@ private:
   std::string _target_addr;
 };
 
-class listener : public dialler::abstract_listener_consumer {
+class listener final : public dialler::abstract_listener_consumer {
 public:
   listener(const std::shared_ptr<mesh_connection> parent);
 
@@ -55,7 +55,7 @@ private:
 
 } // namespace impl
 
-class mesh_connection : public abstract_cluster,
+class mesh_connection final : public abstract_cluster,
                         public std::enable_shared_from_this<mesh_connection> {
 public:
   struct params_t {
@@ -98,8 +98,10 @@ protected:
   void rm_input_connection(uint64_t id);
   void on_new_command(const std::vector<dialler::message_ptr> &m);
 
-  void on_write_resend(const node_name &target, uint64_t mess_id, solidarity::command &cmd);
-  void on_write_status(solidarity::node_name &target, uint64_t mess_id, ERROR_CODE status);
+  void
+  on_write_resend(const node_name &target, uint64_t mess_id, solidarity::command &cmd);
+  void
+  on_write_status(solidarity::node_name &target, uint64_t mess_id, ERROR_CODE status);
 
 private:
   utils::logging::abstract_logger_ptr _logger;

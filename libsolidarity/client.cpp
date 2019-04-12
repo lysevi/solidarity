@@ -90,7 +90,7 @@ void solidarity::inner::client_notify_update(client &c, const client_state_event
   c.notify_on_client_event(ev);
 }
 
-class client_connection : public solidarity::dialler::abstract_dial {
+class client_connection final : public solidarity::dialler::abstract_dial {
 public:
   client_connection(client *const parent)
       : _parent(parent) {}

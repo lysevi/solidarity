@@ -1,9 +1,9 @@
 #include "helpers.h"
 #include "mock_cluster.h"
-#include "mock_consumer.h"
+#include "mock_state_machine.h"
+#include <catch.hpp>
 #include <libsolidarity/raft.h>
 #include <libsolidarity/utils/logger.h>
-#include <catch.hpp>
 
 TEST_CASE("raft.quorum calculation", "[raft]") {
   EXPECT_EQ(solidarity::quorum_for_cluster(3, 0.5), 2);
@@ -21,10 +21,11 @@ TEST_CASE("raft.add_nodes", "[raft]") {
       std::chrono::milliseconds(300));
 
   auto c_0_consumer = std::make_shared<mock_state_machine>();
-  auto c_0 = std::make_shared<solidarity::raft>(settings_0,
-                                              cluster.get(),
-                                              solidarity::logdb::memory_journal::make_new(),
-                                              c_0_consumer.get());
+  auto c_0
+      = std::make_shared<solidarity::raft>(settings_0,
+                                           cluster.get(),
+                                           solidarity::logdb::memory_journal::make_new(),
+                                           c_0_consumer.get());
 
   cluster->add_new(solidarity::node_name().set_name("_0"), c_0);
   EXPECT_EQ(c_0->term(), solidarity::UNDEFINED_TERM);
@@ -40,10 +41,11 @@ TEST_CASE("raft.add_nodes", "[raft]") {
   auto settings_1 = solidarity::raft_settings().set_name("_1").set_election_timeout(
       std::chrono::milliseconds(300));
   auto c_1_consumer = std::make_shared<mock_state_machine>();
-  auto c_1 = std::make_shared<solidarity::raft>(settings_1,
-                                              cluster.get(),
-                                              solidarity::logdb::memory_journal::make_new(),
-                                              c_1_consumer.get());
+  auto c_1
+      = std::make_shared<solidarity::raft>(settings_1,
+                                           cluster.get(),
+                                           solidarity::logdb::memory_journal::make_new(),
+                                           c_1_consumer.get());
   cluster->add_new(solidarity::node_name().set_name(settings_1.name()), c_1);
 
   while (c_1->get_leader().name() != c_0->self_addr().name()) {
@@ -59,10 +61,11 @@ TEST_CASE("raft.add_nodes", "[raft]") {
   auto settings_2 = solidarity::raft_settings().set_name("_2").set_election_timeout(
       std::chrono::milliseconds(300));
   auto c_2_consumer = std::make_shared<mock_state_machine>();
-  auto c_2 = std::make_shared<solidarity::raft>(settings_2,
-                                              cluster.get(),
-                                              solidarity::logdb::memory_journal::make_new(),
-                                              c_2_consumer.get());
+  auto c_2
+      = std::make_shared<solidarity::raft>(settings_2,
+                                           cluster.get(),
+                                           solidarity::logdb::memory_journal::make_new(),
+                                           c_2_consumer.get());
 
   cluster->add_new(solidarity::node_name().set_name(settings_2.name()), c_2);
 
@@ -147,10 +150,10 @@ TEST_CASE("raft", "[raft]") {
       }
       if (leaders.size() == 1) {
         auto cur_leader = leaders.front()->self_addr();
-        auto followers
-            = cluster->by_filter([cur_leader](const std::shared_ptr<solidarity::raft> &v) {
-                return v->get_leader() == cur_leader;
-              });
+        auto followers = cluster->by_filter(
+            [cur_leader](const std::shared_ptr<solidarity::raft> &v) {
+              return v->get_leader() == cur_leader;
+            });
         if (last_leader.is_empty() && followers.size() == cluster->size()) {
           last_leader = cur_leader;
           break;
@@ -203,8 +206,8 @@ TEST_CASE("raft", "[raft]") {
 }
 
 TEST_CASE("raft.replication", "[raft]") {
-  using solidarity::raft;
   using solidarity::node_name;
+  using solidarity::raft;
   using solidarity::logdb::memory_journal;
 
   auto cluster = std::make_shared<mock_cluster>();
@@ -306,6 +309,10 @@ TEST_CASE("raft.replication", "[raft]") {
 }
 
 TEST_CASE("raft.log_compaction", "[raft]") {
+  auto tst_log_prefix = utils::strings::args_to_string("test?> ");
+  auto tst_logger = std::make_shared<utils::logging::prefix_logger>(
+      utils::logging::logger_manager::instance()->get_shared_logger(), tst_log_prefix);
+
   using solidarity::raft_settings;
   auto cluster = std::make_shared<mock_cluster>();
 
@@ -383,18 +390,20 @@ TEST_CASE("raft.log_compaction", "[raft]") {
   consumers.clear();
 }
 
-bool operator==(const solidarity::logdb::log_entry &r, const solidarity::logdb::log_entry &l) {
+bool operator==(const solidarity::logdb::log_entry &r,
+                const solidarity::logdb::log_entry &l) {
   return r.term == l.term && r.kind == l.kind && r.cmd.data.size() == l.cmd.data.size()
          && std::equal(r.cmd.data.cbegin(), r.cmd.data.cend(), l.cmd.data.cbegin());
 }
 
-bool operator!=(const solidarity::logdb::log_entry &r, const solidarity::logdb::log_entry &l) {
+bool operator!=(const solidarity::logdb::log_entry &r,
+                const solidarity::logdb::log_entry &l) {
   return !(r == l);
 }
 
 TEST_CASE("raft.apply_journal_on_start", "[raft]") {
-  using solidarity::raft;
   using solidarity::node_name;
+  using solidarity::raft;
   using solidarity::logdb::memory_journal;
 
   auto cluster = std::make_shared<mock_cluster>();
@@ -434,8 +443,8 @@ TEST_CASE("raft.apply_journal_on_start", "[raft]") {
 }
 
 TEST_CASE("raft.rollback", "[raft]") {
-  using solidarity::raft;
   using solidarity::node_name;
+  using solidarity::raft;
   using solidarity::logdb::memory_journal;
 
   auto cluster = std::make_shared<mock_cluster>();
@@ -567,6 +576,64 @@ TEST_CASE("raft.rollback", "[raft]") {
       if (contents_is_equal) {
         break;
       }
+    }
+  }
+
+  cluster = nullptr;
+  consumers.clear();
+}
+
+TEST_CASE("raft.can_apply", "[raft]") {
+  using solidarity::node_name;
+  using solidarity::raft;
+  using solidarity::logdb::memory_journal;
+
+  auto cluster = std::make_shared<mock_cluster>();
+
+  size_t exists_nodes_count = 1;
+
+  std::vector<std::shared_ptr<mock_state_machine>> consumers;
+  consumers.reserve(exists_nodes_count);
+
+  auto et = std::chrono::milliseconds(400);
+
+  for (size_t i = 0; i < exists_nodes_count; ++i) {
+    auto nname = "_" + std::to_string(i);
+    auto sett = solidarity::raft_settings().set_name(nname).set_election_timeout(et);
+    auto state_machine = std::make_shared<mock_state_machine>(false);
+    consumers.push_back(state_machine);
+    auto cons = std::make_shared<raft>(
+        sett, cluster.get(), memory_journal::make_new(), state_machine.get());
+    cluster->add_new(node_name().set_name(sett.name()), cons);
+  }
+  solidarity::command cmd;
+  cmd.data.resize(1);
+  cmd.data[0] = 0;
+
+  auto data_eq = [&cmd](const std::shared_ptr<mock_state_machine> &c) -> bool {
+    return c->last_cmd.data == cmd.data;
+  };
+
+  cluster->wait_leader_eletion();
+
+  std::vector<std::shared_ptr<solidarity::raft>> leaders
+      = cluster->by_filter(is_leader_pred);
+  EXPECT_EQ(leaders.size(), size_t(1));
+
+  cmd.data[0]++;
+  auto st = leaders[0]->add_command(cmd);
+
+  EXPECT_EQ(st, solidarity::ERROR_CODE::STATE_MACHINE_CAN_T_APPLY_CMD);
+  (*consumers.begin())->_can_apply = true;
+
+  st = leaders[0]->add_command(cmd);
+  EXPECT_EQ(st, solidarity::ERROR_CODE::OK);
+  while (true) {
+    cluster->heartbeat();
+    cluster->print_cluster();
+    auto replicated_on = std::count_if(consumers.cbegin(), consumers.cend(), data_eq);
+    if (size_t(replicated_on) == consumers.size()) {
+      break;
     }
   }
 

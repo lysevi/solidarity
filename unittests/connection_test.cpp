@@ -1,5 +1,5 @@
 #include "helpers.h"
-#include "mock_consumer.h"
+#include "mock_state_machine.h"
 #include <libsolidarity/mesh_connection.h>
 #include <catch.hpp>
 #include <numeric>

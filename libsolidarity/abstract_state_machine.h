@@ -1,7 +1,7 @@
 #pragma once
 #include <libsolidarity/command.h>
 
-namespace solidarity{
+namespace solidarity {
 class abstract_state_machine {
 public:
   virtual ~abstract_state_machine() {}
@@ -9,5 +9,6 @@ public:
   virtual void reset() = 0;
   virtual command snapshot() = 0;
   virtual command read(const command &cmd) = 0;
+  virtual bool can_apply(const command &) { return true; };
 };
-}
+} // namespace solidarity

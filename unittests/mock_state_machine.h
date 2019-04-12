@@ -3,6 +3,9 @@
 
 class mock_state_machine final : public solidarity::abstract_state_machine {
 public:
+  mock_state_machine(bool can_apply = true)
+      : _can_apply(can_apply) {}
+
   void apply_cmd(const solidarity::command &cmd) override {
     std::lock_guard l(_locker);
     last_cmd = cmd;
@@ -30,6 +33,9 @@ public:
     return result;
   }
 
+  bool can_apply(const solidarity::command &) override { return _can_apply; }
+
   std::shared_mutex _locker;
   solidarity::command last_cmd;
+  bool _can_apply;
 };
