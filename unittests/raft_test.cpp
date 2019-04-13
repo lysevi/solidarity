@@ -381,7 +381,13 @@ TEST_CASE("raft.log_compaction", "[raft]") {
         = std::count_if(sizes.cbegin(), sizes.cend(), [max_log_size](const size_t c) {
             return c <= max_log_size;
           });
-    if (count_of == all_nodes.size()) {
+
+    bool all_installed = std::all_of(consumers.cbegin(),
+                                     consumers.cend(),
+                                     [](const std::shared_ptr<mock_state_machine> &c) {
+                                       return c->_snapshot_installed;
+                                     });
+    if (count_of == all_nodes.size() && all_installed) {
       break;
     }
   }
