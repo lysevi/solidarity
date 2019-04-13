@@ -3,8 +3,6 @@ MESSAGE(STATUS "Unittests")
 FILE(GLOB HDRS "*.h")
 FILE(GLOB SRC "*.cpp")
 
-message(status  ${solidarity_INCLUDE_DIR})
-
 add_executable(server_inc server.cpp common.h)
 TARGET_LINK_LIBRARIES(server_inc ${solidarity_LIBRARIES})
 TARGET_LINK_DIRECTORIES(server_inc PUBLIC ${solidarity_LIBRARY_DIR})
