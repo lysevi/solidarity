@@ -1,6 +1,5 @@
 #pragma once
 #include <libsolidarity/command.h>
-#include <libsolidarity/journal.h>
 
 namespace solidarity {
 class abstract_state_machine {
