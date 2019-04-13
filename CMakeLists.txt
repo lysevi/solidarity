@@ -25,7 +25,8 @@ endif()
 
 MESSAGE( STATUS "CMAKE_BUILD_TYPE: " ${CMAKE_BUILD_TYPE} )
 
-option(solidarity_ENABLE_TESTS "Enable testing of the yaaf." ON)
+option(solidarity_ENABLE_TESTS "Enable testing of the solidarity." ON)
+option(solidarity_ENABLE_EXAMPLES "Enable examples of the solidarity." ON)
 option(solidarity_ENABLE_DOUBLECHECKS "More checks in code." OFF)
 option(solidarity_ENABLE_BENCHMARKS "Enable build benchmarks." ON)
 option(solidarity_ASAN_UBSAN "clang asan" OFF)
@@ -37,6 +38,7 @@ endif()
 
 MESSAGE(STATUS "Options: ")
 MESSAGE(STATUS "solidarity_ENABLE_TESTS - " ${solidarity_ENABLE_TESTS})
+MESSAGE(STATUS "solidarity_ENABLE_EXAMPLES - " ${solidarity_ENABLE_EXAMPLES})
 MESSAGE(STATUS "solidarity_ENABLE_DOUBLECHECKS - " ${solidarity_ENABLE_DOUBLECHECKS})
 MESSAGE(STATUS "solidarity_ENABLE_BENCHMARKS - " ${solidarity_ENABLE_BENCHMARKS})
 MESSAGE(STATUS "solidarity_ASAN_UBSAN - " ${solidarity_ASAN_UBSAN})
@@ -115,5 +117,10 @@ if (solidarity_ENABLE_TESTS)
   add_subdirectory(unittests)
 endif()
 
-
-
+if(${solidarity_ENABLE_EXAMPLES})
+  SET(CXXOPTS_BUILD_TESTS OFF)
+  SET(CXXOPTS_BUILD_EXAMPLES OFF)
+  add_subdirectory(extern/cxxopts)
+  include_directories(extern/cxxopts/include)
+  add_subdirectory(examples)
+endif(${solidarity_ENABLE_EXAMPLES})

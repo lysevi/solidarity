@@ -63,6 +63,7 @@ public:
       answer = q.to_message();
       _client_name = cc.client_name;
       _parent->add_client(i->get_id());
+      _logger->dbg("client:", _client_name, " accepted");
     }
 
     i->send_data(answer);

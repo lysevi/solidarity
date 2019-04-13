@@ -10,6 +10,8 @@
 #include <thread>
 #include <vector>
 
+#include <boost/asio.hpp>
+
 namespace solidarity {
 namespace dialler {
 class listener;
