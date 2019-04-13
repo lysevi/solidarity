@@ -23,7 +23,6 @@ public:
   void install_snapshot(const solidarity::command &cmd) override {
     std::lock_guard l(_locker);
     last_cmd = cmd;
-    _snapshot_installed = true;
   }
 
   solidarity::command read(const solidarity::command &cmd) override {
@@ -44,5 +43,4 @@ public:
   std::shared_mutex _locker;
   solidarity::command last_cmd;
   bool _can_apply;
-  bool _snapshot_installed = false;
 };

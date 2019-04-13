@@ -48,7 +48,7 @@ raft::raft(const raft_settings &ns,
   if (!from.is_empty() && !to.is_empty()) {
     for (auto i = from.lsn; i <= to.lsn; ++i) {
       auto rec = jrn->get(i);
-      state_machine->add_reccord(rec);
+      add_reccord(rec);
     }
   }
 }
@@ -191,7 +191,7 @@ void raft::log_fsck(const append_entries &e) {
   if (reset) {
     _jrn->erase_all_after(to_erase.lsn);
     _state_machine->reset();
-    auto f = [this](const logdb::log_entry &le) { _state_machine->add_reccord(le); };
+    auto f = [this](const logdb::log_entry &le) { add_reccord(le); };
     _jrn->visit(f);
     _logger->info("consumer restored ");
   }
@@ -463,13 +463,11 @@ void raft::commit_reccord(const logdb::reccord_info &target) {
 
       if (info.kind == logdb::LOG_ENTRY_KIND::APPEND) {
         ENSURE(_state_machine != nullptr);
-        _state_machine->add_reccord(le);
+        add_reccord(le);
       } else {
         auto erase_point = _jrn->info(i - 1);
         _logger->info("erase all to ", erase_point);
         _jrn->erase_all_to(erase_point.lsn);
-        _state_machine->add_reccord(_jrn->get(info.lsn));
-        _state_machine->add_reccord(le);
       }
       ++i;
     }
@@ -632,4 +630,17 @@ ERROR_CODE raft::add_command(const command &cmd) {
   }
 
   return add_command_impl(cmd, logdb::LOG_ENTRY_KIND::APPEND);
+}
+
+void raft::add_reccord(const logdb::log_entry &le) {
+  switch (le.kind) {
+  case logdb::LOG_ENTRY_KIND::APPEND: {
+    _state_machine->apply_cmd(le.cmd);
+    break;
+  }
+  case logdb::LOG_ENTRY_KIND::SNAPSHOT: {
+    _state_machine->install_snapshot(le.cmd);
+    break;
+  }
+  }
 }

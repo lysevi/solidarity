@@ -382,12 +382,7 @@ TEST_CASE("raft.log_compaction", "[raft]") {
             return c <= max_log_size;
           });
 
-    bool all_installed = std::all_of(consumers.cbegin(),
-                                     consumers.cend(),
-                                     [](const std::shared_ptr<mock_state_machine> &c) {
-                                       return c->_snapshot_installed;
-                                     });
-    if (count_of == all_nodes.size() && all_installed) {
+    if (count_of == all_nodes.size()) {
       break;
     }
   }
