@@ -10,14 +10,8 @@
 #define MAKE_EXCEPTION(msg) utils::exceptions::exception_t::create_and_log(CODE_POS, msg)
 // macros, because need CODE_POS
 
-#ifdef DEBUG
-#define THROW_EXCEPTION(...)                                                             \
-  throw utils::exceptions::exception_t::create_and_log(CODE_POS,                         \
-                                                       __VA_ARGS__) // std::exit(1);
-#else
 #define THROW_EXCEPTION(...)                                                             \
   throw utils::exceptions::exception_t::create_and_log(CODE_POS, __VA_ARGS__)
-#endif
 
 namespace utils::exceptions {
 

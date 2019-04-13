@@ -20,6 +20,11 @@ public:
     return last_cmd;
   }
 
+  void install_snapshot(const solidarity::command &cmd) override {
+    std::lock_guard l(_locker);
+    last_cmd = cmd;
+  }
+
   solidarity::command read(const solidarity::command &cmd) override {
     std::shared_lock l(_locker);
     if (last_cmd.data.empty()) {

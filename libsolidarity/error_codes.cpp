@@ -26,7 +26,9 @@ std::string to_string(const ERROR_CODE status) {
   case ERROR_CODE::NETWORK_ERROR: {
     return "NETWORK_ERROR";
   }
-
+  case ERROR_CODE::STATE_MACHINE_CAN_T_APPLY_CMD: {
+    return "STATE_MACHINE_CAN_T_APPLY_CMD";
+  }
   default:
     THROW_EXCEPTION("unknow error code: ", static_cast<uint16_t>(status));
   }

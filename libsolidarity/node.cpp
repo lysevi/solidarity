@@ -1,9 +1,9 @@
-#include <libsolidarity/raft.h>
+#include <libsolidarity/dialler/listener.h>
 #include <libsolidarity/mesh_connection.h>
 #include <libsolidarity/node.h>
 #include <libsolidarity/protocol_version.h>
 #include <libsolidarity/queries.h>
-#include <libsolidarity/dialler/listener.h>
+#include <libsolidarity/raft.h>
 #include <libsolidarity/utils/utils.h>
 
 #include <boost/asio.hpp>
@@ -12,15 +12,13 @@ using namespace solidarity;
 using namespace solidarity::queries;
 using namespace solidarity::dialler;
 
-class node_listener final: public abstract_listener_consumer {
+class node_listener final : public abstract_listener_consumer {
 public:
   node_listener(node *const parent, utils::logging::abstract_logger_ptr &l)
       : _parent(parent)
       , _logger(l) {}
 
-  void on_new_message(listener_client_ptr i,
-                      message_ptr &&d,
-                      bool &cancel) override {
+  void on_new_message(listener_client_ptr i, message_ptr &&d, bool &cancel) override {
     try {
       QUERY_KIND kind = static_cast<QUERY_KIND>(d->get_header()->kind);
       switch (kind) {
@@ -110,8 +108,8 @@ public:
   }
 
   void on_network_error(listener_client_ptr i,
-                        const message_ptr &/*d*/,
-                        const boost::system::error_code &/*err*/) override {
+                        const message_ptr & /*d*/,
+                        const boost::system::error_code & /*err*/) override {
     _parent->rm_client(i->get_id());
   }
 
@@ -131,7 +129,7 @@ public:
   void apply_cmd(const command &cmd) override {
     _parent->notify_state_machine_update();
     _target->apply_cmd(cmd);
-  }
+  }  
 
   void reset() override {
     _parent->notify_state_machine_update();
@@ -139,6 +137,11 @@ public:
   }
 
   command snapshot() override { return _target->snapshot(); }
+
+  void install_snapshot(const solidarity::command &cmd) override {
+    _parent->notify_state_machine_update();
+    _target->install_snapshot(cmd);
+  }
 
   command read(const command &cmd) override { return _target->read(cmd); }
 

@@ -48,7 +48,7 @@ raft::raft(const raft_settings &ns,
   if (!from.is_empty() && !to.is_empty()) {
     for (auto i = from.lsn; i <= to.lsn; ++i) {
       auto rec = jrn->get(i);
-      state_machine->apply_cmd(rec.cmd);
+      state_machine->add_reccord(rec);
     }
   }
 }
@@ -191,7 +191,7 @@ void raft::log_fsck(const append_entries &e) {
   if (reset) {
     _jrn->erase_all_after(to_erase.lsn);
     _state_machine->reset();
-    auto f = [this](const logdb::log_entry &le) { _state_machine->apply_cmd(le.cmd); };
+    auto f = [this](const logdb::log_entry &le) { _state_machine->add_reccord(le); };
     _jrn->visit(f);
     _logger->info("consumer restored ");
   }
@@ -319,7 +319,9 @@ void raft::on_append_entries(const node_name &from, const append_entries &e) {
     _logs_state.clear();
     return;
   }
-
+  if (e.current.kind == logdb::LOG_ENTRY_KIND::SNAPSHOT) {
+    _logger->info("1");
+  }
   auto self_prev = _jrn->prev_rec();
   if (e.current != self_prev && e.prev != self_prev && !self_prev.is_empty()) {
     if (e.current.lsn == 0) {
@@ -461,13 +463,16 @@ void raft::commit_reccord(const logdb::reccord_info &target) {
       _jrn->commit(i);
       auto commited = _jrn->commited_rec();
       auto le = _jrn->get(commited.lsn);
+
       if (info.kind == logdb::LOG_ENTRY_KIND::APPEND) {
         ENSURE(_state_machine != nullptr);
-        _state_machine->apply_cmd(le.cmd);
+        _state_machine->add_reccord(le);
       } else {
         auto erase_point = _jrn->info(i - 1);
         _logger->info("erase all to ", erase_point);
         _jrn->erase_all_to(erase_point.lsn);
+        _state_machine->add_reccord(_jrn->get(info.lsn));
+        _state_machine->add_reccord(le);
       }
       ++i;
     }
@@ -622,7 +627,11 @@ ERROR_CODE raft::add_command(const command &cmd) {
 
   if (_jrn->size() >= _settings.max_log_size()) {
     _logger->info("create snapshot");
-    add_command_impl(_state_machine->snapshot(), logdb::LOG_ENTRY_KIND::SNAPSHOT);
+    auto res
+        = add_command_impl(_state_machine->snapshot(), logdb::LOG_ENTRY_KIND::SNAPSHOT);
+    if (res != ERROR_CODE::OK) {
+      THROW_EXCEPTION("snapshot save error: ", res);
+    }
   }
 
   return add_command_impl(cmd, logdb::LOG_ENTRY_KIND::APPEND);

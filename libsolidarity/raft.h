@@ -62,9 +62,10 @@ public:
   }
 
 protected:
-  append_entries make_append_entries(const ENTRIES_KIND kind = ENTRIES_KIND::APPEND) const
+  [[nodiscard]] append_entries make_append_entries(const ENTRIES_KIND kind
+                                                   = ENTRIES_KIND::APPEND) const
       noexcept;
-  append_entries make_append_entries(const logdb::index_t lsn_to_replicate,
+  [[nodiscard]] append_entries make_append_entries(const logdb::index_t lsn_to_replicate,
                                      const logdb::index_t prev_lsn);
   void send_all(const ENTRIES_KIND kind);
   void send(const node_name &to, const ENTRIES_KIND kind);
@@ -81,7 +82,7 @@ protected:
   void replicate_log();
   void log_fsck(const append_entries &e);
 
-  ERROR_CODE add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k);
+  [[nodiscard]] ERROR_CODE add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k);
 
 private:
   abstract_state_machine *const _state_machine = nullptr;
