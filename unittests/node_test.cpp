@@ -8,14 +8,15 @@
 
 #include <catch.hpp>
 #include <condition_variable>
-#include <numeric>
 #include <iostream>
+#include <numeric>
 
 TEST_CASE("node", "[network]") {
   size_t cluster_size = 0;
   auto tst_log_prefix = solidarity::utils::strings::args_to_string("test?> ");
   auto tst_logger = std::make_shared<solidarity::utils::logging::prefix_logger>(
-      solidarity::utils::logging::logger_manager::instance()->get_shared_logger(), tst_log_prefix);
+      solidarity::utils::logging::logger_manager::instance()->get_shared_logger(),
+      tst_log_prefix);
 
   SECTION("node.2") { cluster_size = 2; }
   SECTION("node.3") { cluster_size = 3; }
@@ -42,11 +43,12 @@ TEST_CASE("node", "[network]") {
 
     std::vector<std::string> out_addrs;
     out_addrs.reserve(out_ports.size());
-    std::transform(
-        out_ports.begin(),
-        out_ports.end(),
-        std::back_inserter(out_addrs),
-        [](const auto prt) { return solidarity::utils::strings::args_to_string("localhost:", prt); });
+    std::transform(out_ports.begin(),
+                   out_ports.end(),
+                   std::back_inserter(out_addrs),
+                   [](const auto prt) {
+                     return solidarity::utils::strings::args_to_string("localhost:", prt);
+                   });
 
     solidarity::node::params_t params;
     params.port = p;
@@ -57,7 +59,8 @@ TEST_CASE("node", "[network]") {
     std::cerr << params.name << " starting..." << std::endl;
     auto log_prefix = solidarity::utils::strings::args_to_string(params.name, "> ");
     auto node_logger = std::make_shared<solidarity::utils::logging::prefix_logger>(
-        solidarity::utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
+        solidarity::utils::logging::logger_manager::instance()->get_shared_logger(),
+        log_prefix);
 
     auto state_machine = std::make_shared<mock_state_machine>();
     auto n = std::make_shared<solidarity::node>(node_logger, params, state_machine.get());
@@ -124,7 +127,7 @@ TEST_CASE("node", "[network]") {
   bool is_on_update_received = false;
   std::condition_variable cond;
 
-  auto uh_id = leader_client->add_update_handler([&is_on_update_received, &cond]() {
+  auto uh_id = leader_client->add_update_handler([&is_on_update_received, &cond](auto) {
     is_on_update_received = true;
     cond.notify_all();
   });
@@ -160,11 +163,23 @@ TEST_CASE("node", "[network]") {
       tst_logger->info("send over ", kv.first, " cmd:", oss.str());
     }
 
+    bool is_state_changed = false;
+    auto handler_id = kv.second->add_raft_event_handler(
+        [&is_state_changed, kv](const solidarity::raft_state_event_t &rse) mutable {
+          std::cerr << kv.first
+                    << " raft state changed: " << solidarity::to_string(rse.old_state)
+                    << "=>" << solidarity::to_string(rse.new_state) << "!" << std::endl;
+          is_state_changed = true;
+        });
+
     solidarity::ERROR_CODE send_ecode = solidarity::ERROR_CODE::UNDEFINED;
     int i = 0;
     do {
       tst_logger->info("try resend cmd. step #", i++);
       send_ecode = kv.second->send(first_cmd);
+      if (is_state_changed) {
+        break;
+      }
     } while (send_ecode != solidarity::ERROR_CODE::OK);
 
     auto expected_answer = first_cmd;
@@ -172,7 +187,7 @@ TEST_CASE("node", "[network]") {
                    expected_answer.end(),
                    expected_answer.begin(),
                    [](auto &v) -> uint8_t { return uint8_t(v + 1); });
-    while (true) {
+    while (!is_state_changed) {
       auto answer = kv.second->read({1});
       if (std::equal(expected_answer.begin(),
                      expected_answer.end(),
@@ -182,6 +197,7 @@ TEST_CASE("node", "[network]") {
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
+    kv.second->rm_raft_event_handler(handler_id);
   }
 
   for (auto &kv : nodes) {

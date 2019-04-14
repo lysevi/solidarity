@@ -1,7 +1,7 @@
 #include <libsolidarity/abstract_cluster.h>
 #include <libsolidarity/error_codes.h>
 #include <libsolidarity/exports.h>
-
+#include <libsolidarity/node_kind.h>
 #include <libsolidarity/dialler/message.h>
 #include <vector>
 
@@ -15,7 +15,8 @@ enum class QUERY_KIND : dialler::message::kind_t {
   COMMAND,
   READ,
   WRITE,
-  UPDATE
+  UPDATE,
+  RAFT_STATE_UPDATE
 };
 
 struct query_connect_t {
@@ -109,6 +110,14 @@ struct state_machine_updated_t {
   bool f;
   EXPORT state_machine_updated_t();
   EXPORT state_machine_updated_t(const dialler::message_ptr &msg);
+  EXPORT dialler::message_ptr to_message() const;
+};
+
+struct raft_state_updated_t {
+  NODE_KIND old_state;
+  NODE_KIND new_state;
+  EXPORT raft_state_updated_t(NODE_KIND from, NODE_KIND to);
+  EXPORT raft_state_updated_t(const dialler::message_ptr &msg);
   EXPORT dialler::message_ptr to_message() const;
 };
 } // namespace clients

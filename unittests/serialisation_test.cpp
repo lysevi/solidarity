@@ -242,3 +242,22 @@ TEST_CASE("serialisation.state_machine_updated_t", "[network]") {
   EXPECT_TRUE(qc_u.f);
   EXPECT_TRUE(qc.f);
 }
+
+TEST_CASE("serialisation.raft_state_updated_t", "[network]") {
+  solidarity::NODE_KIND k = solidarity::NODE_KIND::CANDIDATE;
+  SECTION("CANDIDATE") { k = solidarity::NODE_KIND::CANDIDATE; }
+  SECTION("FOLLOWER") { k = solidarity::NODE_KIND::FOLLOWER; }
+  SECTION("ELECTION") { k = solidarity::NODE_KIND::ELECTION; }
+  SECTION("LEADER") { k = solidarity::NODE_KIND::LEADER; }
+
+  solidarity::queries::clients::raft_state_updated_t qc(solidarity::NODE_KIND::FOLLOWER,
+                                                        k);
+  auto msg = qc.to_message();
+
+  solidarity::queries::clients::raft_state_updated_t qc_u(msg);
+  EXPECT_EQ(msg->get_header()->kind,
+            (solidarity::dialler::message::kind_t)
+                solidarity::queries::QUERY_KIND::RAFT_STATE_UPDATE);
+  EXPECT_EQ(qc_u.new_state, k);
+  EXPECT_EQ(qc_u.old_state, solidarity::NODE_KIND::FOLLOWER);
+}

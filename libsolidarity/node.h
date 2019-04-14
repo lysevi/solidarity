@@ -55,6 +55,7 @@ public:
   EXPORT size_t connections_count() const;
 
   void notify_state_machine_update();
+  void notify_raft_state_update(NODE_KIND old_state, NODE_KIND new_state);
   void send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd);
 
 private:
@@ -80,5 +81,8 @@ private:
   std::unique_ptr<boost::asio::deadline_timer> _timer;
   std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, solidarity::command>>>
       _message_resend;
+
+  node_name _leader;
+  NODE_KIND _kind;
 };
 } // namespace solidarity

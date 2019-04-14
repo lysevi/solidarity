@@ -1,16 +1,16 @@
 #pragma once
 
+#include <boost/asio.hpp>
+#include <atomic>
 #include <libsolidarity/error_codes.h>
 #include <libsolidarity/exports.h>
-#include <atomic>
+#include <libsolidarity/node_kind.h>
 #include <mutex>
 #include <string>
 #include <thread>
-#include <boost/asio.hpp>
-//namespace boost::asio {
-//class io_context;
+// namespace boost::asio {
+// class io_context;
 //} // namespace boost::asio
-
 
 namespace solidarity {
 namespace dialler {
@@ -18,19 +18,7 @@ class dial;
 }
 
 class client;
-struct client_state_event_t;
 class async_result_t;
-
-namespace inner {
-void client_update_connection_status(client &c, bool status);
-void client_update_async_result(client &c,
-                                uint64_t id,
-                                const std::vector<uint8_t> &cmd,
-                                solidarity::ERROR_CODE ec,
-                                const std::string &err);
-void client_notify_update(client &c);
-void client_notify_update(client &c, const client_state_event_t &ev);
-} // namespace inner
 
 class exception : public std::exception {
 public:
@@ -42,13 +30,32 @@ private:
   std::string _message;
 };
 
+struct state_machine_updated_event_t {};
+
 struct client_state_event_t {
   ERROR_CODE ecode = ERROR_CODE::OK;
 };
 
+struct raft_state_event_t {
+  NODE_KIND old_state;
+  NODE_KIND new_state;
+};
+
+namespace inner {
+void client_update_connection_status(client &c, bool status);
+void client_update_async_result(client &c,
+                                uint64_t id,
+                                const std::vector<uint8_t> &cmd,
+                                solidarity::ERROR_CODE ec,
+                                const std::string &err);
+
+void client_notify_update(client &c, const state_machine_updated_event_t &ev);
+void client_notify_update(client &c, const client_state_event_t &ev);
+void client_notify_update(client &c, const raft_state_event_t &ev);
+} // namespace inner
+
 class client {
 public:
-  
   struct params_t {
     params_t(const std::string &name_) { name = name_; }
 
@@ -73,12 +80,17 @@ public:
   params_t params() const { return _params; }
   bool is_connected() const { return _connected; }
 
-  EXPORT uint64_t add_update_handler(const std::function<void()> &);
+  EXPORT uint64_t
+  add_update_handler(const std::function<void(const state_machine_updated_event_t &)> &);
   EXPORT void rm_update_handler(uint64_t);
 
   EXPORT uint64_t
   add_client_event_handler(const std::function<void(const client_state_event_t &)> &);
   EXPORT void rm_client_event_handler(uint64_t id);
+
+  EXPORT uint64_t
+  add_raft_event_handler(const std::function<void(const raft_state_event_t &)> &);
+  EXPORT void rm_raft_event_handler(uint64_t id);
 
   friend void inner::client_update_connection_status(client &c, bool status);
   friend void inner::client_update_async_result(client &c,
@@ -86,14 +98,16 @@ public:
                                                 const std::vector<uint8_t> &cmd,
                                                 solidarity::ERROR_CODE ec,
                                                 const std::string &err);
-  friend void inner::client_notify_update(client &c);
   friend void inner::client_notify_update(client &c,
-                                          const client_state_event_t &ev);
+                                          const state_machine_updated_event_t &ev);
+  friend void inner::client_notify_update(client &c, const client_state_event_t &ev);
+  friend void inner::client_notify_update(client &c, const raft_state_event_t &ev);
 
 private:
   std::shared_ptr<async_result_t> make_waiter();
-  void notify_on_update();
-  void notify_on_client_event(const client_state_event_t &);
+  void notify_on_update(const state_machine_updated_event_t &);
+  void notify_on_update(const client_state_event_t &);
+  void notify_on_update(const raft_state_event_t &);
 
 private:
   params_t _params;
@@ -107,9 +121,12 @@ private:
   std::atomic_uint64_t _next_query_id;
   std::unordered_map<uint64_t, std::shared_ptr<async_result_t>> _async_results;
 
-  std::unordered_map<uint64_t, std::function<void()>> _on_update_handlers;
+  std::unordered_map<uint64_t, std::function<void(const state_machine_updated_event_t &)>>
+      _on_update_handlers;
   std::unordered_map<uint64_t, std::function<void(const client_state_event_t &)>>
       _on_client_event_handlers;
+  std::unordered_map<uint64_t, std::function<void(const raft_state_event_t &)>>
+      _on_raft_event_handlers;
 
 protected:
   bool _connected;

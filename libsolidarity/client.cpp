@@ -1,10 +1,10 @@
+#include <condition_variable>
 #include <libsolidarity/client.h>
+#include <libsolidarity/dialler/dialler.h>
 #include <libsolidarity/protocol_version.h>
 #include <libsolidarity/queries.h>
-#include <libsolidarity/dialler/dialler.h>
 #include <libsolidarity/utils/strings.h>
 #include <libsolidarity/utils/utils.h>
-#include <condition_variable>
 
 using namespace solidarity;
 
@@ -33,8 +33,9 @@ public:
     throw solidarity::exception(err);
   }
 
-  void
-  set_result(const std::vector<uint8_t> &r, solidarity::ERROR_CODE ec, const std::string &err_) {
+  void set_result(const std::vector<uint8_t> &r,
+                  solidarity::ERROR_CODE ec,
+                  const std::string &err_) {
     answer = r;
     _ec = ec;
     err = err_;
@@ -63,10 +64,10 @@ void solidarity::inner::client_update_connection_status(client &c, bool status) 
 }
 
 void solidarity::inner::client_update_async_result(client &c,
-                                            uint64_t id,
-                                            const std::vector<uint8_t> &cmd,
-                                            ERROR_CODE ec,
-                                            const std::string &err) {
+                                                   uint64_t id,
+                                                   const std::vector<uint8_t> &cmd,
+                                                   ERROR_CODE ec,
+                                                   const std::string &err) {
   c._locker.lock();
   if (auto it = c._async_results.find(id); it == c._async_results.end()) {
     c._locker.unlock();
@@ -82,12 +83,17 @@ void solidarity::inner::client_update_async_result(client &c,
   }
 }
 
-void solidarity::inner::client_notify_update(client &c) {
-  c.notify_on_update();
+void solidarity::inner::client_notify_update(client &c,
+                                             const state_machine_updated_event_t &ev) {
+  c.notify_on_update(ev);
 }
 
 void solidarity::inner::client_notify_update(client &c, const client_state_event_t &ev) {
-  c.notify_on_client_event(ev);
+  c.notify_on_update(ev);
+}
+
+void solidarity::inner::client_notify_update(client &c, const raft_state_event_t &ev) {
+  c.notify_on_update(ev);
 }
 
 class client_connection final : public solidarity::dialler::abstract_dial {
@@ -128,7 +134,16 @@ public:
       break;
     }
     case QUERY_KIND::UPDATE: {
-      inner::client_notify_update(*_parent);
+      state_machine_updated_event_t sme;
+      inner::client_notify_update(*_parent, sme);
+      break;
+    }
+    case QUERY_KIND::RAFT_STATE_UPDATE: {
+      queries::clients::raft_state_updated_t rs(d);
+      raft_state_event_t rse;
+      rse.new_state = rs.new_state;
+      rse.old_state = rs.old_state;
+      inner::client_notify_update(*_parent, rse);
       break;
     }
     default:
@@ -248,7 +263,8 @@ std::vector<uint8_t> client::read(const std::vector<uint8_t> &cmd) {
   return waiter->result();
 }
 
-uint64_t client::add_update_handler(const std::function<void()> &f) {
+uint64_t client::add_update_handler(
+    const std::function<void(const state_machine_updated_event_t &)> &f) {
   std::lock_guard l(_locker);
   auto id = _next_query_id.fetch_add(1);
   _on_update_handlers[id] = f;
@@ -259,13 +275,6 @@ void client::rm_update_handler(uint64_t id) {
   std::lock_guard l(_locker);
   if (auto it = _on_update_handlers.find(id); it != _on_update_handlers.end()) {
     _on_update_handlers.erase(it);
-  }
-}
-
-void client::notify_on_update() {
-  std::lock_guard l(_locker);
-  for (auto &kv : _on_update_handlers) {
-    kv.second();
   }
 }
 
@@ -285,9 +294,38 @@ void client::rm_client_event_handler(uint64_t id) {
   }
 }
 
-void client::notify_on_client_event(const client_state_event_t &ev) {
+uint64_t
+client::add_raft_event_handler(const std::function<void(const raft_state_event_t &)> &f) {
+  std::lock_guard l(_locker);
+  auto id = _next_query_id.fetch_add(1);
+  _on_raft_event_handlers[id] = f;
+  return id;
+}
+
+void client::rm_raft_event_handler(uint64_t id) {
+  std::lock_guard l(_locker);
+  if (auto it = _on_raft_event_handlers.find(id); it != _on_raft_event_handlers.end()) {
+    _on_raft_event_handlers.erase(it);
+  }
+}
+
+void client::notify_on_update(const state_machine_updated_event_t &ev) {
+  std::lock_guard l(_locker);
+  for (auto &kv : _on_update_handlers) {
+    kv.second(ev);
+  }
+}
+
+void client::notify_on_update(const client_state_event_t &ev) {
   std::lock_guard l(_locker);
   for (auto &kv : _on_client_event_handlers) {
+    kv.second(ev);
+  }
+}
+
+void client::notify_on_update(const raft_state_event_t &ev) {
+  std::lock_guard l(_locker);
+  for (auto &kv : _on_raft_event_handlers) {
     kv.second(ev);
   }
 }

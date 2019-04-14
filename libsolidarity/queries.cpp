@@ -6,6 +6,7 @@
 
 #include <msgpack.hpp>
 
+using namespace solidarity;
 using namespace solidarity::queries;
 using namespace solidarity::queries::clients;
 using namespace solidarity::dialler;
@@ -31,8 +32,7 @@ message_ptr pack_to_message(solidarity::queries::QUERY_KIND kind, Args &&... arg
   (pk.pack(args), ...);
 
   auto needed_size = (message::size_t)buffer.size();
-  auto nd
-      = std::make_shared<message>(needed_size, (message::kind_t)kind);
+  auto nd = std::make_shared<message>(needed_size, (message::kind_t)kind);
 
   memcpy(nd->value(), buffer.data(), buffer.size());
   return nd;
@@ -41,8 +41,7 @@ message_ptr pack_to_message(solidarity::queries::QUERY_KIND kind, Args &&... arg
 } // namespace
 
 query_connect_t::query_connect_t(const message_ptr &msg) {
-  ENSURE(msg->get_header()->kind
-         == (message::kind_t)queries::QUERY_KIND::CONNECT);
+  ENSURE(msg->get_header()->kind == (message::kind_t)queries::QUERY_KIND::CONNECT);
   msgpack::unpacker pac = get_unpacker(msg);
   msgpack::object_handle oh;
 
@@ -76,8 +75,7 @@ message_ptr connection_error_t::to_message() const {
 }
 
 status_t::status_t(const message_ptr &mptr) {
-  ENSURE(mptr->get_header()->kind
-         == (message::kind_t)queries::QUERY_KIND::STATUS);
+  ENSURE(mptr->get_header()->kind == (message::kind_t)queries::QUERY_KIND::STATUS);
   msgpack::unpacker pac = get_unpacker(mptr);
   msgpack::object_handle oh;
 
@@ -181,8 +179,7 @@ std::vector<message_ptr> command_t::to_message() const {
 }
 
 client_connect_t::client_connect_t(const message_ptr &msg) {
-  ENSURE(msg->get_header()->kind
-         == (message::kind_t)queries::QUERY_KIND::CONNECT);
+  ENSURE(msg->get_header()->kind == (message::kind_t)queries::QUERY_KIND::CONNECT);
   msgpack::unpacker pac = get_unpacker(msg);
   msgpack::object_handle oh;
 
@@ -233,8 +230,7 @@ state_machine_updated_t::state_machine_updated_t() {
 }
 
 state_machine_updated_t::state_machine_updated_t(const message_ptr &msg) {
-  ENSURE(msg->get_header()->kind
-         == (message::kind_t)queries::QUERY_KIND::UPDATE);
+  ENSURE(msg->get_header()->kind == (message::kind_t)queries::QUERY_KIND::UPDATE);
   msgpack::unpacker pac = get_unpacker(msg);
   msgpack::object_handle oh;
 
@@ -244,4 +240,28 @@ state_machine_updated_t::state_machine_updated_t(const message_ptr &msg) {
 
 message_ptr state_machine_updated_t::to_message() const {
   return pack_to_message(queries::QUERY_KIND::UPDATE, f);
+}
+
+raft_state_updated_t::raft_state_updated_t(NODE_KIND f, NODE_KIND t) {
+  old_state = f;
+  new_state = t;
+}
+
+raft_state_updated_t::raft_state_updated_t(const message_ptr &msg) {
+  ENSURE(msg->get_header()->kind
+         == (message::kind_t)queries::QUERY_KIND::RAFT_STATE_UPDATE);
+  msgpack::unpacker pac = get_unpacker(msg);
+  msgpack::object_handle oh;
+
+  pac.next(oh);
+  old_state = static_cast<NODE_KIND>(oh.get().as<uint8_t>());
+
+  pac.next(oh);
+  new_state = static_cast<NODE_KIND>(oh.get().as<uint8_t>());
+}
+
+message_ptr raft_state_updated_t::to_message() const {
+  return pack_to_message(queries::QUERY_KIND::RAFT_STATE_UPDATE,
+                         static_cast<uint8_t>(old_state),
+                         static_cast<uint8_t>(new_state));
 }

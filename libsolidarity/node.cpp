@@ -130,7 +130,7 @@ public:
   void apply_cmd(const command &cmd) override {
     _parent->notify_state_machine_update();
     _target->apply_cmd(cmd);
-  }  
+  }
 
   void reset() override {
     _parent->notify_state_machine_update();
@@ -209,6 +209,9 @@ void node::start() {
   _timer->async_wait([this](auto) { this->heartbeat_timer(); });
   _listener->start();
   _listener->wait_starting();
+
+  _leader = _raft->get_leader();
+  _kind = _raft->state().node_kind;
 }
 
 void node::stop() {
@@ -259,6 +262,15 @@ void node::notify_state_machine_update() {
   }
 }
 
+void node::notify_raft_state_update(NODE_KIND old_state, NODE_KIND new_state) {
+  _logger->dbg("notify_raft_state_update(): ", old_state, new_state);
+  std::shared_lock l(_locker);
+  for (auto v : _clients) {
+    auto m = clients::raft_state_updated_t(old_state, new_state).to_message();
+    this->_listener->send_to(v, m);
+  }
+}
+
 abstract_state_machine *node::state_machine() {
   return dynamic_cast<consumer_wrapper *>(_state_machine)->_target;
 }
@@ -269,6 +281,15 @@ std::shared_ptr<raft> node::get_raft() {
 
 void node::heartbeat_timer() {
   _raft->heartbeat();
+  auto leader = _raft->get_leader();
+  auto kind = _raft->state().node_kind;
+
+  if (leader != _leader || kind != _kind) {
+    notify_raft_state_update(_kind, kind);
+    _leader = leader;
+    _kind = kind;
+  }
+
   if (!_stoped) {
     _timer->expires_at(_timer->expires_at()
                        + boost::posix_time::milliseconds(_timer_period));
