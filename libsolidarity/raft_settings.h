@@ -4,11 +4,11 @@
 #include <chrono>
 #include <string>
 
-namespace utils {
+namespace solidarity::utils {
 namespace logging {
 class abstract_logger;
 }
-} // namespace utils
+} // namespace solidarity::utils
 
 namespace solidarity {
 class raft_settings {

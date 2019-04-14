@@ -5,7 +5,7 @@
 
 #include "common.h"
 
-utils::logging::abstract_logger_ptr logger_ptr = nullptr;
+solidarity::utils::logging::abstract_logger_ptr logger_ptr = nullptr;
 
 size_t thread_count = 1;
 unsigned short port = 10000;
@@ -38,9 +38,9 @@ int main(int argc, char **argv) {
     }
 
     if (result["verbose"].as<bool>()) {
-      logger_ptr = std::make_shared<utils::logging::console_logger>();
+      logger_ptr = std::make_shared<solidarity::utils::logging::console_logger>();
     } else {
-      logger_ptr = std::make_shared<utils::logging::quiet_logger>();
+      logger_ptr = std::make_shared<solidarity::utils::logging::quiet_logger>();
     }
 
     if (result.count("cluster")) {
@@ -66,11 +66,11 @@ int main(int argc, char **argv) {
   params.client_port = client_port++;
   params.thread_count = 1;
   params.cluster = cluster;
-  params.name = utils::strings::args_to_string("node_", port);
+  params.name = solidarity::utils::strings::args_to_string("node_", port);
 
-  auto log_prefix = utils::strings::args_to_string(params.name, "> ");
-  auto node_logger
-      = std::make_shared<utils::logging::prefix_logger>(logger_ptr, log_prefix);
+  auto log_prefix = solidarity::utils::strings::args_to_string(params.name, "> ");
+  auto node_logger = std::make_shared<solidarity::utils::logging::prefix_logger>(
+      logger_ptr, log_prefix);
 
   auto state_machine = std::make_shared<distr_inc_sm>();
   auto n = std::make_shared<solidarity::node>(node_logger, params, state_machine.get());

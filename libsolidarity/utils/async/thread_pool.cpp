@@ -2,9 +2,9 @@
 #include <libsolidarity/utils/logger.h>
 #include <algorithm>
 
-using namespace utils;
-using namespace utils::logging;
-using namespace utils::async;
+using namespace solidarity::utils;
+using namespace solidarity::utils::logging;
+using namespace solidarity::utils::async;
 
 threads_pool::threads_pool(const params_t &p)
     : _params(p) {

@@ -2,7 +2,7 @@
 #include <libsolidarity/utils/exception.h>
 #include <libsolidarity/utils/utils.h>
 
-using namespace utils::async;
+using namespace solidarity::utils::async;
 
 thread_manager::thread_manager(const thread_manager::params_t &params)
     : _params(params) {

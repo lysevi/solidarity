@@ -6,7 +6,7 @@
 #include <memory>
 #include <utility>
 
-namespace utils::logging {
+namespace solidarity::utils::logging {
 
 enum class MESSAGE_KIND { message, info, warn, fatal };
 
@@ -119,4 +119,4 @@ template <typename... T>
 void logger_fatal(T &&... args) noexcept {
   utils::logging::logger_manager::instance()->get_logger()->fatal(args...);
 }
-} // namespace utils::logging
+} // namespace solidarity::utils::logging

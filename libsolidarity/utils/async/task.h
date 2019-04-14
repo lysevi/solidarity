@@ -5,7 +5,7 @@
 
 #include <condition_variable>
 
-namespace utils::async {
+namespace solidarity::utils::async {
 using thread_kind_t = uint16_t;
 
 enum class TASK_PRIORITY : uint8_t {
@@ -97,4 +97,4 @@ using task_wrapper_ptr = std::shared_ptr<task_wrapper>;
 #define wrap_task_with_priority(t, pr)                                                   \
   std::make_shared<task_wrapper>(                                                        \
       t, std::string(__FUNCTION__), std::string(__FILE__), __LINE__, pr)
-} // namespace utils::async
+} // namespace solidarity::utils::async

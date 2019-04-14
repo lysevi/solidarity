@@ -24,7 +24,7 @@ std::string to_string(const solidarity::ENTRIES_KIND k) {
 }
 
 std::string to_string(const solidarity::append_entries &e) {
-  return utils::strings::args_to_string("{cmd:",
+  return solidarity::utils::strings::args_to_string("{cmd:",
                                         e.cmd.data.size(),
                                         " kind:",
                                         e.kind,

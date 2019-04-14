@@ -1,7 +1,8 @@
 #pragma once
 
-#include <libsolidarity/utils/exception.h>
 #include <atomic>
+#include <ctime>
+#include <libsolidarity/utils/exception.h>
 
 #define NOT_IMPLEMENTED THROW_EXCEPTION("Not implemented");
 
@@ -18,9 +19,7 @@
 
 #define UNUSED(x) (void)(x)
 
-
-
-namespace utils {
+namespace solidarity::utils {
 
 inline void sleep_mls(long long a) {
   std::this_thread::sleep_for(std::chrono::milliseconds(a));
@@ -35,11 +34,13 @@ protected:
   non_copy() = default;
 };
 
-struct elapsed_time {
-  elapsed_time() noexcept { start_time = clock(); }
+//struct elapsed_time {
+//  elapsed_time() noexcept { start_time = std::clock(); }
+//
+//  double elapsed() noexcept {
+//    return ((double)std::clock() - start_time) / CLOCKS_PER_SEC;
+//  }
+//  std::clock_t start_time;
+//};
 
-  double elapsed() noexcept { return ((double)clock() - start_time) / CLOCKS_PER_SEC; }
-  clock_t start_time;
-};
-
-} // namespace utils
+} // namespace solidarity::utils

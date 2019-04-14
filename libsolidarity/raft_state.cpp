@@ -5,7 +5,7 @@
 #include <sstream>
 
 using namespace solidarity;
-using namespace utils::logging;
+using namespace solidarity::utils::logging;
 
 std::string solidarity::to_string(const raft_state_t &s) {
   std::stringstream ss;

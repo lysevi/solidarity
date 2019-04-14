@@ -1,9 +1,9 @@
 #include <libsolidarity/utils/async/task.h>
 #include <libsolidarity/utils/logger.h>
 
-using namespace utils;
-using namespace utils::logging;
-using namespace utils::async;
+using namespace solidarity::utils;
+using namespace solidarity::utils::logging;
+using namespace solidarity::utils::async;
 
 task_wrapper::task_wrapper(task &t,
                            const std::string &_function,

@@ -49,9 +49,10 @@ struct mock_cluster_client : solidarity::abstract_cluster_client {
 
 TEST_CASE("mesh_connection", "[network]") {
   size_t cluster_size = 0;
-  auto tst_log_prefix = utils::strings::args_to_string("test?> ");
-  auto tst_logger = std::make_shared<utils::logging::prefix_logger>(
-      utils::logging::logger_manager::instance()->get_shared_logger(), tst_log_prefix);
+  auto tst_log_prefix = solidarity::utils::strings::args_to_string("test?> ");
+  auto tst_logger = std::make_shared<solidarity::utils::logging::prefix_logger>(
+      solidarity::utils::logging::logger_manager::instance()->get_shared_logger(),
+      tst_log_prefix);
   size_t data_size = 1;
 
   SECTION("mesh_connection.2") {
@@ -107,11 +108,12 @@ TEST_CASE("mesh_connection", "[network]") {
         std::back_inserter(params.addrs),
         [](const auto prt) { return solidarity::dialler::dial::params_t("localhost", prt); });
 
-    auto log_prefix = utils::strings::args_to_string("localhost_", p, ": ");
-    auto logger = std::make_shared<utils::logging::prefix_logger>(
-        utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
+    auto log_prefix = solidarity::utils::strings::args_to_string("localhost_", p, ": ");
+    auto logger = std::make_shared<solidarity::utils::logging::prefix_logger>(
+        solidarity::utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
 
-    auto addr = solidarity::node_name().set_name(utils::strings::args_to_string("node_", p));
+    auto addr = solidarity::node_name().set_name(
+        solidarity::utils::strings::args_to_string("node_", p));
     auto clnt = std::make_shared<mock_cluster_client>();
     auto c = std::make_shared<solidarity::mesh_connection>(addr, clnt, logger, params);
     connections.push_back(c);

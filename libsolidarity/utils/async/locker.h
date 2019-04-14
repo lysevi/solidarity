@@ -4,7 +4,7 @@
 #include <mutex>
 #include <thread>
 
-namespace utils::async {
+namespace solidarity::utils::async {
 template <size_t LOCKER_MAX_TRY>
 class spin_lock {
   std::atomic_flag locked;
@@ -32,4 +32,4 @@ public:
 
 using locker = spin_lock<10>;
 using locker_ptr = std::shared_ptr<utils::async::locker>;
-} // namespace utils::async
+} // namespace solidarity::utils::async

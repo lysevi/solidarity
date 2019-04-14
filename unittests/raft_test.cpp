@@ -142,7 +142,7 @@ TEST_CASE("raft", "[raft]") {
           terms.insert(c->state().term);
         }
         if (terms.size() == 1) {
-          utils::logging::logger_fatal("raft error!!!");
+          solidarity::utils::logging::logger_fatal("raft error!!!");
           cluster->print_cluster();
           EXPECT_FALSE(true);
           return;
@@ -171,7 +171,7 @@ TEST_CASE("raft", "[raft]") {
     // kill the king...
     if (!append_entries) {
       cluster->erase_if(is_leader_pred);
-      utils::logging::logger_info("cluster size - ", cluster->size());
+      solidarity::utils::logging::logger_info("cluster size - ", cluster->size());
     } else {
       const size_t attempts_to_add = 500;
       // TODO implement this method add_command in mock_cluster and use it in all testes
@@ -299,7 +299,7 @@ TEST_CASE("raft.replication", "[raft]") {
     if (size_t(replicated_on) == consumers.size()) {
       break;
     }
-    utils::logging::logger_info("[test] replicated_on: ", replicated_on);
+    solidarity::utils::logging::logger_info("[test] replicated_on: ", replicated_on);
     cluster->heartbeat();
     cluster->print_cluster();
   }
@@ -309,9 +309,9 @@ TEST_CASE("raft.replication", "[raft]") {
 }
 
 TEST_CASE("raft.log_compaction", "[raft]") {
-  auto tst_log_prefix = utils::strings::args_to_string("test?> ");
-  auto tst_logger = std::make_shared<utils::logging::prefix_logger>(
-      utils::logging::logger_manager::instance()->get_shared_logger(), tst_log_prefix);
+  auto tst_log_prefix = solidarity::utils::strings::args_to_string("test?> ");
+  auto tst_logger = std::make_shared<solidarity::utils::logging::prefix_logger>(
+      solidarity::utils::logging::logger_manager::instance()->get_shared_logger(), tst_log_prefix);
 
   using solidarity::raft_settings;
   auto cluster = std::make_shared<mock_cluster>();

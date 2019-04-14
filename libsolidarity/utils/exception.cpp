@@ -2,7 +2,7 @@
 #include <boost/stacktrace.hpp>
 #include <sstream>
 
-using namespace utils::exceptions;
+using namespace solidarity::utils::exceptions;
 
 exception_t::exception_t() {
   init_msg("");

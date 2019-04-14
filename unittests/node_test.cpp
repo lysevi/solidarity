@@ -13,9 +13,9 @@
 
 TEST_CASE("node", "[network]") {
   size_t cluster_size = 0;
-  auto tst_log_prefix = utils::strings::args_to_string("test?> ");
-  auto tst_logger = std::make_shared<utils::logging::prefix_logger>(
-      utils::logging::logger_manager::instance()->get_shared_logger(), tst_log_prefix);
+  auto tst_log_prefix = solidarity::utils::strings::args_to_string("test?> ");
+  auto tst_logger = std::make_shared<solidarity::utils::logging::prefix_logger>(
+      solidarity::utils::logging::logger_manager::instance()->get_shared_logger(), tst_log_prefix);
 
   SECTION("node.2") { cluster_size = 2; }
   SECTION("node.3") { cluster_size = 3; }
@@ -46,18 +46,18 @@ TEST_CASE("node", "[network]") {
         out_ports.begin(),
         out_ports.end(),
         std::back_inserter(out_addrs),
-        [](const auto prt) { return utils::strings::args_to_string("localhost:", prt); });
+        [](const auto prt) { return solidarity::utils::strings::args_to_string("localhost:", prt); });
 
     solidarity::node::params_t params;
     params.port = p;
     params.client_port = client_port++;
     params.thread_count = 1;
     params.cluster = out_addrs;
-    params.name = utils::strings::args_to_string("node_", p);
+    params.name = solidarity::utils::strings::args_to_string("node_", p);
     std::cerr << params.name << " starting..." << std::endl;
-    auto log_prefix = utils::strings::args_to_string(params.name, "> ");
-    auto node_logger = std::make_shared<utils::logging::prefix_logger>(
-        utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
+    auto log_prefix = solidarity::utils::strings::args_to_string(params.name, "> ");
+    auto node_logger = std::make_shared<solidarity::utils::logging::prefix_logger>(
+        solidarity::utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
 
     auto state_machine = std::make_shared<mock_state_machine>();
     auto n = std::make_shared<solidarity::node>(node_logger, params, state_machine.get());
@@ -65,7 +65,7 @@ TEST_CASE("node", "[network]") {
     n->start();
 
     solidarity::client::params_t cpar(
-        utils::strings::args_to_string("client_", params.name));
+        solidarity::utils::strings::args_to_string("client_", params.name));
     cpar.threads_count = 1;
     cpar.host = "localhost";
     cpar.port = params.client_port;

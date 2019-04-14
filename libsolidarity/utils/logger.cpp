@@ -2,11 +2,11 @@
 #include <libsolidarity/utils/utils.h>
 #include <iostream>
 
-using namespace utils::logging;
-using namespace utils::async;
+using namespace solidarity::utils::logging;
+using namespace solidarity::utils::async;
 
 std::shared_ptr<logger_manager> logger_manager::_instance = nullptr;
-utils::async::locker logger_manager::_locker;
+solidarity::utils::async::locker logger_manager::_locker;
 
 VERBOSE_KIND logger_manager::verbose = VERBOSE_KIND::debug;
 

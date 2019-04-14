@@ -1,6 +1,6 @@
 #include <libsolidarity/utils/timer.h>
 #include <libsolidarity/utils/utils.h>
-using namespace utils::timer;
+using namespace solidarity::utils::timer;
 
 void timer_t::start() {
   if (!_started) {

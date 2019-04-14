@@ -1,6 +1,6 @@
 #pragma once
 
-namespace utils {
+namespace solidarity::utils {
 /// Generate get_PROPERTY, set_PROPERTY, TYPE _PROPERTY
 #define PROPERTY(TYPE, NAME)                                                             \
                                                                                          \
@@ -13,4 +13,4 @@ public:                                                                         
     _##NAME = __##NAME;                                                                  \
     return *this;                                                                        \
   }
-} // namespace utils
+} // namespace solidarity::utils

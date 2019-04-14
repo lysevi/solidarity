@@ -6,7 +6,7 @@
 #include <shared_mutex>
 #include <unordered_map>
 
-namespace utils::async {
+namespace solidarity::utils::async {
 class thread_manager final : public utils::non_copy {
 
 public:
@@ -40,4 +40,4 @@ private:
   std::shared_mutex _locker;
   std::unordered_map<thread_kind_t, std::shared_ptr<threads_pool>> _pools;
 };
-} // namespace utils::async
+} // namespace solidarity::utils::async

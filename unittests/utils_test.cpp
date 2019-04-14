@@ -15,7 +15,7 @@ TEST_CASE("utils.split") {
   std::iota(tst_a.begin(), tst_a.end(), 1);
 
   std::string str = "1 2 3 4 5 6 7 8";
-  auto splitted_s = utils::strings::tokens(str);
+  auto splitted_s = solidarity::utils::strings::tokens(str);
 
   std::vector<int> splitted(splitted_s.size());
   std::transform(splitted_s.begin(),
@@ -32,18 +32,18 @@ TEST_CASE("utils.split") {
 
 TEST_CASE("utils.to_upper") {
   auto s = "lower string";
-  auto res = utils::strings::to_upper(s);
+  auto res = solidarity::utils::strings::to_upper(s);
   EXPECT_EQ(res, "LOWER STRING");
 }
 
 TEST_CASE("utils.to_lower") {
   auto s = "UPPER STRING";
-  auto res = utils::strings::to_lower(s);
+  auto res = solidarity::utils::strings::to_lower(s);
   EXPECT_EQ(res, "upper string");
 }
 
 TEST_CASE("utils.threads_pool") {
-  using namespace utils::async;
+  using namespace solidarity::utils::async;
 
   const thread_kind_t tk = 1;
   {
@@ -98,7 +98,7 @@ TEST_CASE("utils.threads_pool") {
 }
 
 TEST_CASE("utils.threads_manager") {
-  using namespace utils::async;
+  using namespace solidarity::utils::async;
 
   const thread_kind_t tk1 = 1;
   const thread_kind_t tk2 = 2;
@@ -128,7 +128,7 @@ TEST_CASE("utils.threads_manager") {
     task at1 = [=](const thread_info &ti) {
       if (tk1 != ti.kind) {
         INFO("(tk != ti.kind)")
-        utils::sleep_mls(400);
+        solidarity::utils::sleep_mls(400);
         throw MAKE_EXCEPTION("(tk1 != ti.kind)");
       }
       return CONTINUATION_STRATEGY::SINGLE;
@@ -136,14 +136,14 @@ TEST_CASE("utils.threads_manager") {
     task at2 = [=](const thread_info &ti) {
       if (tk2 != ti.kind) {
         INFO("(tk != ti.kind)")
-        utils::sleep_mls(400);
+        solidarity::utils::sleep_mls(400);
         throw MAKE_EXCEPTION("(tk2 != ti.kind)");
       }
       return CONTINUATION_STRATEGY::SINGLE;
     };
-    t_manager.post(
-        tk1,
-        wrap_task_with_priority(infinite_worker, utils::async::TASK_PRIORITY::WORKER));
+    t_manager.post(tk1,
+                   wrap_task_with_priority(
+                       infinite_worker, solidarity::utils::async::TASK_PRIORITY::WORKER));
     auto at_while_res = t_manager.post(tk1, wrap_task(at_while));
     for (size_t i = 0; i < tasks_count; ++i) {
       t_manager.post(tk1, wrap_task(at1));
@@ -172,46 +172,46 @@ TEST_CASE("utils.property") {
 TEST_CASE("utils.timer(cyclic)") {
   volatile size_t calls = 0;
   auto f = [&]() { calls++; };
-  utils::timer::timer_t t(std::chrono::milliseconds(100), f);
+  solidarity::utils::timer::timer_t t(std::chrono::milliseconds(100), f);
   t.start();
 
   while (calls < 3) {
-    utils::sleep_mls(100);
+    solidarity::utils::sleep_mls(100);
   }
   t.stop();
   calls = 0;
   t.start();
   while (calls < 2) {
-    utils::sleep_mls(100);
+    solidarity::utils::sleep_mls(100);
   }
 }
 
 TEST_CASE("utils.timer(single)") {
   volatile size_t calls = 0;
   auto f = [&]() { calls++; };
-  utils::timer::timer_t t(std::chrono::milliseconds(100), f, false);
+  solidarity::utils::timer::timer_t t(std::chrono::milliseconds(100), f, false);
   t.start();
 
   while (calls == 0) {
-    utils::sleep_mls(100);
+    solidarity::utils::sleep_mls(100);
   }
   EXPECT_FALSE(t.is_started());
   calls = 0;
 
   t.restart();
   while (calls == 0) {
-    utils::sleep_mls(100);
+    solidarity::utils::sleep_mls(100);
   }
 }
 
 void f_throw() {
-  throw utils::exceptions::exception_t("error");
+  throw solidarity::utils::exceptions::exception_t("error");
 }
 
 TEST_CASE("utils.exception") {
   try {
     f_throw();
-  } catch (utils::exceptions::exception_t &e) {
-    utils::logging::logger_info(e.what());
+  } catch (solidarity::utils::exceptions::exception_t &e) {
+    solidarity::utils::logging::logger_info(e.what());
   }
 }

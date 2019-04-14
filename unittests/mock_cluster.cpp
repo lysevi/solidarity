@@ -64,7 +64,7 @@ void worker_t::worker() {
     }
 
   } catch (std::exception &ex) {
-    utils::logging::logger_fatal(
+    solidarity::utils::logging::logger_fatal(
         "mock_cluster: worker ", _target->self_addr(), " error:", ex.what());
     std::exit(1);
   }
@@ -74,7 +74,7 @@ void worker_t::worker() {
 mock_cluster::mock_cluster() {}
 
 mock_cluster::~mock_cluster() {
-  utils::logging::logger_info("~ mock_cluster ");
+  solidarity::utils::logging::logger_info("~ mock_cluster ");
   stop_workers();
 }
 
@@ -162,13 +162,13 @@ void mock_cluster::heartbeat() {
 }
 
 void mock_cluster::print_cluster() {
-  utils::logging::logger_info("----------------------------");
+  solidarity::utils::logging::logger_info("----------------------------");
   /*std::cout << "----------------------------\n";*/
   apply([](auto n) {
-    /*std::cout << utils::strings::args_to_string("?: ", n->self_addr(), "{", n->kind(),
+    /*std::cout << solidarity::utils::strings::args_to_string("?: ", n->self_addr(), "{", n->kind(),
                                                 ":", n->term(), "}", " => ",
                                                 n->get_leader(), "\n");*/
-    utils::logging::logger_info("?: ",
+    solidarity::utils::logging::logger_info("?: ",
                                 n->self_addr(),
                                 "{",
                                 n->kind(),
@@ -241,7 +241,7 @@ void mock_cluster::wait_leader_eletion(size_t max_leaders) {
 bool mock_cluster::is_leader_eletion_complete(size_t max_leaders) {
   const auto leaders = by_filter(is_leader_pred);
   if (leaders.size() > max_leaders) {
-    utils::logging::logger_fatal("raft error!!!");
+    solidarity::utils::logging::logger_fatal("raft error!!!");
     print_cluster();
     throw std::logic_error("raft error");
   }

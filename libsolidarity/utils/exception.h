@@ -5,15 +5,17 @@
 #include <stdexcept>
 #include <string>
 
-#define CODE_POS (utils::exceptions::codepos(__FILE__, __LINE__, __FUNCTION__))
+#define CODE_POS                                                                         \
+  (solidarity::utils::exceptions::codepos(__FILE__, __LINE__, __FUNCTION__))
 
-#define MAKE_EXCEPTION(msg) utils::exceptions::exception_t::create_and_log(CODE_POS, msg)
+#define MAKE_EXCEPTION(msg)                                                              \
+  solidarity::utils::exceptions::exception_t::create_and_log(CODE_POS, msg)
 // macros, because need CODE_POS
 
 #define THROW_EXCEPTION(...)                                                             \
-  throw utils::exceptions::exception_t::create_and_log(CODE_POS, __VA_ARGS__)
+  throw solidarity::utils::exceptions::exception_t::create_and_log(CODE_POS, __VA_ARGS__)
 
-namespace utils::exceptions {
+namespace solidarity::utils::exceptions {
 
 struct codepos {
   const char *_file;
@@ -59,4 +61,4 @@ protected:
 private:
   std::string _msg;
 };
-} // namespace utils::exceptions
+} // namespace solidarity::utils::exceptions

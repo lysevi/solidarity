@@ -7,7 +7,7 @@
 #include <deque>
 #include <shared_mutex>
 
-namespace utils::async {
+namespace solidarity::utils::async {
 
 using task_queue_t = std::deque<task_wrapper_ptr>;
 
@@ -51,4 +51,4 @@ protected:
   bool _is_stoped;                 // true - already stopped.
   std::atomic_size_t _task_runned; // count of runned tasks.
 };
-} // namespace utils::async
+} // namespace solidarity::utils::async

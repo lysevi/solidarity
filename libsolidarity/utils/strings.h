@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace utils::strings {
+namespace solidarity::utils::strings {
 
 /// split string by space.
 EXPORT std::vector<std::string> tokens(const std::string &str);
@@ -49,4 +49,4 @@ std::string args_to_string(Args &&... args) noexcept {
   }
   return result;
 }
-} // namespace utils::strings
+} // namespace solidarity::utils::strings
