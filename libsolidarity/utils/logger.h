@@ -1,8 +1,10 @@
 #pragma once
 
+#include <libsolidarity/exports.h>
 #include <libsolidarity/utils/async/locker.h>
 #include <libsolidarity/utils/strings.h>
-#include <libsolidarity/exports.h>
+
+#include <fstream>
 #include <memory>
 #include <utility>
 
@@ -42,7 +44,6 @@ public:
   }
 };
 
-
 using abstract_logger_ptr = std::shared_ptr<abstract_logger>;
 using abstract_logger_uptr = std::unique_ptr<abstract_logger>;
 
@@ -50,9 +51,7 @@ class prefix_logger : public abstract_logger {
 public:
   prefix_logger(abstract_logger_ptr target, const std::string &prefix)
       : _prefix(prefix)
-      , _shared_target(target) {
-    
-  }
+      , _shared_target(target) {}
 
   void message(MESSAGE_KIND kind, const std::string &msg) noexcept {
     _shared_target->message(kind, utils::strings::args_to_string(_prefix, msg));
@@ -63,7 +62,6 @@ private:
   abstract_logger_ptr _shared_target;
 };
 
-
 class console_logger final : public abstract_logger {
 public:
   EXPORT void message(MESSAGE_KIND kind, const std::string &msg) noexcept override;
@@ -72,6 +70,17 @@ public:
 class quiet_logger final : public abstract_logger {
 public:
   EXPORT void message(MESSAGE_KIND kind, const std::string &msg) noexcept override;
+};
+
+class file_logger final : public abstract_logger {
+public:
+  EXPORT file_logger(std::string fname, bool _verbose = false);
+  EXPORT void message(MESSAGE_KIND kind, const std::string &msg) noexcept override;
+
+private:
+  bool _verbose;
+  std::unique_ptr<std::ofstream> _output;
+  std::mutex _locker;
 };
 
 enum class VERBOSE_KIND { verbose, debug, quiet };

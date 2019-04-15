@@ -1,6 +1,7 @@
+#include <fstream>
+#include <iostream>
 #include <libsolidarity/utils/logger.h>
 #include <libsolidarity/utils/utils.h>
-#include <iostream>
 
 using namespace solidarity::utils::logging;
 using namespace solidarity::utils::async;
@@ -71,4 +72,47 @@ void console_logger::message(MESSAGE_KIND kind, const std::string &msg) noexcept
 void quiet_logger::message(MESSAGE_KIND kind, const std::string &msg) noexcept {
   UNUSED(kind);
   UNUSED(msg);
+}
+
+file_logger::file_logger(std::string fname, bool verbose) {
+  _verbose = verbose;
+
+  std::stringstream fname_ss;
+  fname_ss << fname;
+  fname_ss << ".log";
+
+  auto logname = fname_ss.str();
+  if (verbose) {
+    std::cout << "See output in " << logname << std::endl;
+  }
+  _output = std::make_unique<std::ofstream>(logname, std::ofstream::app);
+  (*_output) << "Start programm" << std::endl;
+}
+
+void file_logger::message(MESSAGE_KIND kind, const std::string &msg) noexcept {
+  std::lock_guard lg(_locker);
+
+  std::stringstream ss;
+  switch (kind) {
+  case solidarity::utils::logging::MESSAGE_KIND::fatal:
+    ss << "[err] " << msg << std::endl;
+    break;
+  case solidarity::utils::logging::MESSAGE_KIND::info:
+    ss << "[inf] " << msg << std::endl;
+    break;
+  case solidarity::utils::logging::MESSAGE_KIND::warn:
+    ss << "[wrn] " << msg << std::endl;
+    break;
+  case solidarity::utils::logging::MESSAGE_KIND::message:
+    ss << "[dbg] " << msg << std::endl;
+    break;
+  }
+
+  (*_output) << ss.str();
+  _output->flush();
+  _output->flush();
+
+  if (_verbose || kind == solidarity::utils::logging::MESSAGE_KIND::fatal) {
+    std::cerr << ss.str();
+  }
 }
