@@ -1,8 +1,9 @@
+#include "common.h"
 #include <cxxopts.hpp>
 #include <iostream>
 #include <libsolidarity/client.h>
-
-#include "common.h"
+#include <libsolidarity/utils/strings.h>
+#include <libsolidarity/utils/utils.h>
 
 size_t thread_count = 1;
 unsigned short port = 11000;
@@ -44,7 +45,41 @@ int main(int argc, char **argv) {
   auto c = std::make_shared<solidarity::client>(cpar);
   c->connect();
 
+  // TODO add method 'whait_connection'
   while (!c->is_connected()) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+
+  uint64_t i = 0;
+  while (true) {
+
+    std::cout << "write i:" << i << std::endl;
+    std::mutex locker;
+    std::unique_lock ulock(locker);
+    bool is_on_update_received = false;
+    std::condition_variable cond;
+
+    auto uh_id = c->add_update_handler([&is_on_update_received, &cond](auto) {
+      is_on_update_received = true;
+      cond.notify_all();
+    });
+
+    solidarity::utils::elapsed_time el;
+
+    auto res = c->send(common_inner::int2cmd(i).data);
+    std::cout << solidarity::utils::strings::args_to_string("res: ", res) << std::endl;
+
+    while (true) {
+      cond.wait(ulock, [&is_on_update_received]() { return is_on_update_received; });
+      if (is_on_update_received) {
+        break;
+      }
+    }
+    std::cout << "elapsed: " << el.elapsed() << std::endl;
+
+    c->rm_update_handler(uh_id);
+    
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    ++i;
   }
 }

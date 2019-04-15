@@ -5,12 +5,15 @@
 
 #include "common.h"
 
+using solidarity::utils::strings::args_to_string;
+
 solidarity::utils::logging::abstract_logger_ptr logger_ptr = nullptr;
 
 size_t thread_count = 1;
 unsigned short port = 10000;
 unsigned short client_port = 11000;
 std::vector<std::string> cluster;
+bool verbose = false;
 
 int main(int argc, char **argv) {
   cxxopts::Options options("Distributed increment", "Example distributed increment");
@@ -38,15 +41,19 @@ int main(int argc, char **argv) {
     }
 
     if (result["verbose"].as<bool>()) {
-      logger_ptr = std::make_shared<solidarity::utils::logging::console_logger>();
+      verbose = true;
+
     } else {
-      logger_ptr = std::make_shared<solidarity::utils::logging::quiet_logger>();
+      verbose = false;
     }
 
     if (result.count("cluster")) {
       auto &v = result["cluster"].as<std::vector<std::string>>();
       cluster = v;
     }
+
+    logger_ptr = std::make_shared<solidarity::utils::logging::file_logger>(
+        args_to_string("server_inc_", port), verbose);
   } catch (cxxopts::OptionException &ex) {
     logger_ptr->fatal(ex.what());
   }
@@ -66,9 +73,9 @@ int main(int argc, char **argv) {
   params.client_port = client_port++;
   params.thread_count = 1;
   params.cluster = cluster;
-  params.name = solidarity::utils::strings::args_to_string("node_", port);
+  params.name = args_to_string("node_", port);
 
-  auto log_prefix = solidarity::utils::strings::args_to_string(params.name, "> ");
+  auto log_prefix = args_to_string(params.name, "> ");
   auto node_logger = std::make_shared<solidarity::utils::logging::prefix_logger>(
       logger_ptr, log_prefix);
 

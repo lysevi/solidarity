@@ -1,47 +1,72 @@
 #pragma once
+#include <iostream>
 #include <libsolidarity/abstract_state_machine.h>
 #include <shared_mutex>
 
+namespace common_inner {
+union converted {
+  uint64_t value;
+  unsigned char values[8];
+};
+
+uint64_t cmd2int(const solidarity::command &cmd) {
+  if (cmd.data.size() < sizeof(uint64_t)) {
+    throw std::logic_error("cmd.data.size() < sizeof(uint64_t)");
+  }
+  converted c;
+  for (size_t i = 0; i < sizeof(uint64_t); ++i) {
+    c.values[i] = cmd.data[i];
+  }
+  return c.value;
+}
+
+solidarity::command int2cmd(const uint64_t v) {
+  converted c;
+  c.value = v;
+  solidarity::command result;
+  result.data.resize(sizeof(uint64_t));
+
+  for (size_t i = 0; i < sizeof(uint64_t); ++i) {
+    result.data[i] = c.values[i];
+  }
+  return result;
+}
+} // namespace common_inner
+
 class distr_inc_sm final : public solidarity::abstract_state_machine {
 public:
-  distr_inc_sm(bool can_apply = true)
-      : _can_apply(can_apply) {}
+  distr_inc_sm()
+      : counter(0) {}
 
   void apply_cmd(const solidarity::command &cmd) override {
     std::lock_guard l(_locker);
-    last_cmd = cmd;
+    counter = common_inner::cmd2int(cmd);
+    std::cout << "add counter: " << counter << std::endl;
   }
+
   void reset() override {
     std::lock_guard l(_locker);
-    last_cmd.data.clear();
+    counter = 0;
+    std::cout << "reset counter: " << counter << std::endl;
   }
 
   solidarity::command snapshot() override {
     std::shared_lock l(_locker);
-    return last_cmd;
+    return common_inner::int2cmd(counter);
   }
 
   void install_snapshot(const solidarity::command &cmd) override {
     std::lock_guard l(_locker);
-    last_cmd = cmd;
+    counter = common_inner::cmd2int(cmd);
+    std::cout << "install_snapshot counter: " << counter << std::endl;
   }
 
-  solidarity::command read(const solidarity::command &cmd) override {
-    std::shared_lock l(_locker);
-    if (last_cmd.data.empty()) {
-      return cmd;
-    }
-
-    solidarity::command result = last_cmd;
-    for (size_t i = 0; i < result.data.size(); ++i) {
-      result.data[i] += cmd.data[0];
-    }
-    return result;
+  solidarity::command read(const solidarity::command & /*cmd*/) override {
+    return snapshot();
   }
 
-  bool can_apply(const solidarity::command &) override { return _can_apply; }
+  bool can_apply(const solidarity::command &) override { return true; }
 
   std::shared_mutex _locker;
-  solidarity::command last_cmd;
-  bool _can_apply;
+  uint64_t counter;
 };
