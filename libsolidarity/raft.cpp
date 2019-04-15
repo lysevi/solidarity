@@ -38,9 +38,9 @@ raft::raft(const raft_settings &ns,
 
   _self_addr.set_name(_settings.name());
 
-  _state.start_time = clock_t::now().time_since_epoch().count();
+  _state.start_time = high_resolution_clock_t::now().time_since_epoch().count();
   update_next_heartbeat_interval();
-  _state.last_heartbeat_time = clock_t::now();
+  _state.last_heartbeat_time = high_resolution_clock_t::now();
 
   // state_machine->reset();
   auto from = _jrn->restore_start_point();
@@ -167,7 +167,7 @@ void raft::on_heartbeat(const node_name &from, const append_entries &e) {
   }
   if (from == _state.leader) {
     _logger->dbg("on_heartbeat: update last_heartbeat from ", from);
-    _state.last_heartbeat_time = clock_t::now();
+    _state.last_heartbeat_time = high_resolution_clock_t::now();
   }
 }
 
@@ -226,7 +226,7 @@ void raft::on_vote(const node_name &from, const append_entries &e) {
                     _state);
       if (from == _state.leader) {
         _logger->dbg("on_vote: update last_heartbeat from ", from);
-        _state.last_heartbeat_time = clock_t::now();
+        _state.last_heartbeat_time = high_resolution_clock_t::now();
       }
     }
   }
@@ -455,7 +455,7 @@ void raft::commit_reccord(const logdb::reccord_info &target) {
 
     auto i = to_commit.lsn;
     while (i <= target.lsn && i <= _jrn->prev_rec().lsn) {
-      _logger->info("commit entry lsv:", i);
+      _logger->info("commit entry lsn:", i);
       auto info = _jrn->info(i);
       _jrn->commit(i);
       auto commited = _jrn->commited_rec();
@@ -517,6 +517,7 @@ void raft::replicate_log() {
 
   auto jrn_sz = _jrn->size();
   auto jrn_is_empty = jrn_sz == size_t(0);
+  auto first_jrn_record = _jrn->first_rec();
 
   for (const auto &naddr : all) {
     if (naddr == _self_addr) {
@@ -548,7 +549,12 @@ void raft::replicate_log() {
           switch (kv->second.direction) {
           case RDIRECTION::FORWARDS:
             if (lsn_to_replicate != _jrn->prev_rec().lsn) {
-              ++lsn_to_replicate; // we need a next record;
+              if (lsn_to_replicate < first_jrn_record.lsn) {
+                _logger->info("lsn_to_replicate < _jrn->first_rec().lsn");
+                lsn_to_replicate = _jrn->restore_start_point().lsn;
+              } else {
+                ++lsn_to_replicate; // we need a next record;
+              }
             }
             break;
           case RDIRECTION::BACKWARDS:
@@ -605,9 +611,9 @@ ERROR_CODE raft::add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k) {
   _logs_state[_self_addr].prev = current;
   _logger->info("add_command: ", current);
 
-  if (_cluster->size() == size_t(1)) {
+  /*if (_cluster->size() == size_t(1)) {
     commit_reccord(_jrn->first_uncommited_rec());
-  }
+  }*/
   return ERROR_CODE::OK;
 }
 

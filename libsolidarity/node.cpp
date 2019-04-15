@@ -155,7 +155,7 @@ node::node(utils::logging::abstract_logger_ptr logger,
            abstract_state_machine *state_machine) {
   _params = p;
   _state_machine = new consumer_wrapper(this, state_machine);
-
+  
   _logger = logger;
 
   auto jrn = std::make_shared<solidarity::logdb::memory_journal>();
@@ -263,7 +263,7 @@ void node::notify_state_machine_update() {
 }
 
 void node::notify_raft_state_update(NODE_KIND old_state, NODE_KIND new_state) {
-  _logger->dbg("notify_raft_state_update(): ", old_state, new_state);
+  _logger->dbg("notify_raft_state_update(): ", old_state," => ", new_state);
   std::shared_lock l(_locker);
   for (auto v : _clients) {
     auto m = clients::raft_state_updated_t(old_state, new_state).to_message();

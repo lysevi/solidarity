@@ -83,6 +83,6 @@ private:
       _message_resend;
 
   node_name _leader;
-  NODE_KIND _kind;
+  NODE_KIND _kind = NODE_KIND::ELECTION;
 };
 } // namespace solidarity

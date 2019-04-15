@@ -67,7 +67,7 @@ changed_state_t raft_state_t::on_vote(const raft_state_t &self,
         result.node_kind = NODE_KIND::ELECTION;
         result.term = e.term;
         result.leader = e.leader;
-        result.last_heartbeat_time = clock_t::now();
+        result.last_heartbeat_time = high_resolution_clock_t::now();
       }
       target = NOTIFY_TARGET::SENDER;
       break;
@@ -87,7 +87,7 @@ changed_state_t raft_state_t::on_vote(const raft_state_t &self,
         result.node_kind = NODE_KIND::ELECTION;
         result.term = e.term;
         result.leader = e.leader;
-        result.last_heartbeat_time = clock_t::now();
+        result.last_heartbeat_time = high_resolution_clock_t::now();
       }
       target = NOTIFY_TARGET::SENDER;
       break;
@@ -139,7 +139,7 @@ raft_state_t raft_state_t::on_append_entries(const raft_state_t &self,
     if (from == result.leader || (from == e.leader && e.term >= result.term)) {
       result.change_state(NODE_KIND::FOLLOWER, e.term, from);
       result.leader = e.leader;
-      result.last_heartbeat_time = clock_t::now();
+      result.last_heartbeat_time = high_resolution_clock_t::now();
     } else {
       // TODO send error to 'from';
     }
@@ -196,11 +196,12 @@ raft_state_t raft_state_t::heartbeat(const raft_state_t &self,
       break;
     }
     case NODE_KIND::FOLLOWER: {
-      if (cluster_size == size_t(1)) {
+      /*if (cluster_size == size_t(1)) {
         result.term++;
         result.leader = self_addr;
         result.node_kind = NODE_KIND::LEADER;
-      } else {
+      } else */
+	  {
         result.node_kind = NODE_KIND::CANDIDATE;
         result.term++;
         result.leader = self_addr;

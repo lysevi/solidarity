@@ -17,7 +17,7 @@ public:
     _vote_quorum = 0.5;
     _append_quorum = 1.0;
     _cycle_for_replication = 3;
-    _max_log_size = 100;
+    _max_log_size = 10;
     _election_timeout = std::chrono::milliseconds(300);
   }
 

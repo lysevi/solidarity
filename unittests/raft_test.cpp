@@ -13,7 +13,7 @@ TEST_CASE("raft.quorum calculation", "[raft]") {
   EXPECT_EQ(solidarity::quorum_for_cluster(5, 0.5), 3);
 }
 
-TEST_CASE("raft.add_nodes", "[raft]") {
+/*TEST_CASE("raft.add_nodes", "[raft]") {
   auto cluster = std::make_shared<mock_cluster>();
 
   /// SINGLE
@@ -82,6 +82,7 @@ TEST_CASE("raft.add_nodes", "[raft]") {
   EXPECT_EQ(c_1->get_leader().name(), c_0->get_leader().name());
   cluster = nullptr;
 }
+*/
 
 TEST_CASE("raft", "[raft]") {
   auto cluster = std::make_shared<mock_cluster>();
@@ -215,19 +216,6 @@ TEST_CASE("raft.replication", "[raft]") {
   size_t exists_nodes_count = 1;
   size_t new_nodes_count = 1;
 
-  SECTION("raft.replication.1x1") {
-    exists_nodes_count = 1;
-    new_nodes_count = 1;
-  }
-  SECTION("raft.replication.1x2") {
-    exists_nodes_count = 1;
-    new_nodes_count = 2;
-  }
-  SECTION("raft.replication.1x3") {
-    exists_nodes_count = 1;
-    new_nodes_count = 3;
-  }
-
   SECTION("raft.replication.2x1") {
     exists_nodes_count = 2;
     new_nodes_count = 1;
@@ -311,7 +299,8 @@ TEST_CASE("raft.replication", "[raft]") {
 TEST_CASE("raft.log_compaction", "[raft]") {
   auto tst_log_prefix = solidarity::utils::strings::args_to_string("test?> ");
   auto tst_logger = std::make_shared<solidarity::utils::logging::prefix_logger>(
-      solidarity::utils::logging::logger_manager::instance()->get_shared_logger(), tst_log_prefix);
+      solidarity::utils::logging::logger_manager::instance()->get_shared_logger(),
+      tst_log_prefix);
 
   using solidarity::raft_settings;
   auto cluster = std::make_shared<mock_cluster>();
@@ -591,7 +580,7 @@ TEST_CASE("raft.can_apply", "[raft]") {
 
   auto cluster = std::make_shared<mock_cluster>();
 
-  size_t exists_nodes_count = 1;
+  size_t exists_nodes_count = 2;
 
   std::vector<std::shared_ptr<mock_state_machine>> consumers;
   consumers.reserve(exists_nodes_count);

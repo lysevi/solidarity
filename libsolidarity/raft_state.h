@@ -24,7 +24,7 @@ inline size_t quorum_for_cluster(size_t cluster_size, float quorum) {
 
 struct raft_state_t {
   term_t term = UNDEFINED_TERM;
-  clock_t::time_point last_heartbeat_time;
+  high_resolution_clock_t::time_point last_heartbeat_time;
   std::chrono::milliseconds next_heartbeat_interval = {};
   node_name leader;
   NODE_KIND node_kind{NODE_KIND::FOLLOWER};
@@ -56,7 +56,7 @@ struct raft_state_t {
   bool operator!=(const raft_state_t &o) const { return !(*this == o); }
 
   bool is_heartbeat_missed() const {
-    auto now = clock_t::now();
+    auto now = high_resolution_clock_t::now();
     auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(
         now - last_heartbeat_time);
     auto r = diff > next_heartbeat_interval;

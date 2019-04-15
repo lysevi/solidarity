@@ -1,7 +1,7 @@
 #include "helpers.h"
 #include "mock_state_machine.h"
-#include <libsolidarity/mesh_connection.h>
 #include <catch.hpp>
+#include <libsolidarity/mesh_connection.h>
 #include <numeric>
 
 struct mock_cluster_client : solidarity::abstract_cluster_client {
@@ -12,7 +12,7 @@ struct mock_cluster_client : solidarity::abstract_cluster_client {
 
   void lost_connection_with(const solidarity::node_name &addr) override {
     std::lock_guard l(locker);
-    losted.insert(addr);
+    lost_con.insert(addr);
   }
 
   void new_connection_with(const solidarity::node_name &addr) override {
@@ -27,9 +27,9 @@ struct mock_cluster_client : solidarity::abstract_cluster_client {
     return std::equal(data.cbegin(), data.cend(), o.cbegin(), o.cend());
   }
 
-  bool is_connection_losted(const solidarity::node_name &addr) const {
+  bool is_connection_lost(const solidarity::node_name &addr) const {
     std::lock_guard l(locker);
-    return losted.find(addr) != losted.end();
+    return lost_con.find(addr) != lost_con.end();
   }
 
   size_t connections_size() const {
@@ -43,7 +43,7 @@ struct mock_cluster_client : solidarity::abstract_cluster_client {
 
   std::vector<std::uint8_t> data;
   mutable std::mutex locker;
-  std::unordered_set<solidarity::node_name> losted;
+  std::unordered_set<solidarity::node_name> lost_con;
   std::unordered_set<solidarity::node_name> connected;
 };
 
@@ -59,7 +59,8 @@ TEST_CASE("mesh_connection", "[network]") {
     cluster_size = 2;
     SECTION("mesh_connection.small_data") { data_size = 1; }
     SECTION("mesh_connection.big_data") {
-      data_size = size_t(solidarity::dialler::message::MAX_BUFFER_SIZE * cluster_size * 2);
+      data_size
+          = size_t(solidarity::dialler::message::MAX_BUFFER_SIZE * cluster_size * 2);
     }
   }
 
@@ -82,7 +83,7 @@ TEST_CASE("mesh_connection", "[network]") {
 
   std::vector<unsigned short> ports(cluster_size);
   std::iota(ports.begin(), ports.end(), unsigned short(8000));
-  
+
   std::vector<std::shared_ptr<solidarity::mesh_connection>> connections;
   std::unordered_map<solidarity::node_name, std::shared_ptr<mock_cluster_client>> clients;
   connections.reserve(cluster_size);
@@ -102,15 +103,17 @@ TEST_CASE("mesh_connection", "[network]") {
     params.listener_params.port = p;
     params.thread_count = 1;
     params.addrs.reserve(out_ports.size());
-    std::transform(
-        out_ports.begin(),
-        out_ports.end(),
-        std::back_inserter(params.addrs),
-        [](const auto prt) { return solidarity::dialler::dial::params_t("localhost", prt); });
+    std::transform(out_ports.begin(),
+                   out_ports.end(),
+                   std::back_inserter(params.addrs),
+                   [](const auto prt) {
+                     return solidarity::dialler::dial::params_t("localhost", prt);
+                   });
 
     auto log_prefix = solidarity::utils::strings::args_to_string("localhost_", p, ": ");
     auto logger = std::make_shared<solidarity::utils::logging::prefix_logger>(
-        solidarity::utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
+        solidarity::utils::logging::logger_manager::instance()->get_shared_logger(),
+        log_prefix);
 
     auto addr = solidarity::node_name().set_name(
         solidarity::utils::strings::args_to_string("node_", p));
@@ -134,7 +137,7 @@ TEST_CASE("mesh_connection", "[network]") {
                        "    ",
                        target_clnt->connections_size());
 
-      if (nds.size() == without_one && target_clnt->connections_size() == without_one) {
+      if (nds.size() == cluster_size && target_clnt->connections_size() == without_one) {
         break;
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -147,6 +150,9 @@ TEST_CASE("mesh_connection", "[network]") {
   for (auto &v : connections) {
     auto other = v->all_nodes();
     for (auto &node : other) {
+      if (node == v->self_addr()) {
+        continue;
+      }
       for (size_t i = 0; i < 3; ++i) {
         tst_logger->info(v->self_addr(), " => ", node);
         std::fill(ae.cmd.data.begin(), ae.cmd.data.end(), (unsigned char)i);
@@ -171,6 +177,9 @@ TEST_CASE("mesh_connection", "[network]") {
     cmd_index++;
     v->send_all(v->self_addr(), ae);
     for (auto &node : other) {
+      if (node == v->self_addr()) {
+        continue;
+      }
       auto target_clnt = dynamic_cast<mock_cluster_client *>(clients[node].get());
       while (true) {
         if (target_clnt->data.size() == ae.cmd.data.size()
@@ -187,7 +196,7 @@ TEST_CASE("mesh_connection", "[network]") {
     for (size_t j = i + 1; j < connections.size(); ++j) {
       auto node = connections[j]->self_addr();
       auto c = dynamic_cast<mock_cluster_client *>(clients[node].get());
-      while (!c->is_connection_losted(v->self_addr())) {
+      while (!c->is_connection_lost(v->self_addr())) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
       }
     }

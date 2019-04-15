@@ -231,19 +231,19 @@ void mesh_connection::send_all(const node_name &from, const append_entries &m) {
 }
 
 size_t mesh_connection::size() {
-  // TODO +1 => all + me
   return all_nodes().size();
 }
 
 std::vector<node_name> mesh_connection::all_nodes() const {
   std::shared_lock l(_locker);
   std::vector<node_name> result;
-  result.reserve(_accepted_input_connections.size());
+  result.reserve(_accepted_input_connections.size() + 1);
   for (const auto &kv : _accepted_input_connections) {
     if (_accepted_out_connections.find(kv.second) != _accepted_out_connections.end()) {
       result.push_back(kv.second);
     }
   }
+  result.push_back(_self_addr);
   return result;
 }
 
