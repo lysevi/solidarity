@@ -3,11 +3,13 @@
 #include <libsolidarity/command.h>
 #include <libsolidarity/exports.h>
 #include <libsolidarity/types.h>
+
+#include <functional>
 #include <map>
 #include <memory>
 #include <shared_mutex>
-#include <utility>
 #include <unordered_map>
+#include <utility>
 
 namespace solidarity::logdb {
 /// log sequence numbder;
@@ -62,7 +64,7 @@ public:
   virtual void commit(const index_t lsn) = 0;
   virtual log_entry get(const logdb::index_t lsn) = 0;
   virtual size_t size() const = 0;
-  virtual size_t reccords_count()const=0;
+  virtual size_t reccords_count() const = 0;
   virtual void erase_all_after(const index_t lsn) = 0;
   virtual void erase_all_to(const index_t lsn) = 0;
 
