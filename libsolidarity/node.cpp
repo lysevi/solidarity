@@ -155,7 +155,7 @@ node::node(utils::logging::abstract_logger_ptr logger,
            abstract_state_machine *state_machine) {
   _params = p;
   _state_machine = new consumer_wrapper(this, state_machine);
-  
+
   _logger = logger;
 
   auto jrn = std::make_shared<solidarity::logdb::memory_journal>();
@@ -263,7 +263,7 @@ void node::notify_state_machine_update() {
 }
 
 void node::notify_raft_state_update(NODE_KIND old_state, NODE_KIND new_state) {
-  _logger->dbg("notify_raft_state_update(): ", old_state," => ", new_state);
+  _logger->dbg("notify_raft_state_update(): ", old_state, " => ", new_state);
   std::shared_lock l(_locker);
   for (auto v : _clients) {
     auto m = clients::raft_state_updated_t(old_state, new_state).to_message();
@@ -305,9 +305,10 @@ void node::send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd)
     _listener->send_to(client_id, answer);
   } else {
     _logger->dbg("resend query #", client_id, " to leader ", leader);
-    std::lock_guard l(_locker);
-    _message_resend[client_id].push_back(std::pair(message_id, cmd));
-
+    {
+      std::lock_guard l(_locker);
+      _message_resend[client_id].push_back(std::pair(message_id, cmd));
+    }
     _cluster_con->send_to(leader, cmd, [client_id, message_id, this](ERROR_CODE s) {
       // TODO use shared_from_this;
       this->on_message_sended_status(client_id, message_id, s);
