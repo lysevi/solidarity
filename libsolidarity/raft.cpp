@@ -283,7 +283,7 @@ void raft::recv(const node_name &from, const append_entries &e) {
     auto it = _logs_state.find(from);
 
     /// TODO what if the sender clean log and resend hello? it is possible?
-	/// TODO remove from last sended, clear log state for 'from', write new values.
+    /// TODO remove from last sended, clear log state for 'from', write new values.
     if (it == _logs_state.end() || it->second.prev.is_empty()) {
       _logger->info(
           "hello. update log_state[", from, "]:", _logs_state[from].prev, " => ", e.prev);
@@ -352,7 +352,6 @@ void raft::on_append_entries(const node_name &from, const append_entries &e) {
     } else {
       logdb::log_entry le;
       le.term = e.current.term;
-      le.idx = e.current.lsn;
       if (!e.cmd.is_empty()) {
         le.cmd = e.cmd;
       } else {
@@ -364,7 +363,7 @@ void raft::on_append_entries(const node_name &from, const append_entries &e) {
       }
       if (!le.cmd.is_empty()) {
         _logger->info("write to journal ");
-        _jrn->put(le);
+        _jrn->put(e.current.lsn, le);
       }
     }
   }

@@ -61,6 +61,7 @@ EXPORT std::string to_string(const reccord_info &ri);
 class abstract_journal {
 public:
   virtual ~abstract_journal() {}
+  virtual reccord_info put(const index_t idx, const log_entry &e) = 0;
   virtual reccord_info put(const log_entry &e) = 0;
   virtual void commit(const index_t lsn) = 0;
   virtual log_entry get(const logdb::index_t lsn) = 0;
@@ -86,6 +87,7 @@ using journal_ptr = std::shared_ptr<abstract_journal>;
 class memory_journal final : public abstract_journal {
 public:
   [[nodiscard]] EXPORT static std::shared_ptr<memory_journal> make_new();
+  EXPORT reccord_info put(const index_t idx, const log_entry &e) override;
   EXPORT reccord_info put(const log_entry &e) override;
   EXPORT void commit(const index_t lsn) override;
   [[nodiscard]] EXPORT log_entry get(const logdb::index_t lsn) override;

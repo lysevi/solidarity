@@ -1,6 +1,6 @@
 #include "helpers.h"
-#include <libsolidarity/journal.h>
 #include <catch.hpp>
+#include <libsolidarity/journal.h>
 
 TEST_CASE("journal.memory") {
   auto jrn = solidarity::logdb::memory_journal::make_new();
@@ -62,7 +62,26 @@ TEST_CASE("journal.memory") {
     EXPECT_EQ(jrn->prev_rec().lsn, solidarity::logdb::index_t(3));
     EXPECT_EQ(jrn->reccords_count(), size_t(2));
 
-    EXPECT_EQ(jrn->info(solidarity::logdb::index_t(0)).lsn, solidarity::logdb::UNDEFINED_INDEX);
-    EXPECT_EQ(jrn->info(solidarity::logdb::index_t(0)).term, solidarity::logdb::UNDEFINED_TERM);
+    EXPECT_EQ(jrn->info(solidarity::logdb::index_t(0)).lsn,
+              solidarity::logdb::UNDEFINED_INDEX);
+    EXPECT_EQ(jrn->info(solidarity::logdb::index_t(0)).term,
+              solidarity::logdb::UNDEFINED_TERM);
   }
+}
+
+TEST_CASE("journal.memory.put(idx)") {
+  auto jrn = solidarity::logdb::memory_journal::make_new();
+  EXPECT_EQ(jrn->size(), size_t(0));
+  EXPECT_EQ(jrn->restore_start_point().lsn, solidarity::logdb::UNDEFINED_INDEX);
+
+  solidarity::logdb::log_entry en;
+
+  en.term = 0;
+  jrn->put(solidarity::logdb::index_t(777), en);
+  EXPECT_EQ(jrn->reccords_count(), size_t(1));
+  EXPECT_EQ(jrn->size(), size_t(777 + 1));
+  EXPECT_EQ(jrn->get(jrn->prev_rec().lsn).term, en.term);
+  EXPECT_EQ(jrn->prev_rec().lsn, solidarity::logdb::index_t(777));
+  jrn->put(en);
+  EXPECT_EQ(jrn->prev_rec().lsn, solidarity::logdb::index_t(778));
 }
