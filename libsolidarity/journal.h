@@ -25,6 +25,7 @@ struct log_entry {
       , cmd()
       , kind(LOG_ENTRY_KIND::APPEND) {}
 
+  index_t idx= UNDEFINED_INDEX;
   term_t term;
   command cmd;
   LOG_ENTRY_KIND kind;

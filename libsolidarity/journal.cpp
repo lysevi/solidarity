@@ -21,9 +21,15 @@ std::shared_ptr<memory_journal> memory_journal::make_new() {
 
 reccord_info memory_journal::put(const log_entry &e) {
   std::lock_guard<std::shared_mutex> lg(_locker);
-  _wal.insert(std::make_pair(_idx, e));
-  _prev = reccord_info(e, _idx);
-  ++_idx;
+  auto cp = e;
+  if (e.idx == UNDEFINED_INDEX) {
+    cp.idx = _idx;
+    ++_idx;
+  } else {
+    _idx = e.idx;
+  }
+  _wal.insert(std::make_pair(cp.idx, cp));
+  _prev = reccord_info(e, cp.idx);
   return _prev;
 }
 
