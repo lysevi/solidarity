@@ -115,10 +115,10 @@ TEST_CASE("node", "[network]") {
     }
   }
 
-  std::cerr << "send over leader" << std::endl;
   auto leader_name = leaders.begin()->name();
-  // std::shared_ptr<solidarity::node> leader_node = nodes[leader_name];
-
+  std::cerr << "send over leader "<<leader_name << std::endl;
+  tst_logger->info("send over leader ", leader_name);
+  
   auto leader_client = clients[leader_name];
   std::vector<uint8_t> first_cmd{1, 2, 3, 4, 5};
 
