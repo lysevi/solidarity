@@ -16,7 +16,7 @@ public:
   raft_settings() {
     _vote_quorum = 0.5;
     _append_quorum = 1.0;
-    _max_log_size = 10;
+    _max_log_size = 100;
     _election_timeout = std::chrono::milliseconds(300);
   }
 
