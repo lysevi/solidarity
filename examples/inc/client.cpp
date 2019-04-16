@@ -68,7 +68,9 @@ int main(int argc, char **argv) {
 
     auto res = c->send(common_inner::int2cmd(i).data);
     std::cout << solidarity::utils::strings::args_to_string("res: ", res) << std::endl;
-
+    if (res != solidarity::ERROR_CODE::OK) {
+      continue;
+    }
     while (true) {
       cond.wait(ulock, [&is_on_update_received]() { return is_on_update_received; });
       if (is_on_update_received) {
@@ -78,7 +80,7 @@ int main(int argc, char **argv) {
     std::cout << "elapsed: " << el.elapsed() << std::endl;
 
     c->rm_update_handler(uh_id);
-    
+
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     ++i;
   }
