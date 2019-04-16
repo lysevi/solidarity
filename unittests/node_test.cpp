@@ -151,6 +151,7 @@ TEST_CASE("node", "[network]") {
   for (auto &kv : clients) {
     auto suffix = leader_name == kv.first ? " is a leader" : "";
     std::cerr << "resend over " << kv.first << suffix << std::endl;
+    tst_logger->info("resend over ", kv.first, suffix);
     std::transform(first_cmd.begin(),
                    first_cmd.end(),
                    first_cmd.begin(),
