@@ -2,8 +2,8 @@
 
 #include <boost/asio.hpp>
 
-#include <libsolidarity/dialler/dialler.h>
-#include <libsolidarity/dialler/listener.h>
+#include <solidarity/dialler/dialler.h>
+#include <solidarity/dialler/listener.h>
 
 #include <catch.hpp>
 

@@ -2,8 +2,8 @@
 #include "mock_cluster.h"
 #include "mock_state_machine.h"
 #include <catch.hpp>
-#include <libsolidarity/raft.h>
-#include <libsolidarity/utils/logger.h>
+#include <solidarity/raft.h>
+#include <solidarity/utils/logger.h>
 
 TEST_CASE("raft.quorum calculation", "[raft]") {
   EXPECT_EQ(solidarity::quorum_for_cluster(3, 0.5), 2);

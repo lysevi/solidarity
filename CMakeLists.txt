@@ -112,7 +112,7 @@ SET(solidarity_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_BINARY_DIR} )
 
 SET(solidarity_PRIVATE_LIBRARIES  ${CMAKE_THREAD_LIBS_INIT} ${Boost_LIBRARIES})
 
-add_subdirectory(libsolidarity)
+add_subdirectory(solidarity)
 
 if(solidarity_ENABLE_BENCHMARKS)
    add_definitions(-DENABLE_BENCHMARKS)

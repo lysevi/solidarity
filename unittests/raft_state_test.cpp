@@ -1,5 +1,5 @@
 #include "helpers.h"
-#include <libsolidarity/raft_state.h>
+#include <solidarity/raft_state.h>
 #include <catch.hpp>
 
 SCENARIO("raft_state_t.vote", "[raft]") {

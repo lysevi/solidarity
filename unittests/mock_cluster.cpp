@@ -1,6 +1,6 @@
 #include "mock_cluster.h"
-#include <libsolidarity/utils/logger.h>
-#include <libsolidarity/utils/utils.h>
+#include <solidarity/utils/logger.h>
+#include <solidarity/utils/utils.h>
 #include <algorithm>
 #include <cassert>
 

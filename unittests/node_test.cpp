@@ -1,8 +1,8 @@
 #include "helpers.h"
-#include <libsolidarity/client.h>
-#include <libsolidarity/node.h>
-#include <libsolidarity/utils/logger.h>
-#include <libsolidarity/utils/strings.h>
+#include <solidarity/client.h>
+#include <solidarity/node.h>
+#include <solidarity/utils/logger.h>
+#include <solidarity/utils/strings.h>
 
 #include "mock_state_machine.h"
 

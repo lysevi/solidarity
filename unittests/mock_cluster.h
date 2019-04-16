@@ -1,7 +1,7 @@
 #pragma once
 
-#include <libsolidarity/abstract_cluster.h>
-#include <libsolidarity/raft.h>
+#include <solidarity/abstract_cluster.h>
+#include <solidarity/raft.h>
 #include <condition_variable>
 #include <shared_mutex>
 #include <tuple>

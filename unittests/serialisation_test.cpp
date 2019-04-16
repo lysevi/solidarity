@@ -1,9 +1,10 @@
-#include <libsolidarity/abstract_cluster.h>
-#include <libsolidarity/queries.h>
+#include <solidarity/abstract_cluster.h>
+#include <solidarity/queries.h>
 
 #include "helpers.h"
 #include <catch.hpp>
 #include <numeric>
+
 void check_append_entries(const solidarity::append_entries &ae,
                           const solidarity::append_entries &res) {
   EXPECT_EQ(ae.term, res.term);

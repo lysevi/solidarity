@@ -1,4 +1,4 @@
-#include <libsolidarity/utils/strings.h>
+#include <solidarity/utils/strings.h>
 #include <catch.hpp>
 
 #ifdef ENABLE_BENCHMARKS

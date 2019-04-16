@@ -1,6 +1,6 @@
 #include "helpers.h"
 #include <catch.hpp>
-#include <libsolidarity/journal.h>
+#include <solidarity/journal.h>
 
 TEST_CASE("journal.memory") {
   auto jrn = solidarity::logdb::memory_journal::make_new();

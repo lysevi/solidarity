@@ -1,7 +1,7 @@
 #include <cxxopts.hpp>
 #include <iostream>
-#include <libsolidarity/node.h>
-#include <libsolidarity/utils/logger.h>
+#include <solidarity/node.h>
+#include <solidarity/utils/logger.h>
 
 #include "common.h"
 

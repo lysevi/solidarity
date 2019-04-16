@@ -1,6 +1,6 @@
 #pragma once
 #include <iostream>
-#include <libsolidarity/abstract_state_machine.h>
+#include <solidarity/abstract_state_machine.h>
 #include <shared_mutex>
 
 namespace common_inner {

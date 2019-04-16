@@ -1,4 +1,4 @@
-#include <libsolidarity/raft.h>
+#include <solidarity/raft.h>
 #include <mutex>
 
 class mock_state_machine final : public solidarity::abstract_state_machine {

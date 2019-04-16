@@ -1,5 +1,5 @@
 #define CATCH_CONFIG_RUNNER
-#include <libsolidarity/utils/logger.h>
+#include <solidarity/utils/logger.h>
 #include <catch.hpp>
 #include <chrono>
 #include <cstring>

@@ -1,9 +1,9 @@
-#include <libsolidarity/utils/async/thread_manager.h>
-#include <libsolidarity/utils/async/thread_pool.h>
-#include <libsolidarity/utils/property.h>
-#include <libsolidarity/utils/strings.h>
-#include <libsolidarity/utils/timer.h>
-#include <libsolidarity/utils/utils.h>
+#include <solidarity/utils/async/thread_manager.h>
+#include <solidarity/utils/async/thread_pool.h>
+#include <solidarity/utils/property.h>
+#include <solidarity/utils/strings.h>
+#include <solidarity/utils/timer.h>
+#include <solidarity/utils/utils.h>
 
 #include "helpers.h"
 #include <array>

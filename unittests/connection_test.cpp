@@ -1,7 +1,7 @@
 #include "helpers.h"
 #include "mock_state_machine.h"
 #include <catch.hpp>
-#include <libsolidarity/mesh_connection.h>
+#include <solidarity/mesh_connection.h>
 #include <numeric>
 
 struct mock_cluster_client : solidarity::abstract_cluster_client {

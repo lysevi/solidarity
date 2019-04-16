@@ -1,6 +1,6 @@
-#include <libsolidarity/abstract_cluster.h>
-#include <libsolidarity/queries.h>
-#include <libsolidarity/utils/utils.h>
+#include <solidarity/abstract_cluster.h>
+#include <solidarity/queries.h>
+#include <solidarity/utils/utils.h>
 #include <catch.hpp>
 #include <numeric>
 

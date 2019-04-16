@@ -1,9 +1,9 @@
 #include "common.h"
 #include <cxxopts.hpp>
 #include <iostream>
-#include <libsolidarity/client.h>
-#include <libsolidarity/utils/strings.h>
-#include <libsolidarity/utils/utils.h>
+#include <solidarity/client.h>
+#include <solidarity/utils/strings.h>
+#include <solidarity/utils/utils.h>
 
 size_t thread_count = 1;
 unsigned short port = 11000;
