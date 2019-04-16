@@ -244,7 +244,7 @@ void client::connect() {
   }
 
   auto c = std::make_shared<client_connection>(this);
-  dialler::dial::params_t p(_params.host, _params.port, true);
+  dialler::dial::params_t p(_params.host, _params.port, false);
   _dialler = std::make_shared<dialler::dial>(&_io_context, p);
   _dialler->add_consumer(c);
   _dialler->start_async_connection();
@@ -263,6 +263,9 @@ std::shared_ptr<async_result_t> client::make_waiter() {
 }
 
 ERROR_CODE client::send(const std::vector<uint8_t> &cmd) {
+  if (!_connected) {
+    return ERROR_CODE::NETWORK_ERROR;
+  }
   solidarity::command c;
   c.data = cmd;
 
@@ -276,6 +279,9 @@ ERROR_CODE client::send(const std::vector<uint8_t> &cmd) {
 }
 
 std::vector<uint8_t> client::read(const std::vector<uint8_t> &cmd) {
+  if (!_connected) {
+    THROW_EXCEPTION("connection error.");
+  }
   solidarity::command c;
   c.data = cmd;
 
@@ -302,6 +308,14 @@ void client::rm_event_handler(uint64_t id) {
 }
 
 void client::notify_on_update(const client_event_t &ev) {
+  if (ev.kind == client_event_t::event_kind::NETWORK) {
+    std::lock_guard l(_locker);
+    for (auto &kv : _async_results) {
+      kv.second->set_result({}, ev.net_ev.value().ecode, "");
+    }
+    _async_results.clear();
+    _next_query_id.store(0);
+  }
   std::shared_lock l(_locker);
   for (auto &kv : _on_update_handlers) {
     kv.second(ev);

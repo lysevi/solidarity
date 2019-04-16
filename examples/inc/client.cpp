@@ -42,24 +42,36 @@ int main(int argc, char **argv) {
   cpar.host = host;
   cpar.port = port;
 
+  uint64_t i = 0;
+
   auto c = std::make_shared<solidarity::client>(cpar);
   c->connect();
+  if (c->is_connected()) {
+    auto answer = c->read({});
+    if (!answer.empty()) {
+      i = common_inner::cmd2int(answer);
+      std::cout << "read i:" << i << std::endl;
+    }
+  }
 
-  // TODO add method 'whait_connection'
   while (!c->is_connected()) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
-  uint64_t i = 0;
   while (true) {
-
     std::cout << "write i:" << i << std::endl;
     std::mutex locker;
     std::unique_lock ulock(locker);
     bool is_on_update_received = false;
     std::condition_variable cond;
-
-    auto uh_id = c->add_event_handler([&is_on_update_received, &cond](auto ev) {
+    bool is_network_error = false;
+    auto uh_id = c->add_event_handler([&is_on_update_received, &cond, &is_network_error](
+                                          const solidarity::client_event_t ev) {
+      if (ev.kind == solidarity::client_event_t::event_kind::NETWORK) {
+        if (ev.net_ev.value().ecode != solidarity::ERROR_CODE::OK) {
+          is_network_error = true;
+        }
+      }
       std::cerr << solidarity::to_string(ev) << std::endl;
       is_on_update_received = true;
       cond.notify_all();
@@ -84,5 +96,8 @@ int main(int argc, char **argv) {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     ++i;
+    if (is_network_error) {
+      break;
+    }
   }
 }

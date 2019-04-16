@@ -94,8 +94,8 @@ protected:
   void accept_out_connection(const node_name &name, const std::string &addr);
   void accept_input_connection(const node_name &name, uint64_t id);
   node_name addr_by_id(uint64_t id);
-  void rm_out_connection(const std::string &addr);
-  void rm_input_connection(uint64_t id);
+  void rm_out_connection(const std::string &addr, const boost::system::error_code &err);
+  void rm_input_connection(uint64_t id, const boost::system::error_code &err);
   void on_new_command(const std::vector<dialler::message_ptr> &m);
 
   void

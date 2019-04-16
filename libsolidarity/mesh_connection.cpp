@@ -35,9 +35,9 @@ void out_connection::on_new_message(dialler::message_ptr &&d, bool &cancel) {
 }
 
 void out_connection::on_network_error(const dialler::message_ptr & /*d*/,
-                                      const boost::system::error_code & /*err*/) {
+                                      const boost::system::error_code &err) {
   // TODO add message to log err.msg();
-  _parent->rm_out_connection(_target_addr);
+  _parent->rm_out_connection(_target_addr, err);
 }
 
 listener::listener(const std::shared_ptr<mesh_connection> parent) {
@@ -46,9 +46,8 @@ listener::listener(const std::shared_ptr<mesh_connection> parent) {
 
 void listener::on_network_error(dialler::listener_client_ptr i,
                                 const dialler::message_ptr & /*d*/,
-                                const boost::system::error_code & /*err*/) {
-  // TODO add message to log err.msg();
-  _parent->rm_input_connection(i->get_id());
+                                const boost::system::error_code &err) {
+  _parent->rm_input_connection(i->get_id(), err);
 }
 
 void listener::on_new_message(dialler::listener_client_ptr i,
@@ -107,7 +106,7 @@ bool listener::on_new_connection(dialler::listener_client_ptr i) {
 }
 
 void listener::on_disconnect(const dialler::listener_client_ptr &i) {
-  _parent->rm_input_connection(i->get_id());
+  _parent->rm_input_connection(i->get_id(), boost::asio::error::connection_aborted);
 }
 
 } // namespace solidarity::impl
@@ -293,11 +292,12 @@ node_name mesh_connection::addr_by_id(uint64_t id) {
   }
 }
 
-void mesh_connection::rm_out_connection(const std::string &addr) {
+void mesh_connection::rm_out_connection(const std::string &addr,
+                                        const boost::system::error_code &err) {
   node_name name;
   {
     std::lock_guard l(_locker);
-    _logger->dbg(addr, " disconnected as output");
+    _logger->dbg(addr, " disconnected as output. reason: ", err.message());
 
     for (auto it = _accepted_out_connections.begin();
          it != _accepted_out_connections.end();
@@ -320,10 +320,11 @@ void mesh_connection::rm_out_connection(const std::string &addr) {
   }
 }
 
-void mesh_connection::rm_input_connection(const uint64_t id) {
+void mesh_connection::rm_input_connection(const uint64_t id,
+                                          const boost::system::error_code &err) {
   try {
-
     auto name = addr_by_id(id);
+    _logger->dbg(name, " disconnected as input. reason: ", err.message());
     {
       std::lock_guard l(_locker);
       _accepted_input_connections.erase(id);

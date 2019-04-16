@@ -9,15 +9,19 @@ union converted {
   unsigned char values[8];
 };
 
-uint64_t cmd2int(const solidarity::command &cmd) {
-  if (cmd.data.size() < sizeof(uint64_t)) {
+uint64_t cmd2int(const std::vector<uint8_t> &data) {
+  if (data.size() < sizeof(uint64_t)) {
     throw std::logic_error("cmd.data.size() < sizeof(uint64_t)");
   }
   converted c;
   for (size_t i = 0; i < sizeof(uint64_t); ++i) {
-    c.values[i] = cmd.data[i];
+    c.values[i] = data[i];
   }
   return c.value;
+}
+
+uint64_t cmd2int(const solidarity::command &cmd) {
+  return cmd2int(cmd.data);
 }
 
 solidarity::command int2cmd(const uint64_t v) {
