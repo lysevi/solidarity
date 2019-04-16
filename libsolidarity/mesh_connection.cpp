@@ -12,7 +12,7 @@ out_connection::out_connection(const std::shared_ptr<mesh_connection> parent,
 }
 
 void out_connection::on_connect() {
-  _parent->_logger->info("[network] connect to ", _target_addr);
+  _parent->_logger->info("connect to ", _target_addr);
   queries::query_connect_t qc(protocol_version, _parent->_self_addr.name());
   this->_connection->send_async(qc.to_message());
 }
@@ -68,7 +68,7 @@ void listener::on_new_message(dialler::listener_client_ptr i,
       dout = query_connect_t(protocol_version, _parent->_self_addr.name()).to_message();
       auto addr = solidarity::node_name().set_name(qc.node_id);
       _parent->accept_input_connection(addr, i->get_id());
-      _parent->_logger->info("[network] accept connection from ", addr);
+      _parent->_logger->info("accept connection from ", addr);
     }
     i->send_data(dout);
     break;
@@ -296,8 +296,11 @@ void mesh_connection::rm_out_connection(const std::string &addr,
   node_name name;
   {
     std::lock_guard l(_locker);
-    _logger->dbg(addr, " disconnected as output. reason: ", err.message());
-
+    if (err != boost::asio::error::connection_reset) {
+      _logger->dbg(addr, " disconnected as output. reason: ", err.message());
+    } else {
+      _logger->dbg(addr, " reconnection error");
+    }
     for (auto it = _accepted_out_connections.begin();
          it != _accepted_out_connections.end();
          ++it) {
