@@ -36,7 +36,6 @@ void out_connection::on_new_message(dialler::message_ptr &&d, bool &cancel) {
 
 void out_connection::on_network_error(const dialler::message_ptr & /*d*/,
                                       const boost::system::error_code &err) {
-  // TODO add message to log err.msg();
   _parent->rm_out_connection(_target_addr, err);
 }
 
