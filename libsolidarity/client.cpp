@@ -13,11 +13,10 @@ std::string solidarity::to_string(const client_event_t &cev) {
   ss << "{kind:";
   switch (cev.kind) {
   case client_event_t::event_kind::NETWORK:
-    ss << "NETWORK, ecode: "
-       << to_string(std::get<network_state_event_t>(cev.description).ecode);
+    ss << "NETWORK, ecode: " << to_string(cev.net_ev.value().ecode);
     break;
   case client_event_t::event_kind::RAFT:
-    auto re = std::get<raft_state_event_t>(cev.description);
+    auto re = cev.raft_ev.value();
     ss << "RAFT, from:" << to_string(re.old_state)
        << " => to:" << to_string(re.new_state);
     break;
@@ -28,7 +27,7 @@ std::string solidarity::to_string(const client_event_t &cev) {
     NOT_IMPLEMENTED;
   }
   ss << "}";
-  return ss.str(); 
+  return ss.str();
 }
 
 class solidarity::async_result_t {
@@ -151,7 +150,7 @@ public:
       state_machine_updated_event_t sme;
       client_event_t cev;
       cev.kind = client_event_t::event_kind::STATE_MACHINE;
-      cev.description = sme;
+      cev.state_ev = sme;
       inner::client_notify_update(*_parent, cev);
       break;
     }
@@ -163,7 +162,7 @@ public:
 
       client_event_t cev;
       cev.kind = client_event_t::event_kind::RAFT;
-      cev.description = rse;
+      cev.raft_ev = rse;
       inner::client_notify_update(*_parent, cev);
       break;
     }
@@ -181,7 +180,7 @@ public:
 
     client_event_t cev;
     cev.kind = client_event_t::event_kind::NETWORK;
-    cev.description = ev;
+    cev.net_ev = ev;
     inner::client_notify_update(*_parent, cev);
   }
 

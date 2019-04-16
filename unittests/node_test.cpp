@@ -207,7 +207,7 @@ TEST_CASE("node", "[network]") {
     auto id
         = client->add_event_handler([&c](const solidarity::client_event_t &ev) mutable {
             if (ev.kind == solidarity::client_event_t::event_kind::NETWORK) {
-              auto nse = std::get<solidarity::network_state_event_t>(ev.description);
+              auto nse = ev.net_ev.value();
               c = nse.ecode;
             }
           });

@@ -6,13 +6,9 @@
 #include <libsolidarity/exports.h>
 #include <libsolidarity/node_kind.h>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
-#include <variant>
-
-// namespace boost::asio {
-// class io_context;
-//} // namespace boost::asio
 
 namespace solidarity {
 namespace dialler {
@@ -47,8 +43,9 @@ struct client_event_t {
   enum class event_kind { RAFT, NETWORK, STATE_MACHINE };
 
   event_kind kind;
-  std::variant<raft_state_event_t, network_state_event_t, state_machine_updated_event_t>
-      description;
+  std::optional<raft_state_event_t> raft_ev;
+  std::optional<network_state_event_t> net_ev;
+  std::optional<state_machine_updated_event_t> state_ev;
 };
 
 EXPORT std::string to_string(const client_event_t &cev);
@@ -93,7 +90,6 @@ public:
   EXPORT uint64_t add_event_handler(const std::function<void(const client_event_t &)> &);
   EXPORT void rm_event_handler(uint64_t);
 
-
   friend void inner::client_update_connection_status(client &c, bool status);
   friend void inner::client_update_async_result(client &c,
                                                 uint64_t id,
@@ -106,6 +102,7 @@ public:
 private:
   std::shared_ptr<async_result_t> make_waiter();
   void notify_on_update(const client_event_t &);
+
 private:
   params_t _params;
   bool _stoped = false;
@@ -120,6 +117,7 @@ private:
 
   std::unordered_map<uint64_t, std::function<void(const client_event_t &)>>
       _on_update_handlers;
+
 protected:
   bool _connected;
 };
