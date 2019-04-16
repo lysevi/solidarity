@@ -160,7 +160,7 @@ node::node(utils::logging::abstract_logger_ptr logger,
 
   auto jrn = std::make_shared<solidarity::logdb::memory_journal>();
   auto addr = solidarity::node_name().set_name(_params.name);
-  auto s = solidarity::raft_settings().set_name(_params.name);
+  auto s = _params.rft_settings.set_name(_params.name);
   _raft = std::make_shared<solidarity::raft>(s, nullptr, jrn, _state_machine, _logger);
 
   solidarity::mesh_connection::params_t params;

@@ -102,6 +102,8 @@ protected:
   on_write_resend(const node_name &target, uint64_t mess_id, solidarity::command &cmd);
   void
   on_write_status(solidarity::node_name &target, uint64_t mess_id, ERROR_CODE status);
+  void
+  on_write_status(solidarity::node_name &target, ERROR_CODE status);
 
 private:
   utils::logging::abstract_logger_ptr _logger;

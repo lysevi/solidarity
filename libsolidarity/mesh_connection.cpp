@@ -310,17 +310,26 @@ void mesh_connection::rm_out_connection(const std::string &addr) {
     }
   }
   if (!name.is_empty()) {
-    std::shared_lock l(_locker);
-    // ENSURE(!name.is_empty());
+    {
+      std::shared_lock l(_locker);
+      // ENSURE(!name.is_empty());
 
-    _client->lost_connection_with(name);
+      _client->lost_connection_with(name);
+    }
+    on_write_status(name, ERROR_CODE::NETWORK_ERROR);
   }
 }
 
 void mesh_connection::rm_input_connection(const uint64_t id) {
-  {
-    std::lock_guard l(_locker);
-    _accepted_input_connections.erase(id);
+  try {
+
+    auto name = addr_by_id(id);
+    {
+      std::lock_guard l(_locker);
+      _accepted_input_connections.erase(id);
+    }
+    on_write_status(name, ERROR_CODE::NETWORK_ERROR);
+  } catch (...) {
   }
 }
 
@@ -372,17 +381,27 @@ void mesh_connection::on_write_status(solidarity::node_name &target,
                                       uint64_t mess_id,
                                       ERROR_CODE status) {
   std::lock_guard l(_locker);
-  if (status != ERROR_CODE::OK) {
-    // TODO IMPLEMENT!
-    THROW_EXCEPTION("not supported status kind: ", status);
-  }
+  // if (status != ERROR_CODE::OK) {
+  //  // TODO IMPLEMENT!
+  //  THROW_EXCEPTION("not supported status kind: ", status);
+  //}
 
   if (auto mess_it = _messages.find(target); mess_it != _messages.end()) {
     auto pos = mess_it->second.find(mess_id);
     if (pos != mess_it->second.end()) {
       pos->second(status);
-    } else {
+      mess_it->second.erase(pos);
+    } /*else {
       THROW_EXCEPTION("on_write_status: mess_id ", mess_id, " not found");
+    }*/
+  }
+}
+void mesh_connection::on_write_status(solidarity::node_name &target, ERROR_CODE status) {
+  std::lock_guard l(_locker);
+  if (auto mess_it = _messages.find(target); mess_it != _messages.end()) {
+    for (auto &kv : mess_it->second) {
+      kv.second(status);
     }
+    mess_it->second.clear();
   }
 }

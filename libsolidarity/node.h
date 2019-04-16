@@ -4,6 +4,7 @@
 #include <libsolidarity/command.h>
 #include <libsolidarity/exports.h>
 #include <libsolidarity/raft_state.h>
+#include <libsolidarity/raft_settings.h>
 #include <libsolidarity/utils/logger.h>
 
 #include <string>
@@ -31,6 +32,7 @@ public:
     unsigned short client_port;
     std::vector<std::string> cluster;
     std::string name;
+    raft_settings rft_settings;
   };
   node() = delete;
   node(const node &) = delete;
