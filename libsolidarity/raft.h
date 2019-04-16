@@ -18,7 +18,6 @@ class raft : public abstract_cluster_client {
   enum class RDIRECTION { FORWARDS = 0, BACKWARDS };
   struct log_state_t {
     logdb::reccord_info prev;
-    size_t cycle = 0;
     RDIRECTION direction = RDIRECTION::FORWARDS;
   };
 

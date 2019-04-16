@@ -393,7 +393,6 @@ void raft::on_answer_ok(const node_name &from, const append_entries &e) {
     _logs_state[from].prev = e.prev;
     if (_logs_state[from].direction == RDIRECTION::BACKWARDS) {
       _logs_state[from].direction = RDIRECTION::FORWARDS;
-      _logs_state[from].cycle = _settings.cycle_for_replication();
     }
   }
   const size_t quorum = quorum_for_cluster(_cluster->size(), _settings.append_quorum());
@@ -442,9 +441,10 @@ void raft::on_answer_failed(const node_name &from, const append_entries &e) {
     _logs_state[from].prev = e.prev;
   } else {
     it->second.direction = RDIRECTION::BACKWARDS;
-    it->second.cycle = _settings.cycle_for_replication();
+    auto last_sended_it = _last_sended.find(from);
+    ENSURE(last_sended_it != _last_sended.end());
     if (it->second.prev.lsn != logdb::UNDEFINED_INDEX) { /// move replication log backward
-      it->second.prev.lsn -= 1;
+      it->second.prev.lsn = _last_sended[from].lsn - 1;
     }
   }
 }
@@ -530,15 +530,10 @@ void raft::replicate_log() {
       continue;
     }
 
+    auto last_sended_it = _last_sended.find(kv->first);
+
     bool is_append = false;
     if (kv->second.prev.lsn_is_empty() || kv->second.prev != self_log_state.prev) {
-      _logger->info("try replication for ",
-                    kv->first,
-                    " => prev: ",
-                    kv->second.prev,
-                    " != self.prev:",
-                    self_log_state.prev);
-
       auto lsn_to_replicate = kv->second.prev.lsn;
       if (kv->second.prev.lsn_is_empty()) {
         lsn_to_replicate = _jrn->first_rec().lsn;
@@ -563,12 +558,15 @@ void raft::replicate_log() {
         }
       }
 
-      auto ls_it = _last_sended.find(kv->first);
-      if (kv->second.cycle != 0
-          && (ls_it != _last_sended.end() || ls_it->second.lsn == lsn_to_replicate)) {
-        kv->second.cycle--;
-      } else {
-        kv->second.cycle = _settings.cycle_for_replication();
+      if (last_sended_it == _last_sended.end()
+          || last_sended_it->second.lsn != lsn_to_replicate) {
+        _logger->info("try replication for ",
+                      kv->first,
+                      " => prev: ",
+                      kv->second.prev,
+                      " != self.prev:",
+                      self_log_state.prev);
+
         auto ae = make_append_entries(lsn_to_replicate,
                                       lsn_to_replicate > 0 ? lsn_to_replicate - 1
                                                            : logdb::UNDEFINED_INDEX);
@@ -588,7 +586,6 @@ void raft::replicate_log() {
         is_append = true;
       }
     }
-
     if (!is_append) {
       send(naddr, ENTRIES_KIND::HEARTBEAT);
     }

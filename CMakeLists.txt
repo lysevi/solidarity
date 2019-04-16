@@ -23,11 +23,17 @@ if(NOT CMAKE_BUILD_TYPE)
         FORCE)
 endif()
 
+set(DOUBLE_CHECKS  OFF)
+if (CMAKE_BUILD_TYPE EQUAL "DEBUG")
+    message(STATUS "debug mode")
+	set(DOUBLE_CHECKS  ON)
+endif(CMAKE_BUILD_TYPE EQUAL "DEBUG")
+
 MESSAGE( STATUS "CMAKE_BUILD_TYPE: " ${CMAKE_BUILD_TYPE} )
 
 option(solidarity_ENABLE_TESTS "Enable testing of the solidarity." ON)
 option(solidarity_ENABLE_EXAMPLES "Enable examples of the solidarity." ON)
-option(solidarity_ENABLE_DOUBLECHECKS "More checks in code." OFF)
+option(solidarity_ENABLE_DOUBLECHECKS "More checks in code." ${DOUBLE_CHECKS})
 option(solidarity_ENABLE_BENCHMARKS "Enable build benchmarks." ON)
 option(solidarity_ASAN_UBSAN "clang asan" OFF)
 option(solidarity_MSAN "clang msan" OFF)

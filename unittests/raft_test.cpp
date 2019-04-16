@@ -517,7 +517,7 @@ TEST_CASE("raft.rollback", "[raft]") {
     jrn1->commit(jrn1->prev_rec().lsn);
   }
 
-  SECTION("rewrite all journal") {
+  /*SECTION("rewrite all journal") {
     n2->rw_state().term = 100500;
     jrn1->erase_all_after(solidarity::logdb::index_t(-1));
 
@@ -529,7 +529,7 @@ TEST_CASE("raft.rollback", "[raft]") {
       le.term = 0;
       jrn1->put(le);
     }
-  }
+  }*/
   EXPECT_FALSE(consumers.empty());
   cluster->add_new(n1->self_addr(), n1);
   cluster->add_new(n2->self_addr(), n2);
