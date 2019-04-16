@@ -174,6 +174,7 @@ void raft::on_heartbeat(const node_name &from, const append_entries &e) {
 /// clear uncommited reccord in journal
 void raft::log_fsck(const append_entries &e) {
   /// TODO really need this?
+  return;
   bool reset = false;
   logdb::reccord_info to_erase{};
   if (e.prev.lsn != _jrn->prev_rec().lsn) {
@@ -282,8 +283,8 @@ void raft::recv(const node_name &from, const append_entries &e) {
     auto it = _logs_state.find(from);
 
     /// TODO what if the sender clean log and resend hello? it is possible?
-    // if (it == _log_state.end() || it->second.is_empty())
-    {
+	/// TODO remove from last sended, clear log state for 'from', write new values.
+    if (it == _logs_state.end() || it->second.prev.is_empty()) {
       _logger->info(
           "hello. update log_state[", from, "]:", _logs_state[from].prev, " => ", e.prev);
       _logs_state[from].prev = e.prev;
@@ -331,7 +332,8 @@ void raft::on_append_entries(const node_name &from, const append_entries &e) {
         _logger->info("erase all after ", info);
         _jrn->erase_all_after(info.lsn);
       } else {
-        _logger->info("wrong entry from:", from, " ", e.prev, ", ", self_prev);
+        _logger->info(
+            "wrong entry from:", from, " e.prev:", e.prev, ", self.prev:", self_prev);
         send(from, ENTRIES_KIND::ANSWER_FAILED);
         return;
       }
@@ -350,6 +352,7 @@ void raft::on_append_entries(const node_name &from, const append_entries &e) {
     } else {
       logdb::log_entry le;
       le.term = e.current.term;
+      le.idx = e.current.lsn;
       if (!e.cmd.is_empty()) {
         le.cmd = e.cmd;
       } else {
@@ -444,7 +447,7 @@ void raft::on_answer_failed(const node_name &from, const append_entries &e) {
     auto last_sended_it = _last_sended.find(from);
     ENSURE(last_sended_it != _last_sended.end());
     if (it->second.prev.lsn != logdb::UNDEFINED_INDEX) { /// move replication log backward
-      it->second.prev.lsn = _last_sended[from].lsn - 1;
+      it->second.prev.lsn = last_sended_it->second.lsn - 1;
     }
   }
 }
