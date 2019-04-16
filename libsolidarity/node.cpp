@@ -280,16 +280,27 @@ std::shared_ptr<raft> node::get_raft() {
 }
 
 void node::heartbeat_timer() {
-  _raft->heartbeat();
-  auto leader = _raft->get_leader();
-  auto kind = _raft->state().node_kind;
+  auto exists_size = _cluster_con->size();
+  auto max_size = _params.cluster.size();
+  auto qr = quorum_for_cluster(max_size, _params.rft_settings.vote_quorum());
+  if (exists_size >= qr) {
+    _raft->heartbeat();
+    auto leader = _raft->get_leader();
+    auto kind = _raft->state().node_kind;
 
-  if (leader != _leader || kind != _kind) {
-    notify_raft_state_update(_kind, kind);
-    _leader = leader;
-    _kind = kind;
+    if (leader != _leader || kind != _kind) {
+      notify_raft_state_update(_kind, kind);
+      _leader = leader;
+      _kind = kind;
+    }
+  } else {
+    _logger->warn("visible cluster is to small for quorum. exists: ",
+                  exists_size,
+                  " max_size:",
+                  max_size,
+                  " quorum: ",
+                  qr);
   }
-
   if (!_stoped) {
     _timer->expires_at(_timer->expires_at()
                        + boost::posix_time::milliseconds(_timer_period));
