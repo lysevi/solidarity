@@ -59,7 +59,8 @@ int main(int argc, char **argv) {
     bool is_on_update_received = false;
     std::condition_variable cond;
 
-    auto uh_id = c->add_update_handler([&is_on_update_received, &cond](auto) {
+    auto uh_id = c->add_event_handler([&is_on_update_received, &cond](auto ev) {
+      std::cerr << solidarity::to_string(ev) << std::endl;
       is_on_update_received = true;
       cond.notify_all();
     });
@@ -79,7 +80,7 @@ int main(int argc, char **argv) {
     }
     std::cout << "elapsed: " << el.elapsed() << std::endl;
 
-    c->rm_update_handler(uh_id);
+    c->rm_event_handler(uh_id);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     ++i;

@@ -116,9 +116,9 @@ TEST_CASE("node", "[network]") {
   }
 
   auto leader_name = leaders.begin()->name();
-  std::cerr << "send over leader "<<leader_name << std::endl;
+  std::cerr << "send over leader " << leader_name << std::endl;
   tst_logger->info("send over leader ", leader_name);
-  
+
   auto leader_client = clients[leader_name];
   std::vector<uint8_t> first_cmd{1, 2, 3, 4, 5};
 
@@ -127,7 +127,7 @@ TEST_CASE("node", "[network]") {
   bool is_on_update_received = false;
   std::condition_variable cond;
 
-  auto uh_id = leader_client->add_update_handler([&is_on_update_received, &cond](auto) {
+  auto uh_id = leader_client->add_event_handler([&is_on_update_received, &cond](auto) {
     is_on_update_received = true;
     cond.notify_all();
   });
@@ -144,7 +144,7 @@ TEST_CASE("node", "[network]") {
     }
   }
 
-  leader_client->rm_update_handler(uh_id);
+  leader_client->rm_event_handler(uh_id);
   std::cerr << "resend test" << std::endl;
   tst_logger->info("resend test");
 
@@ -165,11 +165,9 @@ TEST_CASE("node", "[network]") {
     }
 
     bool is_state_changed = false;
-    auto handler_id = kv.second->add_raft_event_handler(
-        [&is_state_changed, kv](const solidarity::raft_state_event_t &rse) mutable {
-          std::cerr << kv.first
-                    << " raft state changed: " << solidarity::to_string(rse.old_state)
-                    << "=>" << solidarity::to_string(rse.new_state) << "!" << std::endl;
+    auto handler_id = kv.second->add_event_handler(
+        [&is_state_changed, kv](const solidarity::client_event_t &rse) mutable {
+          std::cerr << kv.first << ": " << solidarity::to_string(rse) << std::endl;
           is_state_changed = true;
         });
 
@@ -198,7 +196,7 @@ TEST_CASE("node", "[network]") {
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    kv.second->rm_raft_event_handler(handler_id);
+    kv.second->rm_event_handler(handler_id);
   }
 
   for (auto &kv : nodes) {
@@ -206,14 +204,19 @@ TEST_CASE("node", "[network]") {
     auto client = clients[kv.first];
 
     solidarity::ERROR_CODE c = solidarity::ERROR_CODE::OK;
-    auto id = client->add_client_event_handler(
-        [&c](const solidarity::client_state_event_t &ev) mutable { c = ev.ecode; });
+    auto id
+        = client->add_event_handler([&c](const solidarity::client_event_t &ev) mutable {
+            if (ev.kind == solidarity::client_event_t::event_kind::NETWORK) {
+              auto nse = std::get<solidarity::network_state_event_t>(ev.description);
+              c = nse.ecode;
+            }
+          });
     kv.second->stop();
 
     while (c != solidarity::ERROR_CODE::NETWORK_ERROR) {
       std::this_thread::yield();
     }
-    client->rm_client_event_handler(id);
+    client->rm_event_handler(id);
   }
 
   for (auto &kv : clients) {

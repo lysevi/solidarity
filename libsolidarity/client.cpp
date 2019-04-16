@@ -8,6 +8,29 @@
 
 using namespace solidarity;
 
+std::string solidarity::to_string(const client_event_t &cev) {
+  std::stringstream ss;
+  ss << "{kind:";
+  switch (cev.kind) {
+  case client_event_t::event_kind::NETWORK:
+    ss << "NETWORK, ecode: "
+       << to_string(std::get<network_state_event_t>(cev.description).ecode);
+    break;
+  case client_event_t::event_kind::RAFT:
+    auto re = std::get<raft_state_event_t>(cev.description);
+    ss << "RAFT, from:" << to_string(re.old_state)
+       << " => to:" << to_string(re.new_state);
+    break;
+  case client_event_t::event_kind::STATE_MACHINE:
+    ss << "STATE_MACHINE";
+    break;
+  default:
+    NOT_IMPLEMENTED;
+  }
+  ss << "}";
+  return ss.str(); 
+}
+
 class solidarity::async_result_t {
 public:
   solidarity::async_result_t(uint64_t id_) {
@@ -83,16 +106,7 @@ void solidarity::inner::client_update_async_result(client &c,
   }
 }
 
-void solidarity::inner::client_notify_update(client &c,
-                                             const state_machine_updated_event_t &ev) {
-  c.notify_on_update(ev);
-}
-
-void solidarity::inner::client_notify_update(client &c, const client_state_event_t &ev) {
-  c.notify_on_update(ev);
-}
-
-void solidarity::inner::client_notify_update(client &c, const raft_state_event_t &ev) {
+void solidarity::inner::client_notify_update(client &c, const client_event_t &ev) {
   c.notify_on_update(ev);
 }
 
@@ -135,7 +149,10 @@ public:
     }
     case QUERY_KIND::UPDATE: {
       state_machine_updated_event_t sme;
-      inner::client_notify_update(*_parent, sme);
+      client_event_t cev;
+      cev.kind = client_event_t::event_kind::STATE_MACHINE;
+      cev.description = sme;
+      inner::client_notify_update(*_parent, cev);
       break;
     }
     case QUERY_KIND::RAFT_STATE_UPDATE: {
@@ -143,7 +160,11 @@ public:
       raft_state_event_t rse;
       rse.new_state = rs.new_state;
       rse.old_state = rs.old_state;
-      inner::client_notify_update(*_parent, rse);
+
+      client_event_t cev;
+      cev.kind = client_event_t::event_kind::RAFT;
+      cev.description = rse;
+      inner::client_notify_update(*_parent, cev);
       break;
     }
     default:
@@ -155,9 +176,13 @@ public:
                         const boost::system::error_code & /*err*/) override {
     // TODO add message to log err.msg();
     inner::client_update_connection_status(*_parent, false);
-    client_state_event_t ev;
+    network_state_event_t ev;
     ev.ecode = ERROR_CODE::NETWORK_ERROR;
-    inner::client_notify_update(*_parent, ev);
+
+    client_event_t cev;
+    cev.kind = client_event_t::event_kind::NETWORK;
+    cev.description = ev;
+    inner::client_notify_update(*_parent, cev);
   }
 
 private:
@@ -263,69 +288,23 @@ std::vector<uint8_t> client::read(const std::vector<uint8_t> &cmd) {
   return waiter->result();
 }
 
-uint64_t client::add_update_handler(
-    const std::function<void(const state_machine_updated_event_t &)> &f) {
+uint64_t client::add_event_handler(const std::function<void(const client_event_t &)> &f) {
   std::lock_guard l(_locker);
   auto id = _next_query_id.fetch_add(1);
   _on_update_handlers[id] = f;
   return id;
 }
 
-void client::rm_update_handler(uint64_t id) {
+void client::rm_event_handler(uint64_t id) {
   std::lock_guard l(_locker);
   if (auto it = _on_update_handlers.find(id); it != _on_update_handlers.end()) {
     _on_update_handlers.erase(it);
   }
 }
 
-uint64_t client::add_client_event_handler(
-    const std::function<void(const client_state_event_t &)> &f) {
-  std::lock_guard l(_locker);
-  auto id = _next_query_id.fetch_add(1);
-  _on_client_event_handlers[id] = f;
-  return id;
-}
-
-void client::rm_client_event_handler(uint64_t id) {
-  std::lock_guard l(_locker);
-  if (auto it = _on_client_event_handlers.find(id);
-      it != _on_client_event_handlers.end()) {
-    _on_client_event_handlers.erase(it);
-  }
-}
-
-uint64_t
-client::add_raft_event_handler(const std::function<void(const raft_state_event_t &)> &f) {
-  std::lock_guard l(_locker);
-  auto id = _next_query_id.fetch_add(1);
-  _on_raft_event_handlers[id] = f;
-  return id;
-}
-
-void client::rm_raft_event_handler(uint64_t id) {
-  std::lock_guard l(_locker);
-  if (auto it = _on_raft_event_handlers.find(id); it != _on_raft_event_handlers.end()) {
-    _on_raft_event_handlers.erase(it);
-  }
-}
-
-void client::notify_on_update(const state_machine_updated_event_t &ev) {
-  std::lock_guard l(_locker);
+void client::notify_on_update(const client_event_t &ev) {
+  std::shared_lock l(_locker);
   for (auto &kv : _on_update_handlers) {
-    kv.second(ev);
-  }
-}
-
-void client::notify_on_update(const client_state_event_t &ev) {
-  std::lock_guard l(_locker);
-  for (auto &kv : _on_client_event_handlers) {
-    kv.second(ev);
-  }
-}
-
-void client::notify_on_update(const raft_state_event_t &ev) {
-  std::lock_guard l(_locker);
-  for (auto &kv : _on_raft_event_handlers) {
     kv.second(ev);
   }
 }
