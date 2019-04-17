@@ -140,11 +140,15 @@ void mesh_connection::start() {
     _threads[i] = std::thread([this]() {
       _threads_at_work.fetch_add(1);
       while (true) {
-        _io_context.run();
-        if (_stoped) {
-          break;
+        try {
+          _io_context.run();
+          if (_stoped) {
+            break;
+          }
+          _io_context.restart();
+        } catch (std::exception &ex) {
+          this->_logger->fatal("mesh_connection loop: ", ex.what());
         }
-        _io_context.restart();
       }
       _threads_at_work.fetch_sub(1);
     });

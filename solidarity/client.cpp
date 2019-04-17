@@ -226,7 +226,6 @@ void client::connect() {
     throw utils::exceptions::exception_t("called twice!");
   }
   _threads_at_work.store(0);
-  // TODO clear _async_results and free all elements of them;
 
   _threads.resize(_params.threads_count);
   for (size_t i = 0; i < _params.threads_count; ++i) {
