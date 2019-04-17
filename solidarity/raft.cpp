@@ -293,8 +293,7 @@ void raft::on_append_entries(const node_name &from, const append_entries &e) {
 
   auto self_prev = _jrn->prev_rec();
   if (e.current != self_prev && e.prev != self_prev && !self_prev.is_empty()) {
-    // TODO check 'e.current.kind == logdb::LOG_ENTRY_KIND::SNAPSHOT'
-    if (e.current.lsn == 0 /*|| e.current.kind == logdb::LOG_ENTRY_KIND::SNAPSHOT*/) {
+    if (e.current.lsn == 0) {
       _logger->info("clear journal!");
       _jrn->erase_all_after(logdb::index_t{-1});
       ENSURE(_jrn->size() == size_t(0));
@@ -582,9 +581,9 @@ ERROR_CODE raft::add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k) {
   _logs_state[_self_addr].prev = current;
   _logger->info("add_command: ", current);
 
-  /*if (_cluster->size() == size_t(1)) {
+  if (_cluster->size() == size_t(1)) {
     commit_reccord(_jrn->first_uncommited_rec());
-  }*/
+  }
   return ERROR_CODE::OK;
 }
 
