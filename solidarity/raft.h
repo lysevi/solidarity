@@ -79,7 +79,6 @@ protected:
 
   void commit_reccord(const logdb::reccord_info &target);
   void replicate_log();
-  void log_fsck(const append_entries &e);
 
   [[nodiscard]] ERROR_CODE add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k);
   void add_reccord(const logdb::log_entry &le);

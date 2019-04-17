@@ -161,40 +161,12 @@ void raft::on_heartbeat(const node_name &from, const append_entries &e) {
                   " append_entries: ",
                   e);
     _logs_state.clear();
-    // log_fsck(e);
     _logger->info("send hello to ", from);
     send(from, ENTRIES_KIND::HELLO);
   }
   if (from == _state.leader) {
     _logger->dbg("on_heartbeat: update last_heartbeat from ", from);
     _state.last_heartbeat_time = high_resolution_clock_t::now();
-  }
-}
-
-/// clear uncommited reccord in journal
-void raft::log_fsck(const append_entries &e) {
-  /// TODO really need this?
-  return;
-  bool reset = false;
-  logdb::reccord_info to_erase{};
-  if (e.prev.lsn != _jrn->prev_rec().lsn) {
-    _logger->info("erase prev ", _jrn->prev_rec(), " => ", e.prev);
-    reset = true;
-    to_erase = e.prev;
-  }
-  if (e.commited.lsn != _jrn->commited_rec().lsn) {
-    reset = true;
-    if (to_erase.is_empty() || e.commited.lsn < to_erase.lsn) {
-      _logger->info("erase commited ", _jrn->commited_rec(), " => ", e.commited);
-      to_erase = e.commited;
-    }
-  }
-  if (reset) {
-    _jrn->erase_all_after(to_erase.lsn);
-    _state_machine->reset();
-    auto f = [this](const logdb::log_entry &le) { add_reccord(le); };
-    _jrn->visit(f);
-    _logger->info("consumer restored ");
   }
 }
 
@@ -265,7 +237,6 @@ void raft::recv(const node_name &from, const append_entries &e) {
     _logger->info("change state to follower");
     _state.leader.clear();
     _state.change_state(NODE_KIND::FOLLOWER, e.term, e.leader);
-    log_fsck(e);
     _logger->info("send hello to ", from);
     send(e.leader, ENTRIES_KIND::HELLO);
     _logs_state.clear();
