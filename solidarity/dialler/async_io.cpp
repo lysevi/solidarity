@@ -1,5 +1,6 @@
 #include <solidarity/dialler/async_io.h>
 #include <solidarity/utils/utils.h>
+#include <solidarity/utils/exception.h>
 #include <cassert>
 #include <exception>
 
@@ -117,9 +118,8 @@ void async_io::readNextAsync() {
             try {
               self->_on_recv_hadler(std::move(d), cancel_flag);
             } catch (std::exception &ex) {
-              throw std::logic_error(
-                  std::string("exception on async readNextAsync::on_read_message. - ")
-                  + ex.what());
+              THROW_EXCEPTION(
+                  "exception on async readNextAsync::on_read_message. - ", ex.what());
             }
             if (!cancel_flag) {
               self->readNextAsync();
