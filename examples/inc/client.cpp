@@ -90,7 +90,9 @@ int main(int argc, char **argv) {
         break;
       }
     }
+    auto answer = c->read({});
     std::cout << "elapsed: " << el.elapsed() << std::endl;
+    std::cout << "sz: " << answer.size() << std::endl;
 
     c->rm_event_handler(uh_id);
 
