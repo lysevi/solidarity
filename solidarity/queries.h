@@ -91,8 +91,8 @@ struct read_query_t {
     msg_id = id;
     query = q;
   }
-  EXPORT read_query_t(const dialler::message_ptr &msg);
-  EXPORT dialler::message_ptr to_message() const;
+  EXPORT read_query_t(const std::vector<dialler::message_ptr> &msg);
+  EXPORT std::vector<dialler::message_ptr> to_message() const;
 };
 
 struct write_query_t {
@@ -102,8 +102,8 @@ struct write_query_t {
     msg_id = id;
     query = q;
   }
-  EXPORT write_query_t(const dialler::message_ptr &msg);
-  EXPORT dialler::message_ptr to_message() const;
+  EXPORT write_query_t(const std::vector<dialler::message_ptr> &msg);
+  EXPORT std::vector<dialler::message_ptr> to_message() const;
 };
 
 struct state_machine_updated_t {

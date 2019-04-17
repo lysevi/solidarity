@@ -134,7 +134,7 @@ public:
       break;
     }
     case QUERY_KIND::READ: {
-      clients::read_query_t rq(d);
+      clients::read_query_t rq({d});
       inner::client_update_async_result(
           *_parent, rq.msg_id, rq.query.data, ERROR_CODE::OK, std::string());
       break;

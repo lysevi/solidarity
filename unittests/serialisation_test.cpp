@@ -199,12 +199,27 @@ TEST_CASE("serialisation.client_connect_t", "[network]") {
 TEST_CASE("serialisation.read_query_t", "[network]") {
   solidarity::command cmd;
   cmd.data = std::vector<uint8_t>{0, 1, 2, 3};
+
+  SECTION("small cmd") {
+    cmd.data.resize(100);
+    std::iota(cmd.data.begin(), cmd.data.end(), uint8_t(0));
+  }
+  SECTION("big cmd") {
+    cmd.data.resize(solidarity::dialler::message::MAX_BUFFER_SIZE * 11);
+    std::iota(cmd.data.begin(), cmd.data.end(), uint8_t(0));
+  }
+
   solidarity::queries::clients::read_query_t qc(777, cmd);
   auto msg = qc.to_message();
 
+  for (auto &v : msg) {
+    EXPECT_EQ(
+        v->get_header()->kind,
+        (solidarity::dialler::message::kind_t)solidarity::queries::QUERY_KIND::READ);
+  }
+
   solidarity::queries::clients::read_query_t qc_u(msg);
-  EXPECT_EQ(msg->get_header()->kind,
-            (solidarity::dialler::message::kind_t)solidarity::queries::QUERY_KIND::READ);
+
   EXPECT_EQ(qc.msg_id, qc_u.msg_id);
   EXPECT_TRUE(std::equal(qc.query.data.begin(),
                          qc.query.data.end(),
@@ -217,12 +232,27 @@ TEST_CASE("serialisation.read_query_t", "[network]") {
 TEST_CASE("serialisation.write_query_t", "[network]") {
   solidarity::command cmd;
   cmd.data = std::vector<uint8_t>{0, 1, 2, 3};
+
+  SECTION("small cmd") {
+    cmd.data.resize(100);
+    std::iota(cmd.data.begin(), cmd.data.end(), uint8_t(0));
+  }
+  SECTION("big cmd") {
+    cmd.data.resize(solidarity::dialler::message::MAX_BUFFER_SIZE * 11);
+    std::iota(cmd.data.begin(), cmd.data.end(), uint8_t(0));
+  }
+
   solidarity::queries::clients::write_query_t qc(777, cmd);
   auto msg = qc.to_message();
 
+  for (auto &v : msg) {
+    EXPECT_EQ(
+        v->get_header()->kind,
+        (solidarity::dialler::message::kind_t)solidarity::queries::QUERY_KIND::WRITE);
+  }
+
   solidarity::queries::clients::write_query_t qc_u(msg);
-  EXPECT_EQ(msg->get_header()->kind,
-            (solidarity::dialler::message::kind_t)solidarity::queries::QUERY_KIND::WRITE);
+
   EXPECT_EQ(qc.msg_id, qc_u.msg_id);
   EXPECT_TRUE(std::equal(qc.query.data.begin(),
                          qc.query.data.end(),

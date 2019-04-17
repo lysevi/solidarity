@@ -70,16 +70,16 @@ public:
   }
 
   void read_handler(listener_client_ptr i, message_ptr &&d) {
-    clients::read_query_t rq(d);
+    clients::read_query_t rq({d});
     _logger->dbg("client:", _client_name, " read query #", rq.msg_id);
     command result = _parent->state_machine()->read(rq.query);
     clients::read_query_t answer(rq.msg_id, result);
     auto ames = answer.to_message();
-    i->send_data(ames);
+    i->send_data(ames.front());
   }
 
   void write_handler(listener_client_ptr i, message_ptr &&d) {
-    clients::write_query_t wq(d);
+    clients::write_query_t wq({d});
     _logger->dbg("client:", _client_name, " write query #", wq.msg_id);
     bool writed = false;
     auto nk = _parent->state().node_kind;

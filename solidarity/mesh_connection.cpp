@@ -78,16 +78,17 @@ void listener::on_new_message(dialler::listener_client_ptr i,
       std::vector<dialler::message_ptr> m({d});
       _parent->on_new_command(m);
     } else {
-      _recv_message_pool.push_back(d);
+      _parent->add_to_message_pool(i->get_id(), d);
       if (d->get_header()->is_end_block) {
-        _parent->on_new_command(std::move(_recv_message_pool));
-        _recv_message_pool.clear();
+        auto all_messages = _parent->read_message_pool(i->get_id());
+        _parent->clear_message_pool(i->get_id());
+        _parent->on_new_command(std::move(all_messages));
       }
     }
     break;
   }
   case QUERY_KIND::WRITE: {
-    queries::clients::write_query_t wq(d);
+    queries::clients::write_query_t wq({d});
     _parent->on_write_resend(_parent->addr_by_id(i->get_id()), wq.msg_id, wq.query);
     break;
   }
