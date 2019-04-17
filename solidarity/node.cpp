@@ -281,7 +281,7 @@ std::shared_ptr<raft> node::get_raft() {
 
 void node::heartbeat_timer() {
   auto exists_size = _cluster_con->size();
-  auto max_size = _params.cluster.size()+1;
+  auto max_size = _params.cluster.size() + 1;
   auto qr = quorum_for_cluster(max_size, _params.rft_settings.vote_quorum());
   if (exists_size >= qr) {
     _raft->heartbeat();

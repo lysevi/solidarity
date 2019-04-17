@@ -13,7 +13,7 @@ TEST_CASE("raft.quorum calculation", "[raft]") {
   EXPECT_EQ(solidarity::quorum_for_cluster(5, 0.5), 3);
 }
 
-/*TEST_CASE("raft.add_nodes", "[raft]") {
+TEST_CASE("raft.add_nodes", "[raft]") {
   auto cluster = std::make_shared<mock_cluster>();
 
   /// SINGLE
@@ -82,7 +82,6 @@ TEST_CASE("raft.quorum calculation", "[raft]") {
   EXPECT_EQ(c_1->get_leader().name(), c_0->get_leader().name());
   cluster = nullptr;
 }
-*/
 
 TEST_CASE("raft", "[raft]") {
   auto cluster = std::make_shared<mock_cluster>();

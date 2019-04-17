@@ -1,7 +1,7 @@
+#include <cmath>
 #include <solidarity/raft_state.h>
 #include <solidarity/utils/logger.h>
 #include <solidarity/utils/utils.h>
-#include <cmath>
 #include <sstream>
 
 using namespace solidarity;
@@ -196,12 +196,11 @@ raft_state_t raft_state_t::heartbeat(const raft_state_t &self,
       break;
     }
     case NODE_KIND::FOLLOWER: {
-      /*if (cluster_size == size_t(1)) {
+      if (cluster_size == size_t(1)) {
         result.term++;
         result.leader = self_addr;
         result.node_kind = NODE_KIND::LEADER;
-      } else */
-	  {
+      } else {
         result.node_kind = NODE_KIND::CANDIDATE;
         result.term++;
         result.leader = self_addr;

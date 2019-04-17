@@ -47,7 +47,7 @@ SCENARIO("raft_state_t.vote", "[raft]") {
     }
     WHEN("self == FOLLOWER") {
       self.node_kind = solidarity::NODE_KIND::FOLLOWER;
-      /*WHEN("leader.term>self.term") {
+      WHEN("leader.term>self.term") {
         self.term = 0;
         auto c = solidarity::raft_state_t::on_vote(self, s, self_addr, self_ci_rec, 2,
                                             from_s_addr, ae);
@@ -56,7 +56,7 @@ SCENARIO("raft_state_t.vote", "[raft]") {
           EXPECT_EQ(c.new_state.term, from_s.term);
           EXPECT_EQ(c.notify, solidarity::NOTIFY_TARGET::SENDER);
         }
-      }*/
+      }
       WHEN("leader.commit>=self.commit") {
         solidarity::logdb::reccord_info ci_rec;
         ci_rec.lsn = 1;
