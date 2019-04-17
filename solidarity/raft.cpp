@@ -270,7 +270,6 @@ void raft::recv(const node_name &from, const append_entries &e) {
     send(e.leader, ENTRIES_KIND::HELLO);
     _logs_state.clear();
     _state.votes_to_me.clear();
-    return;
   }
 
   switch (e.kind) {
