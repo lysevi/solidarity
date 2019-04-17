@@ -293,6 +293,7 @@ void raft::on_append_entries(const node_name &from, const append_entries &e) {
   auto self_prev = _jrn->prev_rec();
   if (e.current != self_prev && e.prev != self_prev && !self_prev.is_empty()) {
     if (e.current.lsn == 0) {
+    if (e.current.lsn == 0 /*|| e.current.kind == logdb::LOG_ENTRY_KIND::SNAPSHOT*/) {
       _logger->info("clear journal!");
       _jrn->erase_all_after(logdb::index_t{-1});
       ENSURE(_jrn->size() == size_t(0));
