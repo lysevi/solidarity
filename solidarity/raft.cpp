@@ -349,6 +349,7 @@ void raft::on_append_entries(const node_name &from, const append_entries &e) {
   /// Pong for "heartbeat"
   auto ae = make_append_entries(ENTRIES_KIND::ANSWER_OK);
   _cluster->send_to(_self_addr, from, ae);
+  _state.last_heartbeat_time = high_resolution_clock_t::now();
 }
 
 void raft::on_answer_ok(const node_name &from, const append_entries &e) {
@@ -491,6 +492,7 @@ void raft::replicate_log() {
   auto jrn_sz = _jrn->size();
   auto jrn_is_empty = jrn_sz == size_t(0);
   auto first_jrn_record = _jrn->first_rec();
+  auto prev_jrn_reccord = _jrn->prev_rec();
 
   for (const auto &naddr : all) {
     if (naddr == _self_addr) {
@@ -509,14 +511,14 @@ void raft::replicate_log() {
     if (kv->second.prev.lsn_is_empty() || kv->second.prev != self_log_state.prev) {
       auto lsn_to_replicate = kv->second.prev.lsn;
       if (kv->second.prev.lsn_is_empty()) {
-        lsn_to_replicate = _jrn->first_rec().lsn;
+        lsn_to_replicate = first_jrn_record.lsn;
       } else {
         if (kv->second.prev.lsn >= self_log_state.prev.lsn) {
-          lsn_to_replicate = _jrn->prev_rec().lsn;
+          lsn_to_replicate = prev_jrn_reccord.lsn;
         } else {
           switch (kv->second.direction) {
           case RDIRECTION::FORWARDS:
-            if (lsn_to_replicate != _jrn->prev_rec().lsn) {
+            if (lsn_to_replicate != prev_jrn_reccord.lsn) {
               if (lsn_to_replicate < first_jrn_record.lsn) {
                 _logger->info("lsn_to_replicate < _jrn->first_rec().lsn");
                 lsn_to_replicate = _jrn->restore_start_point().lsn;
@@ -560,6 +562,7 @@ void raft::replicate_log() {
       }
     }
     if (!is_append) {
+      _logger->info("send HELLO to", naddr);
       send(naddr, ENTRIES_KIND::HEARTBEAT);
     }
   }
