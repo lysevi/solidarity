@@ -67,7 +67,7 @@ void raft::update_next_heartbeat_interval() {
     break;
   }
   case NODE_KIND::FOLLOWER: {
-    hbi = uint64_t(total_mls * 1.5);
+    hbi = _settings.follower_max_timeout().count();
     break;
   }
   case NODE_KIND::ELECTION: {
@@ -562,7 +562,7 @@ void raft::replicate_log() {
       }
     }
     if (!is_append) {
-      _logger->info("send HELLO to", naddr);
+      _logger->info("send HELLO to ", naddr);
       send(naddr, ENTRIES_KIND::HEARTBEAT);
     }
   }
