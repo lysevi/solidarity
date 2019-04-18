@@ -230,7 +230,9 @@ void mesh_connection::send_all(const node_name &from, const append_entries &m) {
   _logger->dbg("send all");
   auto all = all_nodes();
   for (auto &&o : std::move(all)) {
-    send_to(from, std::move(o), m);
+    if (o != _self_addr) {
+      send_to(from, std::move(o), m);
+    }
   }
 }
 
