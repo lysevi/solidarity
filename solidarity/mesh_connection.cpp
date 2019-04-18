@@ -47,7 +47,7 @@ void listener::on_network_error(dialler::listener_client_ptr i,
                                 const dialler::message_ptr & /*d*/,
                                 const boost::system::error_code &err) {
   _parent->rm_input_connection(i->get_id(), err);
-  _parent->clear_message_pool(i->get_id());
+  clear_message_pool(i->get_id());
 }
 
 void listener::on_new_message(dialler::listener_client_ptr i,
@@ -79,10 +79,10 @@ void listener::on_new_message(dialler::listener_client_ptr i,
       std::vector<dialler::message_ptr> m({d});
       _parent->on_new_command(m);
     } else {
-      _parent->add_to_message_pool(i->get_id(), d);
+      add_to_message_pool(i->get_id(), d);
       if (d->get_header()->is_end_block) {
-        auto all_messages = _parent->read_message_pool(i->get_id());
-        _parent->clear_message_pool(i->get_id());
+        auto all_messages = read_message_pool(i->get_id());
+        clear_message_pool(i->get_id());
         _parent->on_new_command(std::move(all_messages));
       }
     }

@@ -46,9 +46,26 @@ public:
 
   void on_disconnect(const dialler::listener_client_ptr &i) override;
 
+   void add_to_message_pool(uint64_t id, const dialler::message_ptr &m) {
+    std::lock_guard l(_locker);
+    _recv_message_pool[id].push_back(m);
+  }
+
+  std::vector<dialler::message_ptr> read_message_pool(uint64_t id) {
+    std::shared_lock l(_locker);
+    return _recv_message_pool[id];
+  }
+
+  void clear_message_pool(uint64_t id) {
+    std::lock_guard l(_locker);
+    _recv_message_pool[id].clear();
+  }
+
 private:
+  mutable std::shared_mutex _locker;
   std::shared_ptr<mesh_connection> _parent;
   // node_name _self_logical_addr;
+  std::unordered_map<uint64_t, std::vector<dialler::message_ptr>> _recv_message_pool;
 };
 
 } // namespace impl
@@ -102,20 +119,7 @@ protected:
   on_write_status(solidarity::node_name &target, uint64_t mess_id, ERROR_CODE status);
   void on_write_status(solidarity::node_name &target, ERROR_CODE status);
 
-  void add_to_message_pool(uint64_t id, const dialler::message_ptr &m) {
-    std::lock_guard l(_locker);
-    _recv_message_pool[id].push_back(m);
-  }
-
-  std::vector<dialler::message_ptr> read_message_pool(uint64_t id) {
-    std::shared_lock l(_locker);
-    return _recv_message_pool[id];
-  }
-
-  void clear_message_pool(uint64_t id) {
-    std::lock_guard l(_locker);
-    _recv_message_pool[id].clear();
-  }
+ 
 
 private:
   utils::logging::abstract_logger_ptr _logger;
@@ -148,6 +152,6 @@ private:
       = std::unordered_map<uint64_t, std::function<void(ERROR_CODE)>>;
   std::unordered_map<solidarity::node_name, message_id_to_callback> _messages;
 
-  std::unordered_map<uint64_t, std::vector<dialler::message_ptr>> _recv_message_pool;
+
 };
 } // namespace solidarity
