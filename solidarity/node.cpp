@@ -75,6 +75,9 @@ public:
     command result = _parent->state_machine()->read(rq.query);
     clients::read_query_t answer(rq.msg_id, result);
     auto ames = answer.to_message();
+    if (ames.size() > 1) {
+      NOT_IMPLEMENTED;
+    }
     i->send_data(ames.front());
   }
 

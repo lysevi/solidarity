@@ -270,8 +270,11 @@ ERROR_CODE client::send(const std::vector<uint8_t> &cmd) {
 
   auto waiter = make_waiter();
   queries::clients::write_query_t rq(waiter->id(), c);
-
-  _dialler->send_async(rq.to_message());
+  auto messages = rq.to_message();
+  if (messages.size() > 1) {
+    NOT_IMPLEMENTED;
+  }
+  _dialler->send_async(messages);
   waiter->wait();
   auto result = waiter->ecode();
   return result;

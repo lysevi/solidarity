@@ -47,6 +47,7 @@ void listener::on_network_error(dialler::listener_client_ptr i,
                                 const dialler::message_ptr & /*d*/,
                                 const boost::system::error_code &err) {
   _parent->rm_input_connection(i->get_id(), err);
+  _parent->clear_message_pool(i->get_id());
 }
 
 void listener::on_new_message(dialler::listener_client_ptr i,
