@@ -7,15 +7,15 @@
 namespace solidarity::utils::strings {
 
 /// split string by space.
-EXPORT std::vector<std::string> tokens(const std::string &str);
+[[nodiscard]] EXPORT std::vector<std::string> tokens(const std::string &str);
 EXPORT std::vector<std::string> split(const std::string &text, char sep);
-EXPORT std::string to_upper(const std::string &text);
-EXPORT std::string to_lower(const std::string &text);
+[[nodiscard]] EXPORT std::string to_upper(const std::string &text);
+[[nodiscard]] EXPORT std::string to_lower(const std::string &text);
 
 namespace inner {
 using std::to_string;
-EXPORT std::string to_string(const char *_Val);
-EXPORT std::string to_string(const std::string &_Val);
+[[nodiscard]] EXPORT std::string to_string(const char *_Val);
+[[nodiscard]] EXPORT std::string to_string(const std::string &_Val);
 
 template <size_t N, class Head>
 void args_as_string(std::string (&s)[N], size_t pos, size_t &sz, Head &&head) noexcept {
@@ -37,7 +37,7 @@ void args_as_string(std::string (&s)[N],
 } // namespace inner
 
 template <class... Args>
-std::string args_to_string(Args &&... args) noexcept {
+[[nodiscard]] std::string args_to_string(Args &&... args) noexcept {
   const size_t n = sizeof...(args);
   std::string ss[n];
   size_t sz = 0;

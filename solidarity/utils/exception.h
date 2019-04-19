@@ -27,7 +27,7 @@ struct codepos {
       , _line(line)
       , _func(function) {}
 
-  std::string toString() const {
+  [[nodiscard]] std::string to_string() const {
     auto ss = std::string(_file) + " line: " + std::to_string(_line)
               + " function: " + std::string(_func) + "\n";
     return ss;
@@ -38,17 +38,19 @@ struct codepos {
 class exception_t final : public std::exception {
 public:
   template <typename... T>
-  static exception_t create_and_log(const codepos &pos, T... message) {
+  [[nodiscard]] static exception_t create_and_log(const codepos &pos, T... message) {
 
     auto expanded_message = utils::strings::args_to_string(
         std::string("FATAL ERROR. The Exception will be thrown! "),
-        pos.toString() + " Message: ",
+        pos.to_string() + " Message: ",
         message...);
     return exception_t(expanded_message);
   }
 
 public:
+  [[nodiscard]] 		
   const char *what() const noexcept override { return _msg.c_str(); }
+  [[nodiscard]] 		
   const std::string &message() const { return _msg; }
 
   EXPORT exception_t();

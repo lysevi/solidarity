@@ -1,9 +1,9 @@
 #pragma once
 
 #include <solidarity/dialler/async_io.h>
-#include <solidarity/exports.h>
 #include <solidarity/dialler/initialized_resource.h>
 #include <solidarity/dialler/message.h>
+#include <solidarity/exports.h>
 #include <unordered_map>
 
 namespace solidarity::dialler {
@@ -17,12 +17,13 @@ public:
   virtual void on_network_error(const message_ptr &d,
                                 const boost::system::error_code &err)
       = 0;
-
-  EXPORT bool is_connected() const;
-  EXPORT bool is_stoped() const;
+  [[nodiscard]] EXPORT bool is_connected() const;
+  [[nodiscard]] EXPORT bool is_stoped() const;
 
   EXPORT void add_connection(std::shared_ptr<dial> c);
-  EXPORT bool is_connection_exists() const { return _connection != nullptr; }
+  [[nodiscard]] EXPORT bool is_connection_exists() const {
+    return _connection != nullptr;
+  }
 
 protected:
   std::shared_ptr<dial> _connection;
@@ -41,12 +42,13 @@ public:
     unsigned short port;
     bool auto_reconnection = true;
 
-    bool operator==(const params_t &other) const {
+    [[nodiscard]] bool operator==(const params_t &other) const {
       return host == other.host && port == other.port
-          && auto_reconnection == other.auto_reconnection;
+             && auto_reconnection == other.auto_reconnection;
     }
   };
   dial() = delete;
+  [[nodiscard]] 		
   params_t get_params() const { return _params; }
 
   EXPORT dial(boost::asio::io_context *context, const params_t &_parms);
@@ -70,7 +72,7 @@ protected:
   abstract_connection_consumer_ptr _consumers;
 };
 
-} // namespace dialler
+} // namespace solidarity::dialler
 
 namespace std {
 template <>

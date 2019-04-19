@@ -20,6 +20,7 @@ public:
   EXPORT void start();
   EXPORT void stop();
   EXPORT void restart();
+  [[nodiscard]] 		
   EXPORT bool is_started() const { return _started; }
 
 private:

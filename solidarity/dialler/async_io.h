@@ -25,7 +25,9 @@ public:
   EXPORT void start(data_handler_t onRecv, error_handler_t onErr);
   EXPORT void fullStop(bool waitAllMessages = false); /// stop thread, clean queue
 
+  [[nodiscard]] 		
   int queueSize() const { return _messages_to_send; }
+  [[nodiscard]] 		
   boost::asio::ip::tcp::socket &socket() { return _sock; }
 
 private:

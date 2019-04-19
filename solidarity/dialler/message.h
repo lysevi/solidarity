@@ -57,16 +57,20 @@ public:
 
   ~message() {}
 
+  [[nodiscard]] 		
   uint8_t *value() { return (_data.data() + SIZE_OF_SIZE + sizeof(header_t)); }
+  [[nodiscard]] 		
   size_t values_size() const { return *_size - SIZE_OF_SIZE - SIZE_OF_HEADER; }
+  [[nodiscard]] 		
   size_t size() const { return *_size; }
 
+  [[nodiscard]] 		
   buffer as_buffer() {
     uint8_t *v = reinterpret_cast<uint8_t *>(_data.data());
     auto buf_size = *_size;
     return buffer{buf_size, v};
   }
-
+  [[nodiscard]] 		
   header_t *get_header() {
     return reinterpret_cast<header_t *>(this->_data.data() + SIZE_OF_SIZE);
   }

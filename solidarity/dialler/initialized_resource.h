@@ -25,7 +25,9 @@ public:
     }
   }
 
+  [[nodiscard]] 		
   bool is_started() const { return _started.load(); }
+  [[nodiscard]] 		
   bool is_complete() const { return _complete.load(); }
 
   void start(bool checkDoubleStarting = true) {
@@ -77,9 +79,13 @@ struct initialized_resource {
       std::abort();
     }
   }
+  [[nodiscard]] 		
   bool is_initialisation_begin() const { return starting.is_started(); }
+  [[nodiscard]] 		
   bool is_started() const { return starting.is_complete(); }
+  [[nodiscard]] 		
   bool is_stopping_started() const { return stoping.is_started(); }
+  [[nodiscard]] 		
   bool is_stoped() const { return stoping.is_complete(); }
 
   void initialisation_begin() {

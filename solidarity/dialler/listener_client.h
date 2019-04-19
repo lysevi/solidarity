@@ -20,6 +20,7 @@ public:
                                const boost::system::error_code &err);
   EXPORT void on_data_recv(message_ptr &&d, bool &cancel);
   EXPORT void send_data(const message_ptr &d);
+  [[nodiscard]] 		
   EXPORT uint64_t get_id() const { return id; }
 
 private:

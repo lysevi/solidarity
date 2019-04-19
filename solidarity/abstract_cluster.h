@@ -1,9 +1,9 @@
 #pragma once
 
-#include <solidarity/journal.h>
-#include <solidarity/error_codes.h>
-#include <solidarity/utils/property.h>
 #include <memory>
+#include <solidarity/error_codes.h>
+#include <solidarity/journal.h>
+#include <solidarity/utils/property.h>
 
 namespace solidarity {
 
@@ -18,15 +18,20 @@ public:
       : _name(sv) {}
 
   node_name &operator=(const node_name &) = default;
-
-  bool is_empty() const { return name().empty(); }
+  [[nodiscard]] bool is_empty() const { return name().empty(); }
   void clear() { _name = ""; }
-  bool operator!=(const node_name &other) const { return _name != other._name; }
-  bool operator==(const node_name &other) const { return _name == other._name; }
-  bool operator<(const node_name &other) const { return _name < other._name; }
+  [[nodiscard]] bool operator!=(const node_name &other) const {
+    return _name != other._name;
+  }
+  [[nodiscard]] bool operator==(const node_name &other) const {
+    return _name == other._name;
+  }
+  [[nodiscard]] bool operator<(const node_name &other) const {
+    return _name < other._name;
+  }
 };
 
-inline std::string to_string(const node_name &s) {
+[[nodiscard]] inline std::string to_string(const node_name &s) {
   return std::string("node:://") + s.name();
 }
 
