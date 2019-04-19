@@ -89,9 +89,9 @@ SCENARIO("raft_state_t.vote", "[raft]") {
 
       WHEN("leader.commit.is_empty() && !self.commit.is_empty()") {
         solidarity::logdb::reccord_info ci_rec;
-        ci_rec.lsn = solidarity::logdb::UNDEFINED_INDEX;
+        ci_rec.lsn = solidarity::UNDEFINED_INDEX;
         ci_rec.term = 2;
-        ae.commited.lsn = solidarity::logdb::UNDEFINED_INDEX;
+        ae.commited.lsn = solidarity::UNDEFINED_INDEX;
         ae.commited.term = 2;
         auto c
             = solidarity::raft_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
@@ -105,7 +105,7 @@ SCENARIO("raft_state_t.vote", "[raft]") {
         solidarity::logdb::reccord_info ci_rec;
         ci_rec.lsn = 1;
         ci_rec.term = 2;
-        ae.commited.lsn = solidarity::logdb::UNDEFINED_INDEX;
+        ae.commited.lsn = solidarity::UNDEFINED_INDEX;
         ae.commited.term = 2;
         auto c
             = solidarity::raft_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
@@ -117,7 +117,7 @@ SCENARIO("raft_state_t.vote", "[raft]") {
       }
       WHEN("leader.commit.is_empty() && !self.commit.is_empty()") {
         solidarity::logdb::reccord_info ci_rec;
-        ci_rec.lsn = solidarity::logdb::UNDEFINED_INDEX;
+        ci_rec.lsn = solidarity::UNDEFINED_INDEX;
         ci_rec.term = 2;
         ae.commited.lsn = 3;
         ae.commited.term = 2;

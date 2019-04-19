@@ -105,8 +105,8 @@ append_entries raft::make_append_entries(const ENTRIES_KIND kind) const noexcept
   return ae;
 }
 
-append_entries raft::make_append_entries(const logdb::index_t lsn_to_replicate,
-                                         const logdb::index_t prev_lsn) {
+append_entries raft::make_append_entries(const index_t lsn_to_replicate,
+                                         const index_t prev_lsn) {
   auto ae = make_append_entries(solidarity::ENTRIES_KIND::APPEND);
   auto cur = _jrn->get(lsn_to_replicate);
 
@@ -118,7 +118,7 @@ append_entries raft::make_append_entries(const logdb::index_t lsn_to_replicate,
   ae.current.lsn = lsn_to_replicate;
   ae.current.term = cur.term;
 
-  if (prev_lsn != logdb::UNDEFINED_INDEX) {
+  if (prev_lsn != UNDEFINED_INDEX) {
     auto prev = _jrn->info(prev_lsn);
     ae.prev = prev;
   } else {
@@ -295,7 +295,7 @@ void raft::on_append_entries(const node_name &from, const append_entries &e) {
   if (e.current != self_prev && e.prev != self_prev && !self_prev.is_empty()) {
     if (e.current.lsn == 0) {
       _logger->info("clear journal!");
-      _jrn->erase_all_after(logdb::index_t{-1});
+      _jrn->erase_all_after(index_t{-1});
       ENSURE(_jrn->size() == size_t(0));
     } else {
       auto info = _jrn->info(e.prev.lsn);
@@ -417,7 +417,7 @@ void raft::on_answer_failed(const node_name &from, const append_entries &e) {
     it->second.direction = RDIRECTION::BACKWARDS;
     auto last_sended_it = _last_sended.find(from);
     ENSURE(last_sended_it != _last_sended.end());
-    if (it->second.prev.lsn != logdb::UNDEFINED_INDEX) { /// move replication log backward
+    if (it->second.prev.lsn != UNDEFINED_INDEX) { /// move replication log backward
       it->second.prev.lsn = last_sended_it->second.lsn - 1;
     }
   }
@@ -544,7 +544,7 @@ void raft::replicate_log() {
 
         auto ae = make_append_entries(lsn_to_replicate,
                                       lsn_to_replicate > 0 ? lsn_to_replicate - 1
-                                                           : logdb::UNDEFINED_INDEX);
+                                                           : UNDEFINED_INDEX);
 
         _last_sended[kv->first] = ae.current;
         _logger->info("replicate cur:",

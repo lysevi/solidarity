@@ -53,7 +53,7 @@ void memory_journal::commit(const index_t lsn) {
   _commited = reccord_info(last->second, last->first);
 }
 
-log_entry memory_journal::get(const logdb::index_t lsn) {
+log_entry memory_journal::get(const index_t lsn) {
   std::shared_lock lg(_locker);
   // TODO check _prev and _commited for better speed;
 
@@ -213,7 +213,7 @@ reccord_info memory_journal::info(index_t lsn) const noexcept {
 }
 
 std::unordered_map<index_t, log_entry> memory_journal::dump() const {
-  std::unordered_map<solidarity::logdb::index_t, solidarity::logdb::log_entry> result;
+  std::unordered_map<solidarity::index_t, solidarity::logdb::log_entry> result;
 
   auto prev = prev_rec();
   if (!prev.is_empty()) {

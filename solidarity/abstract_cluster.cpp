@@ -56,7 +56,7 @@ void unpack_record_info(msgpack::unpacker &pac, logdb::reccord_info &ri) {
   pac.next(oh);
   ri.kind = static_cast<solidarity::logdb::LOG_ENTRY_KIND>(oh.get().as<uint8_t>());
   pac.next(oh);
-  ri.lsn = oh.get().as<solidarity::logdb::index_t>();
+  ri.lsn = oh.get().as<solidarity::index_t>();
   pac.next(oh);
   ri.term = oh.get().as<solidarity::term_t>();
 }

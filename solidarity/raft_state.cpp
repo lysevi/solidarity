@@ -156,8 +156,7 @@ raft_state_t raft_state_t::on_append_entries(const raft_state_t &self,
   case NODE_KIND::LEADER: {
     auto last_lst = jrn->commited_rec();
     if (result.term < e.term || (e.commited.term > last_lst.term)
-        || (e.commited.term != logdb::UNDEFINED_TERM
-            && last_lst.term == logdb::UNDEFINED_TERM)) {
+        || (e.commited.term != UNDEFINED_TERM && last_lst.term == UNDEFINED_TERM)) {
       result.node_kind = NODE_KIND::FOLLOWER;
       result.term = e.term;
       result.leader = e.leader;

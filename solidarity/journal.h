@@ -12,10 +12,6 @@
 #include <utility>
 
 namespace solidarity::logdb {
-/// log sequence numbder;
-using index_t = int64_t;
-const term_t UNDEFINED_TERM = std::numeric_limits<term_t>::min();
-const index_t UNDEFINED_INDEX = {-1};
 
 enum class LOG_ENTRY_KIND : uint8_t { APPEND, SNAPSHOT };
 
@@ -25,7 +21,7 @@ struct log_entry {
       , cmd()
       , kind(LOG_ENTRY_KIND::APPEND) {}
 
-  index_t idx= UNDEFINED_INDEX;
+  index_t idx = UNDEFINED_INDEX;
   term_t term;
   command cmd;
   LOG_ENTRY_KIND kind;
@@ -52,7 +48,7 @@ struct reccord_info {
   bool operator!=(const reccord_info &o) const { return !(*this == o); }
 
   term_t term;
-  logdb::index_t lsn;
+  index_t lsn;
   LOG_ENTRY_KIND kind;
 };
 
@@ -64,7 +60,7 @@ public:
   virtual reccord_info put(const index_t idx, const log_entry &e) = 0;
   virtual reccord_info put(const log_entry &e) = 0;
   virtual void commit(const index_t lsn) = 0;
-  virtual log_entry get(const logdb::index_t lsn) = 0;
+  virtual log_entry get(const index_t lsn) = 0;
   virtual size_t size() const = 0;
   virtual size_t reccords_count() const = 0;
   virtual void erase_all_after(const index_t lsn) = 0;
@@ -90,7 +86,7 @@ public:
   EXPORT reccord_info put(const index_t idx, const log_entry &e) override;
   EXPORT reccord_info put(const log_entry &e) override;
   EXPORT void commit(const index_t lsn) override;
-  [[nodiscard]] EXPORT log_entry get(const logdb::index_t lsn) override;
+  [[nodiscard]] EXPORT log_entry get(const index_t lsn) override;
   [[nodiscard]] EXPORT size_t size() const override;
   [[nodiscard]] EXPORT size_t reccords_count() const;
   EXPORT void erase_all_after(const index_t lsn) override;
@@ -121,7 +117,7 @@ template <>
 struct hash<solidarity::logdb::reccord_info> {
   std::size_t operator()(const solidarity::logdb::reccord_info &k) const {
     size_t h1 = std::hash<solidarity::term_t>()(k.term);
-    size_t h2 = std::hash<solidarity::logdb::index_t>()(k.lsn);
+    size_t h2 = std::hash<solidarity::index_t>()(k.lsn);
     return h1 ^ (h2 << 1);
   }
 };

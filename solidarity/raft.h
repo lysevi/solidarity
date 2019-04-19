@@ -64,8 +64,8 @@ protected:
   [[nodiscard]] append_entries make_append_entries(const ENTRIES_KIND kind
                                                    = ENTRIES_KIND::APPEND) const
       noexcept;
-  [[nodiscard]] append_entries make_append_entries(const logdb::index_t lsn_to_replicate,
-                                     const logdb::index_t prev_lsn);
+  [[nodiscard]] append_entries make_append_entries(const index_t lsn_to_replicate,
+                                     const index_t prev_lsn);
   void send_all(const ENTRIES_KIND kind);
   void send(const node_name &to, const ENTRIES_KIND kind);
 

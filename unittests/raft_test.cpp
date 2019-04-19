@@ -518,7 +518,7 @@ TEST_CASE("raft.rollback", "[raft]") {
 
   /*SECTION("rewrite all journal") {
     n2->rw_state().term = 100500;
-    jrn1->erase_all_after(solidarity::logdb::index_t(-1));
+    jrn1->erase_all_after(solidarity::index_t(-1));
 
     solidarity::logdb::log_entry le;
     le.kind = solidarity::logdb::LOG_ENTRY_KIND::APPEND;
