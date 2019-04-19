@@ -36,8 +36,7 @@ protected:
 
 struct elapsed_time {
   elapsed_time() noexcept { start_time = std::clock(); }
-  [[nodiscard]] 		
-  double elapsed() noexcept {
+  [[nodiscard]] double elapsed() noexcept {
     return ((double)std::clock() - start_time) / CLOCKS_PER_SEC;
   }
   std::clock_t start_time;

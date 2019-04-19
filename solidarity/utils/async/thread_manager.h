@@ -1,9 +1,9 @@
 #pragma once
 
+#include <shared_mutex>
+#include <solidarity/exports.h>
 #include <solidarity/utils/async/thread_pool.h>
 #include <solidarity/utils/utils.h>
-#include <solidarity/exports.h>
-#include <shared_mutex>
 #include <unordered_map>
 
 namespace solidarity::utils::async {

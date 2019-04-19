@@ -1,11 +1,11 @@
 #pragma once
 
+#include <condition_variable>
+#include <deque>
+#include <shared_mutex>
 #include <solidarity/abstract_cluster.h>
 #include <solidarity/raft.h>
-#include <condition_variable>
-#include <shared_mutex>
 #include <tuple>
-#include <deque>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -48,11 +48,13 @@ public:
                const solidarity::node_name &to,
                const solidarity::append_entries &m) override;
 
-  void send_all(const solidarity::node_name &from, const solidarity::append_entries &m) override;
+  void send_all(const solidarity::node_name &from,
+                const solidarity::append_entries &m) override;
   size_t size() override;
   std::vector<solidarity::node_name> all_nodes() const override;
 
-  void add_new(const solidarity::node_name &addr, const std::shared_ptr<solidarity::raft> &c);
+  void add_new(const solidarity::node_name &addr,
+               const std::shared_ptr<solidarity::raft> &c);
 
   std::vector<std::shared_ptr<solidarity::raft>>
   by_filter(std::function<bool(const std::shared_ptr<solidarity::raft>)> pred);
@@ -75,6 +77,7 @@ public:
 
   std::shared_ptr<mock_cluster> split(size_t count_to_move);
   void union_with(std::shared_ptr<mock_cluster> other);
+
 protected:
   void stop_workers();
   void start_workers();

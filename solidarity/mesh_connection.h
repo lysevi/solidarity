@@ -46,7 +46,7 @@ public:
 
   void on_disconnect(const dialler::listener_client_ptr &i) override;
 
-   void add_to_message_pool(uint64_t id, const dialler::message_ptr &m) {
+  void add_to_message_pool(uint64_t id, const dialler::message_ptr &m) {
     std::lock_guard l(_locker);
     _recv_message_pool[id].push_back(m);
   }
@@ -108,8 +108,7 @@ public:
 protected:
   void accept_out_connection(const node_name &name, const std::string &addr);
   void accept_input_connection(const node_name &name, uint64_t id);
-  [[nodiscard]] 		
-  node_name addr_by_id(uint64_t id);
+  [[nodiscard]] node_name addr_by_id(uint64_t id);
   void rm_out_connection(const std::string &addr, const boost::system::error_code &err);
   void rm_input_connection(uint64_t id, const boost::system::error_code &err);
   void on_new_command(const std::vector<dialler::message_ptr> &m);
@@ -119,8 +118,6 @@ protected:
   void
   on_write_status(solidarity::node_name &target, uint64_t mess_id, ERROR_CODE status);
   void on_write_status(solidarity::node_name &target, ERROR_CODE status);
-
- 
 
 private:
   utils::logging::abstract_logger_ptr _logger;
@@ -152,7 +149,5 @@ private:
   using message_id_to_callback
       = std::unordered_map<uint64_t, std::function<void(ERROR_CODE)>>;
   std::unordered_map<solidarity::node_name, message_id_to_callback> _messages;
-
-
 };
 } // namespace solidarity

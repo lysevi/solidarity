@@ -1,7 +1,7 @@
-#include <solidarity/dialler/listener.h>
-#include <solidarity/dialler/listener_client.h>
 #include <boost/asio.hpp>
 #include <functional>
+#include <solidarity/dialler/listener.h>
+#include <solidarity/dialler/listener_client.h>
 #include <string>
 
 using namespace boost::asio;

@@ -1,8 +1,8 @@
 #pragma once
 
+#include <solidarity/exports.h>
 #include <solidarity/utils/async/task.h>
 #include <solidarity/utils/utils.h>
-#include <solidarity/exports.h>
 
 #include <deque>
 #include <shared_mutex>

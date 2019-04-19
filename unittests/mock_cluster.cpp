@@ -1,8 +1,8 @@
 #include "mock_cluster.h"
-#include <solidarity/utils/logger.h>
-#include <solidarity/utils/utils.h>
 #include <algorithm>
 #include <cassert>
+#include <solidarity/utils/logger.h>
+#include <solidarity/utils/utils.h>
 
 worker_t::worker_t(std::shared_ptr<solidarity::raft> t) {
   _target = t;
@@ -110,7 +110,8 @@ void mock_cluster::send_to(const solidarity::node_name &from,
   }
 }
 
-void mock_cluster::send_all(const solidarity::node_name &from, const solidarity::append_entries &m) {
+void mock_cluster::send_all(const solidarity::node_name &from,
+                            const solidarity::append_entries &m) {
   std::shared_lock lg(_cluster_locker);
   ENSURE(!from.is_empty());
   for (const auto &kv : _cluster) {
@@ -133,8 +134,8 @@ void mock_cluster::add_new(const solidarity::node_name &addr,
   _size++;
 }
 
-std::vector<std::shared_ptr<solidarity::raft>>
-mock_cluster::by_filter(std::function<bool(const std::shared_ptr<solidarity::raft>)> pred) {
+std::vector<std::shared_ptr<solidarity::raft>> mock_cluster::by_filter(
+    std::function<bool(const std::shared_ptr<solidarity::raft>)> pred) {
   std::shared_lock lg(_cluster_locker);
   std::vector<std::shared_ptr<solidarity::raft>> result;
   result.reserve(_cluster.size());
@@ -165,18 +166,19 @@ void mock_cluster::print_cluster() {
   solidarity::utils::logging::logger_info("----------------------------");
   /*std::cout << "----------------------------\n";*/
   apply([](auto n) {
-    /*std::cout << solidarity::utils::strings::args_to_string("?: ", n->self_addr(), "{", n->kind(),
+    /*std::cout << solidarity::utils::strings::args_to_string("?: ", n->self_addr(), "{",
+       n->kind(),
                                                 ":", n->term(), "}", " => ",
                                                 n->get_leader(), "\n");*/
     solidarity::utils::logging::logger_info("?: ",
-                                n->self_addr(),
-                                "{",
-                                n->kind(),
-                                ":",
-                                n->term(),
-                                "}",
-                                " => ",
-                                n->get_leader());
+                                            n->self_addr(),
+                                            "{",
+                                            n->kind(),
+                                            ":",
+                                            n->term(),
+                                            "}",
+                                            " => ",
+                                            n->get_leader());
   });
 }
 
@@ -247,12 +249,13 @@ bool mock_cluster::is_leader_eletion_complete(size_t max_leaders) {
   }
   if (leaders.size() == 1) {
     auto cur_leader = leaders.front()->self_addr();
-    auto followers = by_filter([cur_leader](
-                                   const std::shared_ptr<solidarity::raft> &v) -> bool {
-      auto nkind = v->state().node_kind;
-      return v->get_leader() == cur_leader
-             && (nkind == solidarity::NODE_KIND::LEADER || nkind == solidarity::NODE_KIND::FOLLOWER);
-    });
+    auto followers
+        = by_filter([cur_leader](const std::shared_ptr<solidarity::raft> &v) -> bool {
+            auto nkind = v->state().node_kind;
+            return v->get_leader() == cur_leader
+                   && (nkind == solidarity::NODE_KIND::LEADER
+                       || nkind == solidarity::NODE_KIND::FOLLOWER);
+          });
     if (followers.size() == size()) {
       return true;
     }

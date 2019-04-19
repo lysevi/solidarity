@@ -69,7 +69,8 @@ int main(int argc, char **argv) {
   logger_ptr->info(ss.str());
 
   solidarity::node::params_t params;
-  params.rft_settings.set_max_log_size(1000).set_election_timeout(std::chrono::milliseconds(500));
+  params.rft_settings.set_max_log_size(1000).set_election_timeout(
+      std::chrono::milliseconds(500));
   params.port = port;
   params.client_port = client_port++;
   params.thread_count = 1;

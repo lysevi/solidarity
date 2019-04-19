@@ -48,8 +48,7 @@ public:
     }
   };
   dial() = delete;
-  [[nodiscard]] 		
-  params_t get_params() const { return _params; }
+  [[nodiscard]] params_t get_params() const { return _params; }
 
   EXPORT dial(boost::asio::io_context *context, const params_t &_parms);
   EXPORT virtual ~dial();

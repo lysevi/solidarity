@@ -1,8 +1,8 @@
 #pragma once
 
-#include <solidarity/exports.h>
 #include <chrono>
 #include <functional>
+#include <solidarity/exports.h>
 #include <thread>
 
 namespace solidarity::utils::timer {
@@ -20,8 +20,7 @@ public:
   EXPORT void start();
   EXPORT void stop();
   EXPORT void restart();
-  [[nodiscard]] 		
-  EXPORT bool is_started() const { return _started; }
+  [[nodiscard]] EXPORT bool is_started() const { return _started; }
 
 private:
   void _worker();

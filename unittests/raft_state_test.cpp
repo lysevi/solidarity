@@ -1,6 +1,6 @@
 #include "helpers.h"
-#include <solidarity/raft_state.h>
 #include <catch.hpp>
+#include <solidarity/raft_state.h>
 
 SCENARIO("raft_state_t.vote", "[raft]") {
   solidarity::raft_state_t self;
@@ -49,8 +49,8 @@ SCENARIO("raft_state_t.vote", "[raft]") {
       self.node_kind = solidarity::NODE_KIND::FOLLOWER;
       WHEN("leader.term>self.term") {
         self.term = 0;
-        auto c = solidarity::raft_state_t::on_vote(self, s, self_addr, self_ci_rec, 2,
-                                            from_s_addr, ae);
+        auto c = solidarity::raft_state_t::on_vote(
+            self, s, self_addr, self_ci_rec, 2, from_s_addr, ae);
         THEN("vote to sender") {
           EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
           EXPECT_EQ(c.new_state.term, from_s.term);
@@ -63,8 +63,8 @@ SCENARIO("raft_state_t.vote", "[raft]") {
         ci_rec.term = 1;
         ae.commited.lsn = 2;
         ae.commited.term = 2;
-        auto c
-            = solidarity::raft_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
+        auto c = solidarity::raft_state_t::on_vote(
+            self, s, self_addr, ci_rec, 2, from_s_addr, ae);
         THEN("vote to sender") {
           EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
           EXPECT_EQ(c.new_state.term, from_s.term);
@@ -78,8 +78,8 @@ SCENARIO("raft_state_t.vote", "[raft]") {
         ci_rec.term = 2;
         self.term = ae.term = 3;
         ae.commited.lsn = 3;
-        auto c
-            = solidarity::raft_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
+        auto c = solidarity::raft_state_t::on_vote(
+            self, s, self_addr, ci_rec, 2, from_s_addr, ae);
         THEN("vote to sender") {
           EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
           EXPECT_EQ(c.new_state.term, ae.term);
@@ -93,8 +93,8 @@ SCENARIO("raft_state_t.vote", "[raft]") {
         ci_rec.term = 2;
         ae.commited.lsn = solidarity::UNDEFINED_INDEX;
         ae.commited.term = 2;
-        auto c
-            = solidarity::raft_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
+        auto c = solidarity::raft_state_t::on_vote(
+            self, s, self_addr, ci_rec, 2, from_s_addr, ae);
         THEN("vote to sender") {
           EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
           EXPECT_EQ(c.new_state.term, from_s.term);
@@ -107,8 +107,8 @@ SCENARIO("raft_state_t.vote", "[raft]") {
         ci_rec.term = 2;
         ae.commited.lsn = solidarity::UNDEFINED_INDEX;
         ae.commited.term = 2;
-        auto c
-            = solidarity::raft_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
+        auto c = solidarity::raft_state_t::on_vote(
+            self, s, self_addr, ci_rec, 2, from_s_addr, ae);
         THEN("vote to sender") {
           EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
           EXPECT_EQ(c.new_state.term, from_s.term);
@@ -121,8 +121,8 @@ SCENARIO("raft_state_t.vote", "[raft]") {
         ci_rec.term = 2;
         ae.commited.lsn = 3;
         ae.commited.term = 2;
-        auto c
-            = solidarity::raft_state_t::on_vote(self, s, self_addr, ci_rec, 2, from_s_addr, ae);
+        auto c = solidarity::raft_state_t::on_vote(
+            self, s, self_addr, ci_rec, 2, from_s_addr, ae);
         THEN("vote to sender") {
           EXPECT_EQ(c.new_state.leader.name(), from_s_addr.name());
           EXPECT_EQ(c.new_state.term, from_s.term);

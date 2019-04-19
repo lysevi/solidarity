@@ -68,7 +68,6 @@ void byte_array_to_msg(std::vector<dialler::message_ptr> &result,
   }
 }
 
-
 std::vector<uint8_t> messages_to_byte_array(const std::vector<message_ptr> &mptrs) {
   auto s = std::accumulate(mptrs.cbegin(),
                            mptrs.cend(),
@@ -143,7 +142,6 @@ message_ptr status_t::to_message() const {
   return pack_to_message(
       queries::QUERY_KIND::STATUS, id, msg, static_cast<uint16_t>(status));
 }
-
 
 command_t::command_t(const std::vector<message_ptr> &mptrs) {
   ENSURE(std::all_of(mptrs.cbegin(), mptrs.cend(), [](auto mptr) {

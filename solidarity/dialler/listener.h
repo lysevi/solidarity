@@ -1,9 +1,9 @@
 #pragma once
 
 #include <solidarity/dialler/async_io.h>
-#include <solidarity/exports.h>
 #include <solidarity/dialler/initialized_resource.h>
 #include <solidarity/dialler/listener_client.h>
+#include <solidarity/exports.h>
 
 #include <atomic>
 #include <mutex>
@@ -25,8 +25,7 @@ public:
   virtual void on_disconnect(const listener_client_ptr &i) = 0;
 
   EXPORT void set_listener(const std::shared_ptr<listener> &lstnr);
-  [[nodiscard]] 		
-  EXPORT bool is_listener_exists() const { return _lstnr != nullptr; }
+  [[nodiscard]] EXPORT bool is_listener_exists() const { return _lstnr != nullptr; }
   EXPORT void send_to(uint64_t id, message_ptr d);
   EXPORT void stop();
 
@@ -53,8 +52,7 @@ public:
   EXPORT void send_to(listener_client_ptr i, message_ptr d);
   EXPORT void send_to(uint64_t id, message_ptr d);
 
-  [[nodiscard]] 		
-  EXPORT boost::asio::io_context *context() const { return _context; }
+  [[nodiscard]] EXPORT boost::asio::io_context *context() const { return _context; }
 
   EXPORT void erase_client_description(const listener_client_ptr client);
   EXPORT void add_consumer(const abstract_listener_consumer_ptr &c);
@@ -88,4 +86,4 @@ protected:
 
   params_t _params;
 };
-} // namespace dialler
+} // namespace solidarity::dialler

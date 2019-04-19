@@ -1,8 +1,8 @@
-#include <solidarity/utils/strings.h>
 #include <algorithm>
 #include <clocale>
 #include <ctype.h>
 #include <iterator>
+#include <solidarity/utils/strings.h>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -10,7 +10,8 @@
 std::vector<std::string> solidarity::utils::strings::tokens(const std::string &str) {
   std::vector<std::string> tokens;
   std::istringstream iss(str);
-  std::copy(std::istream_iterator<std::string>(iss), std::istream_iterator<std::string>(),
+  std::copy(std::istream_iterator<std::string>(iss),
+            std::istream_iterator<std::string>(),
             std::back_inserter(tokens));
   return tokens;
 }
@@ -21,7 +22,7 @@ std::vector<std::string> solidarity::utils::strings::split(const std::string &te
 
   std::vector<std::string> tokens;
   tokens.reserve(n);
-  
+
   std::size_t start = 0, end = 0;
   while ((end = text.find(sep, start)) != std::string::npos) {
     std::string temp = text.substr(start, end - start);
@@ -40,8 +41,9 @@ std::vector<std::string> solidarity::utils::strings::split(const std::string &te
 std::string solidarity::utils::strings::to_upper(const std::string &text) {
   std::string converted = text;
 
-  std::transform(std::begin(text), std::end(text), std::begin(converted),
-                 [](auto c) { return (char)toupper(c); });
+  std::transform(std::begin(text), std::end(text), std::begin(converted), [](auto c) {
+    return (char)toupper(c);
+  });
 
   return converted;
 }
@@ -49,8 +51,9 @@ std::string solidarity::utils::strings::to_upper(const std::string &text) {
 std::string solidarity::utils::strings::to_lower(const std::string &text) {
   std::string converted = text;
 
-  std::transform(std::begin(text), std::end(text), std::begin(converted),
-                 [](auto c) { return (char)tolower(c); });
+  std::transform(std::begin(text), std::end(text), std::begin(converted), [](auto c) {
+    return (char)tolower(c);
+  });
   return converted;
 }
 

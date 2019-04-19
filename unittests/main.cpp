@@ -1,5 +1,4 @@
 #define CATCH_CONFIG_RUNNER
-#include <solidarity/utils/logger.h>
 #include <catch.hpp>
 #include <chrono>
 #include <cstring>
@@ -7,6 +6,7 @@
 #include <fstream>
 #include <iostream>
 #include <list>
+#include <solidarity/utils/logger.h>
 #include <sstream>
 
 class UnitTestLogger final : public solidarity::utils::logging::abstract_logger {
@@ -138,7 +138,7 @@ std::tuple<int, char **> init_logger(int argc, char **argv) {
 
 int main(int argc, char **argv) {
   size_t runs = 1;
-  auto[_argc, _argv] = init_logger(argc, argv);
+  auto [_argc, _argv] = init_logger(argc, argv);
 
   Catch::Session sesssion;
   sesssion.configData().showDurations = Catch::ShowDurations::OrNot::Always;

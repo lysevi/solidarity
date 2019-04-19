@@ -1,8 +1,8 @@
+#include <catch.hpp>
+#include <numeric>
 #include <solidarity/abstract_cluster.h>
 #include <solidarity/queries.h>
 #include <solidarity/utils/utils.h>
-#include <catch.hpp>
-#include <numeric>
 
 #ifdef ENABLE_BENCHMARKS
 
@@ -31,7 +31,8 @@ TEST_CASE("serialisation", "[bench]") {
     BENCHMARK("query_connect_t:unpack") { query_connect_t unpacked(qcon_msg); }
   }
   {
-    connection_error_t con_error(777, solidarity::ERROR_CODE::WRONG_PROTOCOL_VERSION, "long error message");
+    connection_error_t con_error(
+        777, solidarity::ERROR_CODE::WRONG_PROTOCOL_VERSION, "long error message");
     BENCHMARK("connection_error_t::to_message") { UNUSED(con_error.to_message()); }
 
     auto qcon_err_msg = con_error.to_message();

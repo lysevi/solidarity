@@ -40,17 +40,14 @@ struct reccord_info {
     kind = LOG_ENTRY_KIND::APPEND;
   }
 
-  [[nodiscard]]
-  bool is_empty() const { return lsn_is_empty() && term_is_empty(); }
-  [[nodiscard]]
-  bool lsn_is_empty() const { return lsn == UNDEFINED_INDEX; }
-  [[nodiscard]]
-  bool term_is_empty() const { return term == UNDEFINED_TERM; }
+  [[nodiscard]] bool is_empty() const { return lsn_is_empty() && term_is_empty(); }
+  [[nodiscard]] bool lsn_is_empty() const { return lsn == UNDEFINED_INDEX; }
+  [[nodiscard]] bool term_is_empty() const { return term == UNDEFINED_TERM; }
 
-  [[nodiscard]]
-  bool operator==(const reccord_info &o) const { return term == o.term && lsn == o.lsn; }
-  [[nodiscard]] 		
-  bool operator!=(const reccord_info &o) const { return !(*this == o); }
+  [[nodiscard]] bool operator==(const reccord_info &o) const {
+    return term == o.term && lsn == o.lsn;
+  }
+  [[nodiscard]] bool operator!=(const reccord_info &o) const { return !(*this == o); }
 
   term_t term;
   index_t lsn;
@@ -65,29 +62,20 @@ public:
   virtual reccord_info put(const index_t idx, const log_entry &e) = 0;
   virtual reccord_info put(const log_entry &e) = 0;
   virtual void commit(const index_t lsn) = 0;
-  [[nodiscard]] 		
-  virtual log_entry get(const index_t lsn) = 0;
-  [[nodiscard]] 		
-  virtual size_t size() const = 0;
-  [[nodiscard]] 		
-  virtual size_t reccords_count() const = 0;
+  [[nodiscard]] virtual log_entry get(const index_t lsn) = 0;
+  [[nodiscard]] virtual size_t size() const = 0;
+  [[nodiscard]] virtual size_t reccords_count() const = 0;
   virtual void erase_all_after(const index_t lsn) = 0;
   virtual void erase_all_to(const index_t lsn) = 0;
 
   virtual void visit(std::function<void(const log_entry &)>) = 0;
 
-  [[nodiscard]] 		
-  virtual reccord_info prev_rec() const noexcept = 0;
-  [[nodiscard]] 		
-  virtual reccord_info first_uncommited_rec() const noexcept = 0;
-  [[nodiscard]] 		
-  virtual reccord_info commited_rec() const noexcept = 0;
-  [[nodiscard]] 		
-  virtual reccord_info first_rec() const noexcept = 0;
-  [[nodiscard]] 		
-  virtual reccord_info restore_start_point() const noexcept = 0;
-  [[nodiscard]] 		
-  virtual reccord_info info(index_t lsn) const noexcept = 0;
+  [[nodiscard]] virtual reccord_info prev_rec() const noexcept = 0;
+  [[nodiscard]] virtual reccord_info first_uncommited_rec() const noexcept = 0;
+  [[nodiscard]] virtual reccord_info commited_rec() const noexcept = 0;
+  [[nodiscard]] virtual reccord_info first_rec() const noexcept = 0;
+  [[nodiscard]] virtual reccord_info restore_start_point() const noexcept = 0;
+  [[nodiscard]] virtual reccord_info info(index_t lsn) const noexcept = 0;
 
   virtual std::unordered_map<index_t, log_entry> dump() const = 0;
 };

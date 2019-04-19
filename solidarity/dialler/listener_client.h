@@ -1,10 +1,10 @@
 #pragma once
 
-#include <solidarity/dialler/async_io.h>
-#include <solidarity/exports.h>
-#include <solidarity/dialler/initialized_resource.h>
 #include <atomic>
 #include <mutex>
+#include <solidarity/dialler/async_io.h>
+#include <solidarity/dialler/initialized_resource.h>
+#include <solidarity/exports.h>
 
 namespace solidarity::dialler {
 
@@ -20,8 +20,7 @@ public:
                                const boost::system::error_code &err);
   EXPORT void on_data_recv(message_ptr &&d, bool &cancel);
   EXPORT void send_data(const message_ptr &d);
-  [[nodiscard]] 		
-  EXPORT uint64_t get_id() const { return id; }
+  [[nodiscard]] EXPORT uint64_t get_id() const { return id; }
 
 private:
   uint64_t id;
@@ -29,4 +28,4 @@ private:
   std::shared_ptr<listener> _listener = nullptr;
 };
 using listener_client_ptr = std::shared_ptr<listener_client>;
-} // namespace dialler
+} // namespace solidarity::dialler

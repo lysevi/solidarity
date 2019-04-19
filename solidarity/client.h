@@ -2,11 +2,11 @@
 
 #include <boost/asio.hpp>
 #include <atomic>
+#include <mutex>
+#include <optional>
 #include <solidarity/error_codes.h>
 #include <solidarity/exports.h>
 #include <solidarity/node_kind.h>
-#include <mutex>
-#include <optional>
 #include <string>
 #include <thread>
 

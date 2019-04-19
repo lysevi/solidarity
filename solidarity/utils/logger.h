@@ -89,15 +89,12 @@ class logger_manager {
 public:
   EXPORT static VERBOSE_KIND verbose;
   logger_manager(abstract_logger_ptr &logger);
-  [[nodiscard]] 		
-  EXPORT abstract_logger *get_logger() noexcept;
-  [[nodiscard]] 		
-  EXPORT abstract_logger_ptr get_shared_logger() noexcept;
+  [[nodiscard]] EXPORT abstract_logger *get_logger() noexcept;
+  [[nodiscard]] EXPORT abstract_logger_ptr get_shared_logger() noexcept;
 
   EXPORT static void start(abstract_logger_ptr &logger);
   EXPORT static void stop();
-  [[nodiscard]] 		
-  EXPORT static logger_manager *instance() noexcept;
+  [[nodiscard]] EXPORT static logger_manager *instance() noexcept;
 
   template <typename... T>
   void variadic_message(MESSAGE_KIND kind, T &&... args) noexcept {

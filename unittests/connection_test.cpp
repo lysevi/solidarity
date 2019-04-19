@@ -1,8 +1,8 @@
 #include "helpers.h"
 #include "mock_state_machine.h"
 #include <catch.hpp>
-#include <solidarity/mesh_connection.h>
 #include <numeric>
+#include <solidarity/mesh_connection.h>
 
 struct mock_cluster_client : solidarity::abstract_cluster_client {
   void recv(const solidarity::node_name &, const solidarity::append_entries &e) override {

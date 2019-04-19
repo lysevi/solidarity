@@ -1,7 +1,7 @@
 #pragma once
 
-#include <solidarity/utils/utils.h>
 #include <solidarity/exports.h>
+#include <solidarity/utils/utils.h>
 
 #include <condition_variable>
 

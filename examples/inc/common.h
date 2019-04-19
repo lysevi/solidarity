@@ -1,7 +1,7 @@
 #pragma once
 #include <iostream>
-#include <solidarity/abstract_state_machine.h>
 #include <shared_mutex>
+#include <solidarity/abstract_state_machine.h>
 
 namespace common_inner {
 union converted {

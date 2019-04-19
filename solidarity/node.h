@@ -3,8 +3,8 @@
 #include <solidarity/abstract_state_machine.h>
 #include <solidarity/command.h>
 #include <solidarity/exports.h>
-#include <solidarity/raft_state.h>
 #include <solidarity/raft_settings.h>
+#include <solidarity/raft_state.h>
 #include <solidarity/utils/logger.h>
 
 #include <string>

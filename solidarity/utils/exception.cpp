@@ -1,5 +1,5 @@
-#include <solidarity/utils/exception.h>
 #include <boost/stacktrace.hpp>
+#include <solidarity/utils/exception.h>
 #include <sstream>
 
 using namespace solidarity::utils::exceptions;

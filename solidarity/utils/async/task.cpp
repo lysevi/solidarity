@@ -43,8 +43,12 @@ CONTINUATION_STRATEGY task_wrapper::worker() {
   try {
     return _task(this->_tinfo);
   } catch (std::exception &ex) {
-    logger_fatal("utils: *** async task exception:", _parent_function,
-                 " file:", _code_file, " line:", _code_line);
+    logger_fatal("utils: *** async task exception:",
+                 _parent_function,
+                 " file:",
+                 _code_file,
+                 " line:",
+                 _code_line);
     logger_fatal("utils: *** what:", ex.what());
     throw;
   }

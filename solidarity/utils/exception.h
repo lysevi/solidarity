@@ -48,10 +48,8 @@ public:
   }
 
 public:
-  [[nodiscard]] 		
-  const char *what() const noexcept override { return _msg.c_str(); }
-  [[nodiscard]] 		
-  const std::string &message() const { return _msg; }
+  [[nodiscard]] const char *what() const noexcept override { return _msg.c_str(); }
+  [[nodiscard]] const std::string &message() const { return _msg; }
 
   EXPORT exception_t();
   EXPORT exception_t(const char *&message);

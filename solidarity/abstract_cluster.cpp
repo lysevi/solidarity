@@ -25,20 +25,20 @@ std::string to_string(const solidarity::ENTRIES_KIND k) {
 
 std::string to_string(const solidarity::append_entries &e) {
   return solidarity::utils::strings::args_to_string("{cmd:",
-                                        e.cmd.data.size(),
-                                        " kind:",
-                                        e.kind,
-                                        " L:",
-                                        e.leader,
-                                        " term:",
-                                        e.term,
-                                        " cur:",
-                                        e.current,
-                                        " prev:",
-                                        e.prev,
-                                        " ci:",
-                                        e.commited,
-                                        "}");
+                                                    e.cmd.data.size(),
+                                                    " kind:",
+                                                    e.kind,
+                                                    " L:",
+                                                    e.leader,
+                                                    " term:",
+                                                    e.term,
+                                                    " cur:",
+                                                    e.current,
+                                                    " prev:",
+                                                    e.prev,
+                                                    " ci:",
+                                                    e.commited,
+                                                    "}");
 }
 } // namespace std
 

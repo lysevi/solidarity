@@ -1,8 +1,8 @@
 #include <solidarity/abstract_cluster.h>
+#include <solidarity/dialler/message.h>
 #include <solidarity/error_codes.h>
 #include <solidarity/exports.h>
 #include <solidarity/node_kind.h>
-#include <solidarity/dialler/message.h>
 #include <vector>
 
 namespace solidarity::queries {

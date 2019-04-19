@@ -23,10 +23,10 @@ class raft : public abstract_cluster_client {
 
 public:
   EXPORT raft(const raft_settings &ns,
-                   abstract_cluster *cluster,
-                   const logdb::journal_ptr &jrn,
-                   abstract_state_machine *state_machine,
-                   utils::logging::abstract_logger_ptr logger = nullptr);
+              abstract_cluster *cluster,
+              const logdb::journal_ptr &jrn,
+              abstract_state_machine *state_machine,
+              utils::logging::abstract_logger_ptr logger = nullptr);
   raft_state_t state() const {
     std::lock_guard l(_locker);
     return _state;
@@ -62,10 +62,9 @@ public:
 
 protected:
   [[nodiscard]] append_entries make_append_entries(const ENTRIES_KIND kind
-                                                   = ENTRIES_KIND::APPEND) const
-      noexcept;
+                                                   = ENTRIES_KIND::APPEND) const noexcept;
   [[nodiscard]] append_entries make_append_entries(const index_t lsn_to_replicate,
-                                     const index_t prev_lsn);
+                                                   const index_t prev_lsn);
   void send_all(const ENTRIES_KIND kind);
   void send(const node_name &to, const ENTRIES_KIND kind);
 
@@ -82,6 +81,7 @@ protected:
 
   [[nodiscard]] ERROR_CODE add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k);
   void add_reccord(const logdb::log_entry &le);
+
 private:
   abstract_state_machine *const _state_machine = nullptr;
   mutable std::mutex _locker;

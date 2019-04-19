@@ -1,7 +1,7 @@
 #pragma once
 
-#include <solidarity/exports.h>
 #include <cstdint>
+#include <solidarity/exports.h>
 #include <string>
 
 namespace solidarity {

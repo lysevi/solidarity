@@ -1,6 +1,6 @@
+#include <algorithm>
 #include <solidarity/utils/async/thread_pool.h>
 #include <solidarity/utils/logger.h>
-#include <algorithm>
 
 using namespace solidarity::utils;
 using namespace solidarity::utils::logging;
@@ -49,8 +49,8 @@ void threads_pool::flush() {
     _condition.notify_one();
     std::unique_lock<std::shared_mutex> lock(_queue_mutex);
     if (!_in_queue.empty()) {
-      auto is_workers_only =
-          std::all_of(_in_queue.begin(), _in_queue.end(), [](const task_wrapper_ptr &t) {
+      auto is_workers_only = std::all_of(
+          _in_queue.begin(), _in_queue.end(), [](const task_wrapper_ptr &t) {
             return t->priority == TASK_PRIORITY::WORKER;
           });
       if (!is_workers_only) {
@@ -112,8 +112,8 @@ void threads_pool::_pool_logic(size_t num) {
         break;
       }
       _queue_mutex.lock_shared();
-      if (!_in_queue.empty() || this->_stop_flag ||
-          task->priority == TASK_PRIORITY::WORKER) {
+      if (!_in_queue.empty() || this->_stop_flag
+          || task->priority == TASK_PRIORITY::WORKER) {
         _queue_mutex.unlock_shared();
         push_task(task);
         break;

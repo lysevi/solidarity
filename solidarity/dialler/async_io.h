@@ -1,7 +1,7 @@
 #pragma once
 
-#include <solidarity/dialler/message.h>
 #include <boost/asio.hpp>
+#include <solidarity/dialler/message.h>
 
 #include <atomic>
 #include <functional>
@@ -25,10 +25,8 @@ public:
   EXPORT void start(data_handler_t onRecv, error_handler_t onErr);
   EXPORT void fullStop(bool waitAllMessages = false); /// stop thread, clean queue
 
-  [[nodiscard]] 		
-  int queueSize() const { return _messages_to_send; }
-  [[nodiscard]] 		
-  boost::asio::ip::tcp::socket &socket() { return _sock; }
+  [[nodiscard]] int queueSize() const { return _messages_to_send; }
+  [[nodiscard]] boost::asio::ip::tcp::socket &socket() { return _sock; }
 
 private:
   void readNextAsync();
@@ -49,4 +47,4 @@ private:
 };
 using async_io_ptr = std::shared_ptr<async_io>;
 
-} // namespace dialler
+} // namespace solidarity::dialler
