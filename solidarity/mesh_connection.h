@@ -101,8 +101,8 @@ public:
 
   boost::asio::io_context *context() { return &_io_context; }
 
-  void send_to(solidarity::node_name &target,
-               solidarity::command &cmd,
+  EXPORT void send_to(const solidarity::node_name &target,
+               const solidarity::command &cmd,
                std::function<void(ERROR_CODE)> callback);
 
 protected:

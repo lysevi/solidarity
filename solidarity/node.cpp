@@ -84,24 +84,13 @@ public:
   void write_handler(listener_client_ptr i, message_ptr &&d) {
     clients::write_query_t wq({d});
     _logger->dbg("client:", _client_name, " write query #", wq.msg_id);
-    bool writed = false;
-    auto nk = _parent->state().node_kind;
-    if (nk != NODE_KIND::LEADER && nk != NODE_KIND::FOLLOWER) {
-      // TODO IMPLEMENT!
-      queries::status_t st(wq.msg_id, ERROR_CODE::UNDER_ELECTION, std::string());
-      i->send_data(st.to_message());
-    } else {
-      if (nk == NODE_KIND::LEADER) {
-        auto ec = _parent->get_raft()->add_command(wq.query);
-        status_t s(wq.msg_id, ec, std::string());
-        auto ames = s.to_message();
-        i->send_data(ames);
-        writed = true;
-      }
+    auto res = _parent->add_command(wq.query);
 
-      if (!writed) {
-        _parent->send_to_leader(i->get_id(), wq.msg_id, wq.query);
-      }
+    if (res == ERROR_CODE::NOT_A_LEADER) {
+      _parent->send_to_leader(i->get_id(), wq.msg_id, wq.query);
+    } else {
+      queries::status_t st(wq.msg_id, res, std::string());
+      i->send_data(st.to_message());
     }
   }
 
@@ -324,7 +313,6 @@ void node::send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd)
       _message_resend[client_id].push_back(std::pair(message_id, cmd));
     }
     _cluster_con->send_to(leader, cmd, [client_id, message_id, this](ERROR_CODE s) {
-      // TODO use shared_from_this;
       this->on_message_sended_status(client_id, message_id, s);
     });
   }
@@ -347,4 +335,40 @@ void node::on_message_sended_status(uint64_t client,
     _listener->send_to(client, answer);
     _message_resend[client].erase(pos);
   }
+}
+
+ERROR_CODE node::add_command(const command &cmd) {
+  auto nk = state().node_kind;
+  if (nk != NODE_KIND::LEADER && nk != NODE_KIND::FOLLOWER) {
+    return ERROR_CODE::UNDER_ELECTION;
+  } else {
+    if (nk == NODE_KIND::LEADER) {
+      auto ec = get_raft()->add_command(cmd);
+      return ec;
+    }
+    return ERROR_CODE::NOT_A_LEADER;
+  }
+}
+
+std::shared_ptr<async_result_t> node::add_command_to_cluster(const command &cmd) {
+  _logger->dbg("add_command_to_cluster");
+  auto result = std::make_shared<async_result_t>(uint64_t(0));
+  auto st = add_command(cmd);
+  if (st == ERROR_CODE::OK) {
+    result->set_result({}, st, "");
+    return result;
+  }
+  auto rft_st = _raft->state();
+  auto leader = rft_st.leader;
+  if (leader.is_empty() || rft_st.node_kind == NODE_KIND::CANDIDATE
+      || rft_st.node_kind == NODE_KIND::ELECTION) {
+    result->set_result({}, solidarity::ERROR_CODE::UNDER_ELECTION, "");
+    return result;
+  }
+
+  auto callback = [result, this](ERROR_CODE s) {
+    result->set_result({}, s, s == ERROR_CODE::OK ? "" : to_string(s));
+  };
+  _cluster_con->send_to(leader, cmd, callback);
+  return result;
 }

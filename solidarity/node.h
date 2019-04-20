@@ -6,6 +6,7 @@
 #include <solidarity/raft_settings.h>
 #include <solidarity/raft_state.h>
 #include <solidarity/utils/logger.h>
+#include <solidarity/async_result.h>
 
 #include <string>
 #include <thread>
@@ -52,19 +53,26 @@ public:
   EXPORT raft_state_t state() const;
   EXPORT node_name self_name() const;
 
+  EXPORT ERROR_CODE add_command(const command &cmd);
+  EXPORT std::shared_ptr<async_result_t> add_command_to_cluster(const command &cmd);
+
   void add_client(uint64_t id);
+  
   void rm_client(uint64_t id);
   EXPORT size_t connections_count() const;
 
   void notify_state_machine_update();
   void notify_raft_state_update(NODE_KIND old_state, NODE_KIND new_state);
-  void send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd);
+  EXPORT void send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd);
+
+  
 
 private:
   void heartbeat_timer();
   void on_message_sended_status(uint64_t client, uint64_t message, ERROR_CODE status);
 
 private:
+  mutable std::shared_mutex _locker;
   bool _stoped;
   params_t _params;
   std::shared_ptr<raft> _raft;
@@ -76,7 +84,7 @@ private:
   std::shared_ptr<solidarity::dialler::listener> _listener;
   std::shared_ptr<solidarity::dialler::abstract_listener_consumer> _listener_consumer;
 
-  mutable std::shared_mutex _locker;
+  
   std::unordered_set<uint64_t> _clients;
 
   uint32_t _timer_period;

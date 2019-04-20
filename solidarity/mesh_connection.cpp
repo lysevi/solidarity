@@ -350,8 +350,8 @@ void mesh_connection::on_new_command(const std::vector<dialler::message_ptr> &m)
   _client->recv(cmd_q.from, cmd_q.cmd);
 }
 
-void mesh_connection::send_to(solidarity::node_name &target,
-                              solidarity::command &cmd,
+void mesh_connection::send_to(const solidarity::node_name &target,
+                              const solidarity::command &cmd,
                               std::function<void(ERROR_CODE)> callback) {
   // TODO need an unit test
   std::lock_guard l(_locker);

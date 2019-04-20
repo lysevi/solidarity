@@ -149,7 +149,8 @@ TEST_CASE("node", "[network]") {
   tst_logger->info("resend test");
 
   for (auto &kv : clients) {
-    auto suffix = leader_name == kv.first ? " is a leader" : "";
+    bool is_a_leader = leader_name == kv.first;
+    auto suffix = is_a_leader ? " is a leader" : "";
     std::cerr << "resend over " << kv.first << suffix << std::endl;
     tst_logger->info("resend over ", kv.first, suffix);
     std::transform(first_cmd.begin(),
@@ -168,7 +169,9 @@ TEST_CASE("node", "[network]") {
     auto handler_id = kv.second->add_event_handler(
         [&is_state_changed, kv](const solidarity::client_event_t &rse) mutable {
           std::cerr << kv.first << ": " << solidarity::to_string(rse) << std::endl;
-          is_state_changed = true;
+          if (rse.kind == solidarity::client_event_t::event_kind::RAFT) {
+            is_state_changed = true;
+          }
         });
 
     solidarity::ERROR_CODE send_ecode = solidarity::ERROR_CODE::UNDEFINED;
@@ -186,6 +189,46 @@ TEST_CASE("node", "[network]") {
                    expected_answer.end(),
                    expected_answer.begin(),
                    [](auto &v) -> uint8_t { return uint8_t(v + 1); });
+    while (!is_state_changed) {
+      auto answer = kv.second->read({1});
+      if (std::equal(expected_answer.begin(),
+                     expected_answer.end(),
+                     answer.begin(),
+                     answer.end())) {
+        break;
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    // write to node
+    std::cerr << "write to node " << kv.first << suffix << std::endl;
+    std::transform(first_cmd.begin(),
+                   first_cmd.end(),
+                   first_cmd.begin(),
+                   [](auto &v) -> uint8_t { return uint8_t(v + 1); });
+
+    send_ecode = solidarity::ERROR_CODE::UNDEFINED;
+    solidarity::command cmd;
+    auto tnode = nodes[kv.first];
+    do {
+      tst_logger->info("try write cmd. step #", i++);
+      cmd.data = first_cmd;
+      send_ecode = tnode->add_command(cmd);
+      if (send_ecode != solidarity::ERROR_CODE::OK) {
+        if (is_a_leader) {
+          break;
+        }
+        tst_logger->info("try resend cmd. step #", i++);
+        std::cerr << "try resend cmd. step #" << i << std::endl;
+        auto ares = tnode->add_command_to_cluster(cmd);
+        ares->wait();
+        send_ecode = ares->ecode();
+      }
+      if (is_state_changed) {
+        break;
+      }
+    } while (send_ecode != solidarity::ERROR_CODE::OK);
+
     while (!is_state_changed) {
       auto answer = kv.second->read({1});
       if (std::equal(expected_answer.begin(),

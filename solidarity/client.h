@@ -1,14 +1,17 @@
 #pragma once
 
-#include <boost/asio.hpp>
-#include <atomic>
-#include <mutex>
-#include <optional>
+#include <solidarity/client_exception.h>
 #include <solidarity/error_codes.h>
 #include <solidarity/exports.h>
 #include <solidarity/node_kind.h>
+
+#include <atomic>
+#include <mutex>
+#include <optional>
 #include <string>
 #include <thread>
+
+#include <boost/asio.hpp>
 
 namespace solidarity {
 namespace dialler {
@@ -17,16 +20,6 @@ class dial;
 
 class client;
 class async_result_t;
-
-class exception : public std::exception {
-public:
-  exception(std::string m)
-      : _message(m) {}
-  const char *what() const noexcept override { return _message.c_str(); }
-
-private:
-  std::string _message;
-};
 
 struct state_machine_updated_event_t {};
 
