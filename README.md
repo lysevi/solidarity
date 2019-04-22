@@ -1,4 +1,4 @@
-![logo](artwork/logo.png)
+![logo](artwork/logo.small.png)
 # SOLIDarity
 
 ## building
