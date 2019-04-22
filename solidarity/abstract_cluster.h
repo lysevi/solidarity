@@ -59,8 +59,9 @@ struct append_entries {
   logdb::reccord_info prev;
   logdb::reccord_info commited;
 
-  EXPORT std::vector<uint8_t> to_byte_array() const;
-  EXPORT static append_entries from_byte_array(const std::vector<uint8_t> &bytes);
+  [[nodiscard]] EXPORT std::vector<uint8_t> to_byte_array() const;
+  [[nodiscard]] EXPORT static append_entries
+  from_byte_array(const std::vector<uint8_t> &bytes);
 };
 
 struct abstract_cluster_client {

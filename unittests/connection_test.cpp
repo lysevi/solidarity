@@ -49,7 +49,7 @@ struct mock_cluster_client : solidarity::abstract_cluster_client {
 
 TEST_CASE("mesh_connection", "[network]") {
   size_t cluster_size = 0;
-  auto tst_log_prefix = solidarity::utils::strings::args_to_string("test?> ");
+  auto tst_log_prefix = solidarity::utils::strings::to_string("test?> ");
   auto tst_logger = std::make_shared<solidarity::utils::logging::prefix_logger>(
       solidarity::utils::logging::logger_manager::instance()->get_shared_logger(),
       tst_log_prefix);
@@ -110,13 +110,13 @@ TEST_CASE("mesh_connection", "[network]") {
                      return solidarity::dialler::dial::params_t("localhost", prt);
                    });
 
-    auto log_prefix = solidarity::utils::strings::args_to_string("localhost_", p, ": ");
+    auto log_prefix = solidarity::utils::strings::to_string("localhost_", p, ": ");
     auto logger = std::make_shared<solidarity::utils::logging::prefix_logger>(
         solidarity::utils::logging::logger_manager::instance()->get_shared_logger(),
         log_prefix);
 
     auto addr = solidarity::node_name().set_name(
-        solidarity::utils::strings::args_to_string("node_", p));
+        solidarity::utils::strings::to_string("node_", p));
     auto clnt = std::make_shared<mock_cluster_client>();
     auto c = std::make_shared<solidarity::mesh_connection>(addr, clnt, logger, params);
     connections.push_back(c);
@@ -146,7 +146,7 @@ TEST_CASE("mesh_connection", "[network]") {
 
   uint8_t cmd_index = 0;
   solidarity::append_entries ae;
-  ae.cmd.data.resize(data_size);
+  ae.cmd.resize(data_size);
   for (auto &v : connections) {
     auto other = v->all_nodes();
     for (auto &node : other) {
@@ -182,7 +182,7 @@ TEST_CASE("mesh_connection", "[network]") {
       }
       auto target_clnt = dynamic_cast<mock_cluster_client *>(clients[node].get());
       while (true) {
-        if (target_clnt->data.size() == ae.cmd.data.size()
+        if (target_clnt->data.size() == ae.cmd.size()
             && target_clnt->data[0] == ae.cmd.data[0]) {
           break;
         }

@@ -27,12 +27,12 @@ public:
 
   solidarity::command read(const solidarity::command &cmd) override {
     std::shared_lock l(_locker);
-    if (last_cmd.data.empty()) {
+    if (last_cmd.is_empty()) {
       return cmd;
     }
 
     solidarity::command result = last_cmd;
-    for (size_t i = 0; i < result.data.size(); ++i) {
+    for (size_t i = 0; i < result.size(); ++i) {
       result.data[i] += cmd.data[0];
     }
     return result;

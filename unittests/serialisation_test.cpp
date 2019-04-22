@@ -45,7 +45,7 @@ TEST_CASE("serialisation.append_entries", "[network]") {
     ae.cmd.data = std::vector<uint8_t>({1, 2, 3, 4, 5});
   }
   SECTION("!cmd.is_empty() [big]") {
-    ae.cmd.data.resize(1000);
+    ae.cmd.resize(1000);
     std::iota(ae.cmd.data.begin(), ae.cmd.data.end(), uint8_t(0));
   }
 
@@ -148,11 +148,11 @@ TEST_CASE("serialisation.command", "[network]") {
   kind = solidarity::ENTRIES_KIND::HEARTBEAT;
   leader.set_name("LEADER");
   SECTION("small cmd") {
-    ae.cmd.data.resize(100);
+    ae.cmd.resize(100);
     std::iota(ae.cmd.data.begin(), ae.cmd.data.end(), uint8_t(0));
   }
   SECTION("big cmd") {
-    ae.cmd.data.resize(solidarity::dialler::message::MAX_BUFFER_SIZE * 11);
+    ae.cmd.resize(solidarity::dialler::message::MAX_BUFFER_SIZE * 11);
     std::iota(ae.cmd.data.begin(), ae.cmd.data.end(), uint8_t(0));
   }
   lk = solidarity::logdb::LOG_ENTRY_KIND::APPEND;

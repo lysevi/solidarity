@@ -16,5 +16,5 @@ enum class ERROR_CODE : uint16_t {
   STATE_MACHINE_CAN_T_APPLY_CMD,
   UNDEFINED = std::numeric_limits<uint16_t>::max()
 };
-EXPORT std::string to_string(const ERROR_CODE status);
+[[nodiscard]] EXPORT std::string to_string(const ERROR_CODE status);
 } // namespace solidarity

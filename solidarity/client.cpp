@@ -1,3 +1,4 @@
+#include <solidarity/async_result.h>
 #include <solidarity/client.h>
 #include <solidarity/client_exception.h>
 #include <solidarity/dialler/dialler.h>
@@ -5,7 +6,6 @@
 #include <solidarity/queries.h>
 #include <solidarity/utils/strings.h>
 #include <solidarity/utils/utils.h>
-#include <solidarity/async_result.h>
 
 using namespace solidarity;
 
@@ -178,7 +178,7 @@ void client::connect() {
 
   auto w = make_waiter();
   ENSURE(w->id() == 0);
-  w->result();
+  UNUSED(w->result());
   _connected = true;
 }
 
@@ -189,15 +189,13 @@ std::shared_ptr<async_result_t> client::make_waiter() {
   return waiter;
 }
 
-ERROR_CODE client::send(const std::vector<uint8_t> &cmd) {
+ERROR_CODE client::send(const solidarity::command &cmd) {
   if (!_connected) {
     return ERROR_CODE::NETWORK_ERROR;
   }
-  solidarity::command c;
-  c.data = cmd;
 
   auto waiter = make_waiter();
-  queries::clients::write_query_t rq(waiter->id(), c);
+  queries::clients::write_query_t rq(waiter->id(), cmd);
   auto messages = rq.to_message();
   if (messages.size() > 1) {
     NOT_IMPLEMENTED;
@@ -208,19 +206,18 @@ ERROR_CODE client::send(const std::vector<uint8_t> &cmd) {
   return result;
 }
 
-std::vector<uint8_t> client::read(const std::vector<uint8_t> &cmd) {
+solidarity::command client::read(const solidarity::command &cmd) {
   if (!_connected) {
     THROW_EXCEPTION("connection error.");
   }
-  solidarity::command c;
-  c.data = cmd;
 
   auto waiter = make_waiter();
-  queries::clients::read_query_t rq(waiter->id(), c);
+  queries::clients::read_query_t rq(waiter->id(), cmd);
 
   _dialler->send_async(rq.to_message());
-
-  return waiter->result();
+  solidarity::command c;
+  c.data = waiter->result();
+  return c;
 }
 
 uint64_t client::add_event_handler(const std::function<void(const client_event_t &)> &f) {

@@ -5,7 +5,7 @@
 
 #include "common.h"
 
-using solidarity::utils::strings::args_to_string;
+using solidarity::utils::strings::to_string;
 
 solidarity::utils::logging::abstract_logger_ptr logger_ptr = nullptr;
 
@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
     }
 
     logger_ptr = std::make_shared<solidarity::utils::logging::file_logger>(
-        args_to_string("server_inc_", port), verbose);
+        to_string("server_inc_", port), verbose);
   } catch (cxxopts::OptionException &ex) {
     logger_ptr->fatal(ex.what());
   }
@@ -75,9 +75,9 @@ int main(int argc, char **argv) {
   params.client_port = client_port++;
   params.thread_count = 1;
   params.cluster = cluster;
-  params.name = args_to_string("node_", port);
+  params.name = to_string("node_", port);
 
-  auto log_prefix = args_to_string(params.name, "> ");
+  auto log_prefix = to_string(params.name, "> ");
   auto node_logger = std::make_shared<solidarity::utils::logging::prefix_logger>(
       logger_ptr, log_prefix);
 

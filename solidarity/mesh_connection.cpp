@@ -165,7 +165,7 @@ void mesh_connection::start() {
 
   for (auto &p : _params.addrs) {
 
-    auto cnaddr = utils::strings::args_to_string(p.host + ":" + std::to_string(p.port));
+    auto cnaddr = utils::strings::to_string(p.host + ":" + std::to_string(p.port));
     auto c = std::make_shared<impl::out_connection>(self, cnaddr);
 
     ENSURE(_diallers.find(cnaddr) == _diallers.end());

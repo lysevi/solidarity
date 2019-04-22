@@ -25,7 +25,7 @@ public:
       }
     }
   }
-
+  [[nodiscard]]
   std::vector<uint8_t> result() {
     wait();
     if (err.empty()) {
@@ -43,9 +43,9 @@ public:
     answer_received = true;
     _condition.notify_all();
   }
-
+  [[nodiscard]]
   uint64_t id() const { return _id; }
-
+  [[nodiscard]]
   solidarity::ERROR_CODE ecode() const {
     ENSURE(_ec != solidarity::ERROR_CODE::UNDEFINED);
     return _ec;

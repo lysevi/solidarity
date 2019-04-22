@@ -166,7 +166,7 @@ void mock_cluster::print_cluster() {
   solidarity::utils::logging::logger_info("----------------------------");
   /*std::cout << "----------------------------\n";*/
   apply([](auto n) {
-    /*std::cout << solidarity::utils::strings::args_to_string("?: ", n->self_addr(), "{",
+    /*std::cout << solidarity::utils::strings::to_string("?: ", n->self_addr(), "{",
        n->kind(),
                                                 ":", n->term(), "}", " => ",
                                                 n->get_leader(), "\n");*/

@@ -5,13 +5,13 @@
 #ifdef ENABLE_BENCHMARKS
 TEST_CASE("utils::strings", "[bench]") {
 
-  BENCHMARK("strings::args_to_string small") {
+  BENCHMARK("strings::to_string small") {
     UNUSED(
-        solidarity::utils::strings::args_to_string("Hello, world!", int(1), float(3.14)));
+        solidarity::utils::strings::to_string("Hello, world!", int(1), float(3.14)));
   }
 
-  BENCHMARK("strings::args_to_string") {
-    UNUSED(solidarity::utils::strings::args_to_string(
+  BENCHMARK("strings::to_string") {
+    UNUSED(solidarity::utils::strings::to_string(
         "Hello, world!",
         int(1),
         float(3.14),

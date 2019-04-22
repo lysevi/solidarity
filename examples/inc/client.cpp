@@ -48,8 +48,8 @@ int main(int argc, char **argv) {
   c->connect();
   if (c->is_connected()) {
     auto answer = c->read({});
-    if (!answer.empty()) {
-      i = common_inner::cmd2int(answer);
+    if (!answer.is_empty()) {
+      i = answer.to_value<uint64_t>();
       std::cout << "read i:" << i << std::endl;
     }
   }
@@ -81,8 +81,8 @@ int main(int argc, char **argv) {
 
       solidarity::utils::elapsed_time el;
 
-      auto res = c->send(common_inner::int2cmd(i).data);
-      std::cout << solidarity::utils::strings::args_to_string("res: ", res) << std::endl;
+      auto res = c->send(solidarity::command::from_value(i));
+      std::cout << solidarity::utils::strings::to_string("res: ", res) << std::endl;
       if (res != solidarity::ERROR_CODE::OK) {
         c->rm_event_handler(uh_id);
         continue;

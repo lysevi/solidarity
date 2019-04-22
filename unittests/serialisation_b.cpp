@@ -13,7 +13,7 @@ TEST_CASE("serialisation", "[bench]") {
   using dialler::message;
   {
     solidarity::append_entries ae;
-    ae.cmd.data.resize(1000);
+    ae.cmd.resize(1000);
     std::iota(ae.cmd.data.begin(), ae.cmd.data.end(), uint8_t(0));
 
     BENCHMARK("append_entries::to_byte_array") { UNUSED(ae.to_byte_array()); }
@@ -48,8 +48,8 @@ TEST_CASE("serialisation", "[bench]") {
 
   {
     solidarity::append_entries ae;
-    ae.cmd.data.resize(1000);
-    std::iota(ae.cmd.data.begin(), ae.cmd.data.end(), uint8_t(0));
+    ae.cmd.resize(1000);
+    std::iota(ae.cmd.begin(), ae.cmd.end(), uint8_t(0));
 
     command_t cmd(solidarity::node_name("long cluster node name"), ae);
     BENCHMARK("command_t::to_message") { UNUSED(cmd.to_message()); }
@@ -68,8 +68,8 @@ TEST_CASE("serialisation", "[bench]") {
   }
   {
     solidarity::command read_q_cmd;
-    read_q_cmd.data.resize(10);
-    std::iota(read_q_cmd.data.begin(), read_q_cmd.data.end(), uint8_t(0));
+    read_q_cmd.resize(10);
+    std::iota(read_q_cmd.begin(), read_q_cmd.end(), uint8_t(0));
     clients::read_query_t read_q(777, read_q_cmd);
     BENCHMARK("read_query_t::to_message") { UNUSED(read_q.to_message()); }
 
@@ -78,8 +78,8 @@ TEST_CASE("serialisation", "[bench]") {
   }
   {
     solidarity::command w_q_cmd;
-    w_q_cmd.data.resize(10);
-    std::iota(w_q_cmd.data.begin(), w_q_cmd.data.end(), uint8_t(0));
+    w_q_cmd.resize(10);
+    std::iota(w_q_cmd.begin(), w_q_cmd.end(), uint8_t(0));
     clients::write_query_t write_q(777, w_q_cmd);
     BENCHMARK("write_query_t::to_message") { UNUSED(write_q.to_message()); }
 

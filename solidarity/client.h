@@ -5,6 +5,7 @@
 #include <solidarity/event.h>
 #include <solidarity/exports.h>
 #include <solidarity/node_kind.h>
+#include <solidarity/command.h>
 
 #include <atomic>
 #include <mutex>
@@ -53,8 +54,8 @@ public:
   EXPORT void connect();
   EXPORT void disconnect();
 
-  [[nodiscard]] EXPORT ERROR_CODE send(const std::vector<uint8_t> &cmd);
-  EXPORT std::vector<uint8_t> read(const std::vector<uint8_t> &cmd);
+  [[nodiscard]] EXPORT ERROR_CODE send(const solidarity::command &cmd);
+  EXPORT solidarity::command read(const solidarity::command &cmd);
 
   params_t params() const { return _params; }
   bool is_connected() const { return _connected; }

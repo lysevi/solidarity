@@ -19,7 +19,7 @@ public:
 
   template <typename... T>
   void variadic_message(MESSAGE_KIND kind, T &&... args) noexcept {
-    auto str_message = utils::strings::args_to_string(args...);
+    auto str_message = utils::strings::to_string(args...);
     this->message(kind, str_message);
   }
 
@@ -54,7 +54,7 @@ public:
       , _shared_target(target) {}
 
   void message(MESSAGE_KIND kind, const std::string &msg) noexcept {
-    _shared_target->message(kind, utils::strings::args_to_string(_prefix, msg));
+    _shared_target->message(kind, utils::strings::to_string(_prefix, msg));
   }
 
 private:

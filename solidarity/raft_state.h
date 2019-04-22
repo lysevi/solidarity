@@ -45,16 +45,17 @@ struct raft_state_t {
     last_heartbeat_time = o.last_heartbeat_time;
     return *this;
   }
-
+  [[nodiscard]]
   bool operator==(const raft_state_t &o) const {
     return term == o.term && last_heartbeat_time == o.last_heartbeat_time
            && next_heartbeat_interval == o.next_heartbeat_interval && leader == o.leader
            && node_kind == o.node_kind && election_round == o.election_round
            && votes_to_me == o.votes_to_me && start_time == o.start_time;
   }
-
+  [[nodiscard]]
   bool operator!=(const raft_state_t &o) const { return !(*this == o); }
 
+  [[nodiscard]]
   bool is_heartbeat_missed() const {
     auto now = high_resolution_clock_t::now();
     auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -69,29 +70,28 @@ struct raft_state_t {
 
   void change_state(const NODE_KIND s, const term_t r, const node_name &leader_);
   void change_state(const node_name &cn, const term_t r);
+  [[nodiscard]] EXPORT static changed_state_t on_vote(const raft_state_t &self,
+                                                      const raft_settings &settings,
+                                                      const node_name &self_addr,
+                                                      const logdb::reccord_info commited,
+                                                      const size_t cluster_size,
+                                                      const node_name &from,
+                                                      const append_entries &e);
+  [[nodiscard]] EXPORT static raft_state_t
+  on_append_entries(const raft_state_t &self,
+                    const node_name &from,
+                    const logdb::abstract_journal *jrn,
+                    const append_entries &e);
+  [[nodiscard]] EXPORT static raft_state_t heartbeat(const raft_state_t &self,
+                                                     const node_name &self_addr,
+                                                     const size_t cluster_size);
 
-  EXPORT static changed_state_t on_vote(const raft_state_t &self,
-                                        const raft_settings &settings,
-                                        const node_name &self_addr,
-                                        const logdb::reccord_info commited,
-                                        const size_t cluster_size,
-                                        const node_name &from,
-                                        const append_entries &e);
-
-  EXPORT static raft_state_t on_append_entries(const raft_state_t &self,
-                                               const node_name &from,
-                                               const logdb::abstract_journal *jrn,
-                                               const append_entries &e);
-  EXPORT static raft_state_t heartbeat(const raft_state_t &self,
-                                       const node_name &self_addr,
-                                       const size_t cluster_size);
-
-  EXPORT static bool is_my_jrn_biggest(const raft_state_t &self,
-                                       const logdb::reccord_info commited,
-                                       const append_entries &e);
+  [[nodiscard]] EXPORT static bool is_my_jrn_biggest(const raft_state_t &self,
+                                                     const logdb::reccord_info commited,
+                                                     const append_entries &e);
 };
 
-EXPORT std::string to_string(const raft_state_t &s);
+[[nodiscard]] EXPORT std::string to_string(const raft_state_t &s);
 
 enum class NOTIFY_TARGET { SENDER, ALL, NOBODY };
 

@@ -40,7 +40,7 @@ public:
   template <typename... T>
   [[nodiscard]] static exception_t create_and_log(const codepos &pos, T... message) {
 
-    auto expanded_message = utils::strings::args_to_string(
+    auto expanded_message = utils::strings::to_string(
         std::string("FATAL ERROR. The Exception will be thrown! "),
         pos.to_string() + " Message: ",
         message...);

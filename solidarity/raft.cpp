@@ -26,7 +26,7 @@ raft::raft(const raft_settings &ns,
   if (logger != nullptr) {
     _logger = std::make_shared<utils::logging::prefix_logger>(logger, "[raft] ");
   } else {
-    auto log_prefix = utils::strings::args_to_string("node ", ns.name(), ": ");
+    auto log_prefix = utils::strings::to_string("node ", ns.name(), ": ");
 
     _logger = std::make_shared<utils::logging::prefix_logger>(
         utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);

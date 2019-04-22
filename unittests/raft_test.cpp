@@ -124,8 +124,7 @@ TEST_CASE("raft", "[raft]") {
     cluster->add_new(solidarity::node_name().set_name(sett.name()), cons);
   }
   solidarity::node_name last_leader;
-  solidarity::command cmd;
-  cmd.data.resize(1);
+  solidarity::command cmd(1);
   cmd.data[0] = 0;
 
   auto data_eq = [&cmd](const std::shared_ptr<mock_state_machine> &c) -> bool {
@@ -242,8 +241,7 @@ TEST_CASE("raft.replication", "[raft]") {
         sett, cluster.get(), memory_journal::make_new(), state_machine.get());
     cluster->add_new(node_name().set_name(sett.name()), cons);
   }
-  solidarity::command cmd;
-  cmd.data.resize(1);
+  solidarity::command cmd(1);
   cmd.data[0] = 0;
 
   auto data_eq = [&cmd](const std::shared_ptr<mock_state_machine> &c) -> bool {
@@ -296,7 +294,7 @@ TEST_CASE("raft.replication", "[raft]") {
 }
 
 TEST_CASE("raft.log_compaction", "[raft]") {
-  auto tst_log_prefix = solidarity::utils::strings::args_to_string("test?> ");
+  auto tst_log_prefix = solidarity::utils::strings::to_string("test?> ");
   auto tst_logger = std::make_shared<solidarity::utils::logging::prefix_logger>(
       solidarity::utils::logging::logger_manager::instance()->get_shared_logger(),
       tst_log_prefix);
@@ -325,8 +323,7 @@ TEST_CASE("raft.log_compaction", "[raft]") {
   cluster->wait_leader_eletion();
 
   solidarity::node_name last_leader;
-  solidarity::command cmd;
-  cmd.data.resize(1);
+  solidarity::command cmd(1);
   cmd.data[0] = 0;
 
   auto data_eq = [&cmd](const std::shared_ptr<mock_state_machine> &c) -> bool {
@@ -381,8 +378,8 @@ TEST_CASE("raft.log_compaction", "[raft]") {
 
 bool operator==(const solidarity::logdb::log_entry &r,
                 const solidarity::logdb::log_entry &l) {
-  return r.term == l.term && r.kind == l.kind && r.cmd.data.size() == l.cmd.data.size()
-         && std::equal(r.cmd.data.cbegin(), r.cmd.data.cend(), l.cmd.data.cbegin());
+  return r.term == l.term && r.kind == l.kind && r.cmd.size() == l.cmd.size()
+         && std::equal(r.cmd.cbegin(), r.cmd.cend(), l.cmd.cbegin());
 }
 
 bool operator!=(const solidarity::logdb::log_entry &r,
@@ -404,8 +401,7 @@ TEST_CASE("raft.apply_journal_on_start", "[raft]") {
   auto et = std::chrono::milliseconds(300);
   auto jrn = memory_journal::make_new();
 
-  solidarity::command cmd;
-  cmd.data.resize(1);
+  solidarity::command cmd(1);
   cmd.data[0] = 0;
 
   for (int i = 0; i < 10; ++i) {
@@ -443,8 +439,7 @@ TEST_CASE("raft.rollback", "[raft]") {
   consumers.reserve(exists_nodes_count);
 
   auto et = std::chrono::milliseconds(300);
-  solidarity::command cmd;
-  cmd.data.resize(1);
+  solidarity::command cmd(1);
 
   std::shared_ptr<solidarity::raft> n1, n2;
   std::shared_ptr<solidarity::logdb::memory_journal> jrn1, jrn2;
@@ -516,7 +511,7 @@ TEST_CASE("raft.rollback", "[raft]") {
     jrn1->commit(jrn1->prev_rec().lsn);
   }
 
-  /*SECTION("rewrite all journal") {
+  SECTION("rewrite all journal") {
     n2->rw_state().term = 100500;
     jrn1->erase_all_after(solidarity::index_t(-1));
 
@@ -528,7 +523,7 @@ TEST_CASE("raft.rollback", "[raft]") {
       le.term = 0;
       jrn1->put(le);
     }
-  }*/
+  }
   EXPECT_FALSE(consumers.empty());
   cluster->add_new(n1->self_addr(), n1);
   cluster->add_new(n2->self_addr(), n2);
@@ -595,8 +590,7 @@ TEST_CASE("raft.can_apply", "[raft]") {
         sett, cluster.get(), memory_journal::make_new(), state_machine.get());
     cluster->add_new(node_name().set_name(sett.name()), cons);
   }
-  solidarity::command cmd;
-  cmd.data.resize(1);
+  solidarity::command cmd(1);
   cmd.data[0] = 0;
 
   auto data_eq = [&cmd](const std::shared_ptr<mock_state_machine> &c) -> bool {

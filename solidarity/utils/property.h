@@ -8,7 +8,7 @@ protected:                                                                      
   TYPE _##NAME;                                                                          \
                                                                                          \
 public:                                                                                  \
-  TYPE NAME() const { return _##NAME; }                                                  \
+  [[nodiscard]] TYPE NAME() const { return _##NAME; }                                    \
   auto set_##NAME(TYPE __##NAME)->decltype(*this) {                                      \
     _##NAME = __##NAME;                                                                  \
     return *this;                                                                        \
