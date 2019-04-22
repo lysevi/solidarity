@@ -1,0 +1,30 @@
+#pragma once
+
+
+#include <solidarity/error_codes.h>
+#include <solidarity/node_kind.h>
+
+#include <optional>
+
+namespace solidarity {
+
+struct state_machine_updated_event_t {};
+
+struct network_state_event_t {
+  ERROR_CODE ecode = ERROR_CODE::OK;
+};
+
+struct raft_state_event_t {
+  NODE_KIND old_state;
+  NODE_KIND new_state;
+};
+
+struct client_event_t {
+  enum class event_kind { RAFT, NETWORK, STATE_MACHINE };
+
+  event_kind kind;
+  std::optional<raft_state_event_t> raft_ev;
+  std::optional<network_state_event_t> net_ev;
+  std::optional<state_machine_updated_event_t> state_ev;
+};
+}

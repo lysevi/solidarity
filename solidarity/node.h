@@ -1,12 +1,13 @@
 #pragma once
 
 #include <solidarity/abstract_state_machine.h>
+#include <solidarity/async_result.h>
 #include <solidarity/command.h>
+#include <solidarity/event.h>
 #include <solidarity/exports.h>
 #include <solidarity/raft_settings.h>
 #include <solidarity/raft_state.h>
 #include <solidarity/utils/logger.h>
-#include <solidarity/async_result.h>
 
 #include <string>
 #include <thread>
@@ -57,7 +58,7 @@ public:
   EXPORT std::shared_ptr<async_result_t> add_command_to_cluster(const command &cmd);
 
   void add_client(uint64_t id);
-  
+
   void rm_client(uint64_t id);
   EXPORT size_t connections_count() const;
 
@@ -65,7 +66,9 @@ public:
   void notify_raft_state_update(NODE_KIND old_state, NODE_KIND new_state);
   EXPORT void send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd);
 
-  
+  EXPORT uint64_t add_event_handler(const std::function<void(const state_machine_updated_event_t &)> &);
+  EXPORT void rm_event_handler(uint64_t);
+
 
 private:
   void heartbeat_timer();
@@ -84,13 +87,16 @@ private:
   std::shared_ptr<solidarity::dialler::listener> _listener;
   std::shared_ptr<solidarity::dialler::abstract_listener_consumer> _listener_consumer;
 
-  
   std::unordered_set<uint64_t> _clients;
 
   uint32_t _timer_period;
   std::unique_ptr<boost::asio::deadline_timer> _timer;
   std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, solidarity::command>>>
       _message_resend;
+
+  std::atomic_uint64_t _next_id = {0};
+  std::unordered_map<uint64_t, std::function<void(const state_machine_updated_event_t &)>>
+      _on_update_handlers;
 
   node_name _leader;
   NODE_KIND _kind = NODE_KIND::ELECTION;

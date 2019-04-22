@@ -166,7 +166,7 @@ TEST_CASE("node", "[network]") {
     }
 
     bool is_state_changed = false;
-    auto handler_id = kv.second->add_event_handler(
+    auto client_handler_id = kv.second->add_event_handler(
         [&is_state_changed, kv](const solidarity::client_event_t &rse) mutable {
           std::cerr << kv.first << ": " << solidarity::to_string(rse) << std::endl;
           if (rse.kind == solidarity::client_event_t::event_kind::RAFT) {
@@ -200,8 +200,8 @@ TEST_CASE("node", "[network]") {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    // write to node
-    std::cerr << "write to node " << kv.first << suffix << std::endl;
+    /// write over node
+    std::cerr << "write over node " << kv.first << suffix << std::endl;
     std::transform(first_cmd.begin(),
                    first_cmd.end(),
                    first_cmd.begin(),
@@ -210,11 +210,16 @@ TEST_CASE("node", "[network]") {
     send_ecode = solidarity::ERROR_CODE::UNDEFINED;
     solidarity::command cmd;
     auto tnode = nodes[kv.first];
+    bool writed_to_node_sm = false;
+    uint64_t node_handler_id = tnode->add_event_handler(
+        [&writed_to_node_sm](auto) { writed_to_node_sm = true; });
+
     i = 0;
     do {
       i++;
       tst_logger->info("try write cmd. step #", i);
       cmd.data = first_cmd;
+
       send_ecode = tnode->add_command(cmd);
       if (send_ecode != solidarity::ERROR_CODE::OK) {
         EXPECT_FALSE(is_a_leader);
@@ -241,11 +246,13 @@ TEST_CASE("node", "[network]") {
                      expected_answer.end(),
                      answer.begin(),
                      answer.end())) {
+        EXPECT_TRUE(writed_to_node_sm);
         break;
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    kv.second->rm_event_handler(handler_id);
+    tnode->rm_event_handler(node_handler_id);
+    kv.second->rm_event_handler(client_handler_id);
   }
 
   for (auto &kv : nodes) {
