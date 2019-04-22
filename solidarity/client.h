@@ -2,9 +2,9 @@
 
 #include <solidarity/client_exception.h>
 #include <solidarity/error_codes.h>
+#include <solidarity/event.h>
 #include <solidarity/exports.h>
 #include <solidarity/node_kind.h>
-#include <solidarity/event.h>
 
 #include <atomic>
 #include <mutex>
@@ -21,8 +21,6 @@ class dial;
 
 class client;
 class async_result_t;
-
-EXPORT std::string to_string(const client_event_t &cev);
 
 namespace inner {
 void client_update_connection_status(client &c, bool status);

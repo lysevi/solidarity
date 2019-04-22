@@ -1,7 +1,7 @@
 #pragma once
 
-
 #include <solidarity/error_codes.h>
+#include <solidarity/exports.h>
 #include <solidarity/node_kind.h>
 
 #include <optional>
@@ -27,4 +27,7 @@ struct client_event_t {
   std::optional<network_state_event_t> net_ev;
   std::optional<state_machine_updated_event_t> state_ev;
 };
-}
+
+[[nodiscard]]
+EXPORT std::string to_string(const client_event_t &cev);
+} // namespace solidarity

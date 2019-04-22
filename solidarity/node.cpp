@@ -249,29 +249,64 @@ size_t node::connections_count() const {
 void node::notify_state_machine_update() {
   _logger->dbg("notify_state_machine_update()");
   std::shared_lock l(_locker);
-  auto a1 = std::async(std::launch::async, [this]() {
-    for (auto v : _clients) {
-      auto m = clients::state_machine_updated_t().to_message();
-      this->_listener->send_to(v, m);
-    }
-  });
+  std::future<void> a1, a2;
 
-  auto a2 = std::async(std::launch::async, [this]() {
-    state_machine_updated_event_t ev{};
-    for (auto &v : _on_update_handlers) {
-      v.second(ev);
-    }
-  });
-  a1.wait();
-  a2.wait();
+  if (!_clients.empty()) {
+    a1 = std::async(std::launch::async, [this]() {
+      for (auto v : _clients) {
+        auto m = clients::state_machine_updated_t().to_message();
+        this->_listener->send_to(v, m);
+      }
+    });
+  }
+  if (!_on_update_handlers.empty()) {
+    a2 = std::async(std::launch::async, [this]() {
+      client_event_t ev;
+      ev.kind = client_event_t::event_kind::STATE_MACHINE;
+      ev.state_ev = state_machine_updated_event_t{};
+      for (auto &v : _on_update_handlers) {
+        v.second(ev);
+      }
+    });
+  }
+  if (a1.valid()) {
+    a1.wait();
+  }
+  if (a2.valid()) {
+    a2.wait();
+  }
 }
 
 void node::notify_raft_state_update(NODE_KIND old_state, NODE_KIND new_state) {
   _logger->dbg("notify_raft_state_update(): ", old_state, " => ", new_state);
   std::shared_lock l(_locker);
-  for (auto v : _clients) {
-    auto m = clients::raft_state_updated_t(old_state, new_state).to_message();
-    this->_listener->send_to(v, m);
+  std::future<void> a1, a2;
+
+  if (!_clients.empty()) {
+    a1 = std::async(std::launch::async, [this, old_state, new_state]() {
+      for (auto v : _clients) {
+        auto m = clients::raft_state_updated_t(old_state, new_state).to_message();
+        this->_listener->send_to(v, m);
+      }
+    });
+  }
+
+  if (!_on_update_handlers.empty()) {
+    a2 = std::async(std::launch::async, [this, old_state, new_state]() {
+      client_event_t ev;
+      ev.kind = client_event_t::event_kind::RAFT;
+      ev.raft_ev = raft_state_event_t{old_state, new_state};
+
+      for (auto &v : _on_update_handlers) {
+        v.second(ev);
+      }
+    });
+  }
+  if (a1.valid()) {
+    a1.wait();
+  }
+  if (a2.valid()) {
+    a2.wait();
   }
 }
 
@@ -283,8 +318,7 @@ std::shared_ptr<raft> node::get_raft() {
   return _raft;
 }
 
-uint64_t node::add_event_handler(
-    const std::function<void(const state_machine_updated_event_t &)> &h) {
+uint64_t node::add_event_handler(const std::function<void(const client_event_t &)> &h) {
   auto id = _next_id.fetch_add(1);
   std::lock_guard l(_locker);
   _on_update_handlers[id] = h;

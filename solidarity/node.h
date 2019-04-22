@@ -66,7 +66,7 @@ public:
   void notify_raft_state_update(NODE_KIND old_state, NODE_KIND new_state);
   EXPORT void send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd);
 
-  EXPORT uint64_t add_event_handler(const std::function<void(const state_machine_updated_event_t &)> &);
+  EXPORT uint64_t add_event_handler(const std::function<void(const client_event_t &)> &);
   EXPORT void rm_event_handler(uint64_t);
 
 
@@ -95,7 +95,7 @@ private:
       _message_resend;
 
   std::atomic_uint64_t _next_id = {0};
-  std::unordered_map<uint64_t, std::function<void(const state_machine_updated_event_t &)>>
+  std::unordered_map<uint64_t, std::function<void(const client_event_t &)>>
       _on_update_handlers;
 
   node_name _leader;
