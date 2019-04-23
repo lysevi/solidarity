@@ -179,15 +179,16 @@ void listener::erase_consumer() {
 }
 
 void listener::on_network_error(listener_client_ptr i,
-                                const message_ptr &d,
                                 const boost::system::error_code &err) {
   if (_consumer != nullptr) {
-    _consumer->on_network_error(i, d, err);
+    _consumer->on_network_error(i, err);
   }
 }
 
-void listener::on_new_message(listener_client_ptr i, message_ptr &&d, bool &cancel) {
+void listener::on_new_message(listener_client_ptr i,
+                              std::vector<message_ptr> &d,
+                              bool &cancel) {
   if (_consumer != nullptr) {
-    _consumer->on_new_message(i, std::move(d), cancel);
+    _consumer->on_new_message(i, d, cancel);
   }
 }

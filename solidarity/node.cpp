@@ -19,20 +19,22 @@ public:
       : _parent(parent)
       , _logger(l) {}
 
-  void on_new_message(listener_client_ptr i, message_ptr &&d, bool &cancel) override {
+  void on_new_message(listener_client_ptr i,
+                      std::vector<dialler::message_ptr> &d,
+                      bool &cancel) override {
     try {
-      QUERY_KIND kind = static_cast<QUERY_KIND>(d->get_header()->kind);
+      QUERY_KIND kind = static_cast<QUERY_KIND>(d.front()->get_header()->kind);
       switch (kind) {
       case QUERY_KIND::CONNECT: {
-        connect_handler(i, std::move(d), cancel);
+        connect_handler(i, d.front(), cancel);
         break;
       }
       case QUERY_KIND::READ: {
-        read_handler(i, std::move(d));
+        read_handler(i, d.front());
         break;
       }
       case QUERY_KIND::WRITE: {
-        write_handler(i, std::move(d));
+        write_handler(i, d.front());
         break;
       }
       default:
@@ -45,7 +47,7 @@ public:
     }
   }
 
-  void connect_handler(listener_client_ptr i, message_ptr &&d, bool &cancel) {
+  void connect_handler(listener_client_ptr i, message_ptr &d, bool &cancel) {
     clients::client_connect_t cc(d);
     message_ptr answer = nullptr;
     if (cc.protocol_version != protocol_version) {
@@ -70,7 +72,7 @@ public:
     i->send_data(answer);
   }
 
-  void read_handler(listener_client_ptr i, message_ptr &&d) {
+  void read_handler(listener_client_ptr i, message_ptr &d) {
     clients::read_query_t rq({d});
     _logger->dbg("client:", _client_name, " read query #", rq.msg_id);
     command result = _parent->state_machine()->read(rq.query);
@@ -82,7 +84,7 @@ public:
     i->send_data(ames.front());
   }
 
-  void write_handler(listener_client_ptr i, message_ptr &&d) {
+  void write_handler(listener_client_ptr i, message_ptr &d) {
     clients::write_query_t wq({d});
     _logger->dbg("client:", _client_name, " write query #", wq.msg_id);
     auto res = _parent->add_command(wq.query);
@@ -102,7 +104,6 @@ public:
   }
 
   void on_network_error(listener_client_ptr i,
-                        const message_ptr & /*d*/,
                         const boost::system::error_code & /*err*/) override {
     _parent->rm_client(i->get_id());
   }

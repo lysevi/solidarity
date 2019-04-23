@@ -37,11 +37,11 @@ void dial::disconnect() {
   }
 }
 
-void dial::reconnecton_error(const message_ptr &d, const boost::system::error_code &err) {
+void dial::reconnecton_error(const boost::system::error_code &err) {
 
   {
     if (_consumers != nullptr) {
-      _consumers->on_network_error(d, err);
+      _consumers->on_network_error(err);
     }
   }
 
@@ -65,7 +65,7 @@ void dial::start_async_connection() {
   auto con_handler = [self](auto ec, auto resoler_ir) {
     if (ec) {
       if (!self->is_stoped()) {
-        self->reconnecton_error(nullptr, ec);
+        self->reconnecton_error(ec);
       }
     } else {
 
@@ -74,7 +74,7 @@ void dial::start_async_connection() {
           self->on_data_receive(std::move(d), cancel);
         };
         async_io::error_handler_t on_n
-            = [self](auto d, auto err) { self->reconnecton_error(d, err); };
+            = [self](auto err) { self->reconnecton_error(err); };
 
         self->_async_io->start(on_d, on_n);
 
@@ -90,10 +90,10 @@ void dial::start_async_connection() {
       self->_async_io->socket(), results.begin(), results.end(), con_handler);
 }
 
-void dial::on_data_receive(message_ptr &&d, bool &cancel) {
+void dial::on_data_receive(std::vector<message_ptr> &d, bool &cancel) {
   {
     if (_consumers != nullptr) {
-      _consumers->on_new_message(std::move(d), cancel);
+      _consumers->on_new_message(d, cancel);
     }
   }
 }

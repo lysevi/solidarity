@@ -17,12 +17,12 @@ void out_connection::on_connect() {
   this->_connection->send_async(qc.to_message());
 }
 
-void out_connection::on_new_message(dialler::message_ptr &&d, bool &cancel) {
+void out_connection::on_new_message(std::vector<dialler::message_ptr> &d, bool &cancel) {
   using namespace queries;
-  QUERY_KIND kind = static_cast<QUERY_KIND>(d->get_header()->kind);
+  QUERY_KIND kind = static_cast<QUERY_KIND>(d.front()->get_header()->kind);
   switch (kind) {
   case QUERY_KIND::CONNECT: {
-    query_connect_t qc(d);
+    query_connect_t qc(d.front());
     _parent->accept_out_connection(node_name(qc.node_id), _target_addr);
     break;
   }
@@ -34,8 +34,7 @@ void out_connection::on_new_message(dialler::message_ptr &&d, bool &cancel) {
   }
 }
 
-void out_connection::on_network_error(const dialler::message_ptr & /*d*/,
-                                      const boost::system::error_code &err) {
+void out_connection::on_network_error(const boost::system::error_code &err) {
   _parent->rm_out_connection(_target_addr, err);
 }
 
@@ -44,20 +43,18 @@ listener::listener(const std::shared_ptr<mesh_connection> parent) {
 }
 
 void listener::on_network_error(dialler::listener_client_ptr i,
-                                const dialler::message_ptr & /*d*/,
                                 const boost::system::error_code &err) {
   _parent->rm_input_connection(i->get_id(), err);
-  clear_message_pool(i->get_id());
 }
 
 void listener::on_new_message(dialler::listener_client_ptr i,
-                              dialler::message_ptr &&d,
+                              std::vector<dialler::message_ptr> &d,
                               bool &cancel) {
   using namespace queries;
-  QUERY_KIND kind = static_cast<QUERY_KIND>(d->get_header()->kind);
+  QUERY_KIND kind = static_cast<QUERY_KIND>(d.front()->get_header()->kind);
   switch (kind) {
   case QUERY_KIND::CONNECT: {
-    query_connect_t qc(d);
+    query_connect_t qc(d.front());
     dialler::message_ptr dout;
     if (qc.protocol_version != protocol_version) {
       dout = connection_error_t(protocol_version,
@@ -75,32 +72,22 @@ void listener::on_new_message(dialler::listener_client_ptr i,
     break;
   }
   case QUERY_KIND::COMMAND: {
-    if (d->get_header()->is_single_message()) {
-      std::vector<dialler::message_ptr> m({d});
-      _parent->on_new_command(m);
-    } else {
-      add_to_message_pool(i->get_id(), d);
-      if (d->get_header()->is_end_block) {
-        auto all_messages = read_message_pool(i->get_id());
-        clear_message_pool(i->get_id());
-        _parent->on_new_command(std::move(all_messages));
-      }
-    }
+    _parent->on_new_command(d);
     break;
   }
   case QUERY_KIND::WRITE: {
-    queries::clients::write_query_t wq({d});
+    queries::clients::write_query_t wq(d);
     _parent->on_write_resend(_parent->addr_by_id(i->get_id()), wq.msg_id, wq.query);
     break;
   }
   case QUERY_KIND::STATUS: {
-    queries::status_t sq(d);
+    queries::status_t sq(d.front());
     auto name = _parent->addr_by_id(i->get_id());
     _parent->on_write_status(name, sq.id, sq.status);
     break;
   }
   }
-}
+} // namespace solidarity::impl
 
 bool listener::on_new_connection(dialler::listener_client_ptr i) {
   return true;

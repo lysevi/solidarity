@@ -47,9 +47,9 @@ public:
     this->_connection->send_async(qc.to_message());
   }
 
-  void on_new_message(solidarity::dialler::message_ptr &&d, bool & /*cancel*/) override {
+  void on_new_message(std::vector<dialler::message_ptr> &d, bool & /*cancel*/) override {
     using namespace queries;
-    QUERY_KIND kind = static_cast<QUERY_KIND>(d->get_header()->kind);
+    QUERY_KIND kind = static_cast<QUERY_KIND>(d.front()->get_header()->kind);
     switch (kind) {
     case QUERY_KIND::CONNECT: {
       // query_connect_t cc(d);
@@ -57,18 +57,18 @@ public:
       break;
     }
     case QUERY_KIND::CONNECTION_ERROR: {
-      connection_error_t cc(d);
+      connection_error_t cc(d.front());
       inner::client_update_async_result(*_parent, 0, {}, cc.status, cc.msg);
       break;
     }
     case QUERY_KIND::READ: {
-      clients::read_query_t rq({d});
+      clients::read_query_t rq(d);
       inner::client_update_async_result(
           *_parent, rq.msg_id, rq.query.data, ERROR_CODE::OK, std::string());
       break;
     }
     case QUERY_KIND::STATUS: {
-      status_t sq(d);
+      status_t sq(d.front());
       // TODO check sq::status
       inner::client_update_async_result(
           *_parent, sq.id, std::vector<uint8_t>(), sq.status, sq.msg);
@@ -83,7 +83,7 @@ public:
       break;
     }
     case QUERY_KIND::RAFT_STATE_UPDATE: {
-      queries::clients::raft_state_updated_t rs(d);
+      queries::clients::raft_state_updated_t rs(d.front());
       raft_state_event_t rse;
       rse.new_state = rs.new_state;
       rse.old_state = rs.old_state;
@@ -99,8 +99,7 @@ public:
     }
   }
 
-  void on_network_error(const solidarity::dialler::message_ptr & /*d*/,
-                        const boost::system::error_code & /*err*/) override {
+  void on_network_error(const boost::system::error_code & /*err*/) override {
     // TODO add message to log err.msg();
     inner::client_update_connection_status(*_parent, false);
     network_state_event_t ev;

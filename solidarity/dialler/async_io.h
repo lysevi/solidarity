@@ -14,9 +14,8 @@ class async_io final : public std::enable_shared_from_this<async_io> {
 public:
   /// if method set 'cancel' to true, then read loop stoping.
   /// if dont_free_memory, then free NetData_ptr is in client side.
-  using data_handler_t = std::function<void(message_ptr &&d, bool &cancel)>;
-  using error_handler_t
-      = std::function<void(const message_ptr &d, const boost::system::error_code &err)>;
+  using data_handler_t = std::function<void(std::vector<message_ptr> &d, bool &cancel)>;
+  using error_handler_t = std::function<void(const boost::system::error_code &err)>;
 
   EXPORT async_io(boost::asio::io_context *context);
   EXPORT ~async_io() noexcept;
@@ -44,6 +43,8 @@ private:
 
   data_handler_t _on_recv_hadler;
   error_handler_t _on_error_handler;
+
+  std::vector<message_ptr> _recv_message_pool;
 };
 using async_io_ptr = std::shared_ptr<async_io>;
 

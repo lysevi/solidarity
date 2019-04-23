@@ -13,10 +13,8 @@ class abstract_dial {
 public:
   EXPORT virtual ~abstract_dial();
   virtual void on_connect() = 0;
-  virtual void on_new_message(message_ptr &&d, bool &cancel) = 0;
-  virtual void on_network_error(const message_ptr &d,
-                                const boost::system::error_code &err)
-      = 0;
+  virtual void on_new_message(std::vector<message_ptr>&d, bool &cancel) = 0;
+  virtual void on_network_error(const boost::system::error_code &err) = 0;
   [[nodiscard]] EXPORT bool is_connected() const;
   [[nodiscard]] EXPORT bool is_stoped() const;
 
@@ -54,9 +52,8 @@ public:
   EXPORT virtual ~dial();
   EXPORT void disconnect();
   EXPORT void start_async_connection();
-  EXPORT void reconnecton_error(const message_ptr &d,
-                                const boost::system::error_code &err);
-  EXPORT void on_data_receive(message_ptr &&d, bool &cancel);
+  EXPORT void reconnecton_error(const boost::system::error_code &err);
+  EXPORT void on_data_receive(std::vector<message_ptr>&d, bool &cancel);
   EXPORT void send_async(const message_ptr &d);
   EXPORT void send_async(const std::vector<message_ptr> &d);
 

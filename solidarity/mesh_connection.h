@@ -21,9 +21,8 @@ public:
   out_connection(const std::shared_ptr<mesh_connection> parent,
                  const std::string &target_addr);
   void on_connect() override;
-  void on_new_message(dialler::message_ptr &&d, bool &cancel) override;
-  void on_network_error(const dialler::message_ptr &d,
-                        const boost::system::error_code &err) override;
+  void on_new_message(std::vector<dialler::message_ptr> &d, bool &cancel) override;
+  void on_network_error(const boost::system::error_code &err) override;
 
 private:
   std::shared_ptr<mesh_connection> _parent;
@@ -35,37 +34,18 @@ public:
   listener(const std::shared_ptr<mesh_connection> parent);
 
   void on_network_error(dialler::listener_client_ptr i,
-                        const dialler::message_ptr &d,
                         const boost::system::error_code &err) override;
 
   void on_new_message(dialler::listener_client_ptr i,
-                      dialler::message_ptr &&d,
+                      std::vector<dialler::message_ptr> &d,
                       bool &cancel) override;
 
   bool on_new_connection(dialler::listener_client_ptr i) override;
 
   void on_disconnect(const dialler::listener_client_ptr &i) override;
 
-  void add_to_message_pool(uint64_t id, const dialler::message_ptr &m) {
-    std::lock_guard l(_locker);
-    _recv_message_pool[id].push_back(m);
-  }
-
-  std::vector<dialler::message_ptr> read_message_pool(uint64_t id) {
-    std::shared_lock l(_locker);
-    return _recv_message_pool[id];
-  }
-
-  void clear_message_pool(uint64_t id) {
-    std::lock_guard l(_locker);
-    _recv_message_pool[id].clear();
-  }
-
 private:
-  mutable std::shared_mutex _locker;
   std::shared_ptr<mesh_connection> _parent;
-  // node_name _self_logical_addr;
-  std::unordered_map<uint64_t, std::vector<dialler::message_ptr>> _recv_message_pool;
 };
 
 } // namespace impl
@@ -102,8 +82,8 @@ public:
   boost::asio::io_context *context() { return &_io_context; }
 
   EXPORT void send_to(const solidarity::node_name &target,
-               const solidarity::command &cmd,
-               std::function<void(ERROR_CODE)> callback);
+                      const solidarity::command &cmd,
+                      std::function<void(ERROR_CODE)> callback);
 
 protected:
   void accept_out_connection(const node_name &name, const std::string &addr);
