@@ -70,9 +70,8 @@ void dial::start_async_connection() {
     } else {
 
       if (self->_async_io->socket().is_open()) {
-        async_io::data_handler_t on_d = [self](auto d, auto cancel) {
-          self->on_data_receive(d, cancel);
-        };
+        async_io::data_handler_t on_d
+            = [self](auto d, auto cancel) { self->on_data_receive(d, cancel); };
         async_io::error_handler_t on_n
             = [self](auto err) { self->reconnecton_error(err); };
 

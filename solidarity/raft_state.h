@@ -45,18 +45,15 @@ struct raft_state_t {
     last_heartbeat_time = o.last_heartbeat_time;
     return *this;
   }
-  [[nodiscard]]
-  bool operator==(const raft_state_t &o) const {
+  [[nodiscard]] bool operator==(const raft_state_t &o) const {
     return term == o.term && last_heartbeat_time == o.last_heartbeat_time
            && next_heartbeat_interval == o.next_heartbeat_interval && leader == o.leader
            && node_kind == o.node_kind && election_round == o.election_round
            && votes_to_me == o.votes_to_me && start_time == o.start_time;
   }
-  [[nodiscard]]
-  bool operator!=(const raft_state_t &o) const { return !(*this == o); }
+  [[nodiscard]] bool operator!=(const raft_state_t &o) const { return !(*this == o); }
 
-  [[nodiscard]]
-  bool is_heartbeat_missed() const {
+  [[nodiscard]] bool is_heartbeat_missed() const {
     auto now = high_resolution_clock_t::now();
     auto diff = std::chrono::duration_cast<std::chrono::milliseconds>(
         now - last_heartbeat_time);

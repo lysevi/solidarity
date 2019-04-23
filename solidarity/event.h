@@ -28,6 +28,5 @@ struct client_event_t {
   std::optional<state_machine_updated_event_t> state_ev;
 };
 
-[[nodiscard]]
-EXPORT std::string to_string(const client_event_t &cev);
+[[nodiscard]] EXPORT std::string to_string(const client_event_t &cev);
 } // namespace solidarity

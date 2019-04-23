@@ -69,7 +69,6 @@ public:
   EXPORT uint64_t add_event_handler(const std::function<void(const client_event_t &)> &);
   EXPORT void rm_event_handler(uint64_t);
 
-
 private:
   void heartbeat_timer();
   void on_message_sended_status(uint64_t client, uint64_t message, ERROR_CODE status);

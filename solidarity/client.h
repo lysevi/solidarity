@@ -1,11 +1,11 @@
 #pragma once
 
 #include <solidarity/client_exception.h>
+#include <solidarity/command.h>
 #include <solidarity/error_codes.h>
 #include <solidarity/event.h>
 #include <solidarity/exports.h>
 #include <solidarity/node_kind.h>
-#include <solidarity/command.h>
 
 #include <atomic>
 #include <mutex>

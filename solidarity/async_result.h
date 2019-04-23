@@ -1,13 +1,13 @@
 #pragma once
 
-#include <solidarity/error_codes.h>
 #include <solidarity/client_exception.h>
+#include <solidarity/error_codes.h>
 #include <solidarity/utils/utils.h>
 
 #include <condition_variable>
 #include <mutex>
 
-namespace solidarity{
+namespace solidarity {
 
 class async_result_t {
 public:
@@ -25,8 +25,7 @@ public:
       }
     }
   }
-  [[nodiscard]]
-  std::vector<uint8_t> result() {
+  [[nodiscard]] std::vector<uint8_t> result() {
     wait();
     if (err.empty()) {
       return answer;
@@ -43,10 +42,8 @@ public:
     answer_received = true;
     _condition.notify_all();
   }
-  [[nodiscard]]
-  uint64_t id() const { return _id; }
-  [[nodiscard]]
-  solidarity::ERROR_CODE ecode() const {
+  [[nodiscard]] uint64_t id() const { return _id; }
+  [[nodiscard]] solidarity::ERROR_CODE ecode() const {
     ENSURE(_ec != solidarity::ERROR_CODE::UNDEFINED);
     return _ec;
   }
@@ -60,4 +57,4 @@ private:
   solidarity::ERROR_CODE _ec = solidarity::ERROR_CODE::UNDEFINED;
   bool answer_received;
 };
-}
+} // namespace solidarity

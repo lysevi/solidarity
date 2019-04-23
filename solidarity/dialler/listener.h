@@ -19,9 +19,8 @@ public:
   virtual void on_network_error(listener_client_ptr i,
                                 const boost::system::error_code &err)
       = 0;
-  virtual void on_new_message(listener_client_ptr i,
-                              std::vector<message_ptr>&d,
-                              bool &cancel)
+  virtual void
+  on_new_message(listener_client_ptr i, std::vector<message_ptr> &d, bool &cancel)
       = 0;
   virtual bool on_new_connection(listener_client_ptr i) = 0;
   virtual void on_disconnect(const listener_client_ptr &i) = 0;
@@ -64,11 +63,8 @@ public:
   friend listener_client;
 
 protected:
-  void on_network_error(listener_client_ptr i,
-                        const boost::system::error_code &err);
-  void on_new_message(listener_client_ptr i,
-                      std::vector<message_ptr>&d,
-                      bool &cancel);
+  void on_network_error(listener_client_ptr i, const boost::system::error_code &err);
+  void on_new_message(listener_client_ptr i, std::vector<message_ptr> &d, bool &cancel);
 
 private:
   void start_async_accept(async_io_ptr aio);
