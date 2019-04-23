@@ -14,6 +14,7 @@
 
 TEST_CASE("node", "[network]") {
   size_t cluster_size = 0;
+  size_t large_cmd_size = size_t(solidarity::dialler::message::MAX_BUFFER_SIZE * 3.75);
   size_t cmd_size = 5;
   auto tst_log_prefix = solidarity::utils::strings::to_string("test?> ");
   auto tst_logger = std::make_shared<solidarity::utils::logging::prefix_logger>(
@@ -22,23 +23,17 @@ TEST_CASE("node", "[network]") {
 
   SECTION("node.2") {
     SECTION("small data") {}
-    SECTION("large data.x3.75") {
-      cmd_size = solidarity::dialler::message::MAX_BUFFER_SIZE * 3.75;
-    }
+    SECTION("large data.x3.75") { cmd_size = large_cmd_size; }
     cluster_size = 2;
   }
   SECTION("node.3") {
     SECTION("small data") {}
-    SECTION("large data.x3.75") {
-      cmd_size = solidarity::dialler::message::MAX_BUFFER_SIZE * 3.75;
-    }
+    SECTION("large data.x3.75") { cmd_size = large_cmd_size; }
     cluster_size = 3;
   }
   SECTION("node.5") {
     SECTION("small data") {}
-    SECTION("large data.x3.75") {
-      cmd_size = solidarity::dialler::message::MAX_BUFFER_SIZE * 3.75;
-    }
+    SECTION("large data.x3.75") { cmd_size = large_cmd_size; }
     cluster_size = 5;
   }
 
