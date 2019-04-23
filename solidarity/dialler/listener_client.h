@@ -19,6 +19,7 @@ public:
   EXPORT void on_network_error(const boost::system::error_code &err);
   EXPORT void on_data_recv(std::vector<message_ptr> &d, bool &cancel);
   EXPORT void send_data(const message_ptr &d);
+  EXPORT void send_data(const std::vector<message_ptr> &d);
   [[nodiscard]] EXPORT uint64_t get_id() const { return id; }
 
 private:

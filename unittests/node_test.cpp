@@ -1,5 +1,6 @@
 #include "helpers.h"
 #include <solidarity/client.h>
+#include <solidarity/dialler/message.h>
 #include <solidarity/node.h>
 #include <solidarity/utils/logger.h>
 #include <solidarity/utils/strings.h>
@@ -13,14 +14,33 @@
 
 TEST_CASE("node", "[network]") {
   size_t cluster_size = 0;
+  size_t cmd_size = 5;
   auto tst_log_prefix = solidarity::utils::strings::to_string("test?> ");
   auto tst_logger = std::make_shared<solidarity::utils::logging::prefix_logger>(
       solidarity::utils::logging::logger_manager::instance()->get_shared_logger(),
       tst_log_prefix);
 
-  SECTION("node.2") { cluster_size = 2; }
-  SECTION("node.3") { cluster_size = 3; }
-  SECTION("node.5") { cluster_size = 5; }
+  SECTION("node.2") {
+    SECTION("small data") {}
+    SECTION("large data.x3.75") {
+      cmd_size = solidarity::dialler::message::MAX_BUFFER_SIZE * 3.75;
+    }
+    cluster_size = 2;
+  }
+  SECTION("node.3") {
+    SECTION("small data") {}
+    SECTION("large data.x3.75") {
+      cmd_size = solidarity::dialler::message::MAX_BUFFER_SIZE * 3.75;
+    }
+    cluster_size = 3;
+  }
+  SECTION("node.5") {
+    SECTION("small data") {}
+    SECTION("large data.x3.75") {
+      cmd_size = solidarity::dialler::message::MAX_BUFFER_SIZE * 3.75;
+    }
+    cluster_size = 5;
+  }
 
   std::vector<unsigned short> ports(cluster_size);
   std::iota(ports.begin(), ports.end(), unsigned short(8000));
@@ -120,7 +140,8 @@ TEST_CASE("node", "[network]") {
   tst_logger->info("send over leader ", leader_name);
 
   auto leader_client = clients[leader_name];
-  std::vector<uint8_t> first_cmd{1, 2, 3, 4, 5};
+  std::vector<uint8_t> first_cmd(cmd_size);
+  std::iota(first_cmd.begin(), first_cmd.end(), uint8_t(0));
 
   std::mutex locker;
   std::unique_lock ulock(locker);

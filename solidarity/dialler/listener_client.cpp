@@ -58,3 +58,7 @@ void listener_client::on_data_recv(std::vector<message_ptr> &d, bool &cancel) {
 void listener_client::send_data(const message_ptr &d) {
   _async_connection->send(d);
 }
+
+void listener_client::send_data(const std::vector<message_ptr> &d) {
+  _async_connection->send(d);
+}

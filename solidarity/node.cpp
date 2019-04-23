@@ -30,11 +30,11 @@ public:
         break;
       }
       case QUERY_KIND::READ: {
-        read_handler(i, d.front());
+        read_handler(i, d);
         break;
       }
       case QUERY_KIND::WRITE: {
-        write_handler(i, d.front());
+        write_handler(i, d);
         break;
       }
       default:
@@ -72,20 +72,17 @@ public:
     i->send_data(answer);
   }
 
-  void read_handler(listener_client_ptr i, message_ptr &d) {
-    clients::read_query_t rq({d});
+  void read_handler(listener_client_ptr i, std::vector<message_ptr> &d) {
+    clients::read_query_t rq(d);
     _logger->dbg("client:", _client_name, " read query #", rq.msg_id);
     command result = _parent->state_machine()->read(rq.query);
     clients::read_query_t answer(rq.msg_id, result);
     auto ames = answer.to_message();
-    if (ames.size() > 1) {
-      NOT_IMPLEMENTED;
-    }
-    i->send_data(ames.front());
+    i->send_data(ames);
   }
 
-  void write_handler(listener_client_ptr i, message_ptr &d) {
-    clients::write_query_t wq({d});
+  void write_handler(listener_client_ptr i, std::vector<message_ptr> &d) {
+    clients::write_query_t wq(d);
     _logger->dbg("client:", _client_name, " write query #", wq.msg_id);
     auto res = _parent->add_command(wq.query);
 

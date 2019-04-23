@@ -196,9 +196,6 @@ ERROR_CODE client::send(const solidarity::command &cmd) {
   auto waiter = make_waiter();
   queries::clients::write_query_t rq(waiter->id(), cmd);
   auto messages = rq.to_message();
-  if (messages.size() > 1) {
-    NOT_IMPLEMENTED;
-  }
   _dialler->send_async(messages);
   waiter->wait();
   auto result = waiter->ecode();
