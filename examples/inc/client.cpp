@@ -8,6 +8,7 @@
 size_t thread_count = 1;
 unsigned short port = 11000;
 std::string host = "localhost";
+bool dont_read = false;
 
 int main(int argc, char **argv) {
   cxxopts::Options options("Distributed increment", "Example distributed increment");
@@ -20,6 +21,7 @@ int main(int argc, char **argv) {
   add_o("host", "Node addr", cxxopts::value<std::string>(host));
   add_o(
       "p,port", "Listening port for other servers", cxxopts::value<unsigned short>(port));
+  add_o("dont-read", "don't wait an answer from cluster after each writing.");
 
   try {
     cxxopts::ParseResult result = options.parse(argc, argv);
@@ -29,6 +31,10 @@ int main(int argc, char **argv) {
       std::exit(0);
     }
 
+    if (result["dont-read"].as<bool>()) {
+      dont_read = true;
+    }
+
   } catch (cxxopts::OptionException &ex) {
     std::cerr << ex.what() << std::endl;
   }
@@ -36,6 +42,7 @@ int main(int argc, char **argv) {
   std::cout << "port: " << port << std::endl;
   std::cout << "threads: " << thread_count << std::endl;
   std::cout << "host: " << host << std::endl;
+  std::cout << "dont_read: " << dont_read << std::endl;
 
   solidarity::client::params_t cpar("client_");
   cpar.threads_count = 1;
@@ -87,16 +94,18 @@ int main(int argc, char **argv) {
         c->rm_event_handler(uh_id);
         continue;
       }
-      while (true) {
-        cond.wait(ulock, [&is_on_update_received]() { return is_on_update_received; });
-        if (is_on_update_received) {
-          break;
+      if (!dont_read) {
+        while (true) {
+          cond.wait(ulock, [&is_on_update_received]() { return is_on_update_received; });
+          if (is_on_update_received) {
+            break;
+          }
         }
-      }
 
-      auto answer = c->read({});
+        auto answer = c->read({});
+        std::cout << "sz: " << answer.size() << std::endl;
+      }
       std::cout << "elapsed: " << el.elapsed() << std::endl;
-      std::cout << "sz: " << answer.size() << std::endl;
 
       c->rm_event_handler(uh_id);
 
