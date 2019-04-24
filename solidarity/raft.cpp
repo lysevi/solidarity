@@ -451,8 +451,21 @@ void raft::commit_reccord(const logdb::reccord_info &target) {
 void raft::heartbeat() {
   std::lock_guard l(_locker);
 
-  if (!_state.is_heartbeat_missed()) {
-    return;
+  if (_state.node_kind == NODE_KIND::LEADER) {
+    auto prev = _jrn->prev_rec();
+    bool prev_is_not_replicated
+        = std::any_of(_logs_state.cbegin(),
+                      _logs_state.cend(),
+                      [prev](const auto &kv) -> bool { return kv.second.prev != prev; });
+    if (!prev_is_not_replicated) {
+      if (!_state.is_heartbeat_missed()) {
+        return;
+      }
+    }
+  } else {
+    if (!_state.is_heartbeat_missed()) {
+      return;
+    }
   }
 
   if (_state.node_kind != NODE_KIND::LEADER) {
@@ -465,7 +478,6 @@ void raft::heartbeat() {
   }
 
   if (_state.node_kind == NODE_KIND::CANDIDATE || _state.node_kind == NODE_KIND::LEADER) {
-
     if (_state.node_kind == NODE_KIND::LEADER) { /// CANDIDATE => LEADER
       if (_logs_state.find(_self_addr) == _logs_state.end()) {
         _logs_state[_self_addr].prev = _jrn->prev_rec();
