@@ -16,7 +16,10 @@ namespace {
 using namespace solidarity;
 
 struct Listener final : public dialler::abstract_listener_consumer {
-  Listener() { connections.store(0); }
+  Listener() {
+    connections.store(0);
+    recv_msg_count.store(0);
+  }
   bool on_new_connection(dialler::listener_client_ptr) override {
     connections.fetch_add(1);
     return true;
@@ -26,14 +29,17 @@ struct Listener final : public dialler::abstract_listener_consumer {
                         const boost::system::error_code & /*err*/) override {}
 
   void on_new_message(dialler::listener_client_ptr /*i*/,
-                      std::vector<dialler::message_ptr> & /*d*/,
-                      bool & /*cancel*/) override {}
+                      std::vector<dialler::message_ptr> &d,
+                      bool & /*cancel*/) override {
+    recv_msg_count += d.size();
+  }
 
   void on_disconnect(const dialler::listener_client_ptr & /*i*/) override {
     connections.fetch_sub(1);
   }
 
   std::atomic_int16_t connections;
+  std::atomic_size_t recv_msg_count;
 };
 
 struct Connection final : public dialler::abstract_dial {
@@ -96,22 +102,49 @@ TEST_CASE("listener.client", "[network]") {
   }
 
   std::vector<std::shared_ptr<dialler::dial>> clients(clients_count);
-  std::vector<std::shared_ptr<Connection>> consumers(clients_count);
+  std::vector<std::shared_ptr<Connection>> connections(clients_count);
   for (size_t i = 0; i < clients_count; i++) {
     clients[i] = std::make_shared<dialler::dial>(context, p);
-    consumers[i] = std::make_shared<Connection>();
-    clients[i]->add_consumer(consumers[i]);
+    connections[i] = std::make_shared<Connection>();
+    clients[i]->add_consumer(connections[i]);
     clients[i]->start_async_connection();
   }
 
-  for (auto &c : consumers) {
+  for (auto &c : connections) {
     while (!c->mock_is_connected) {
-
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
   }
 
   while (!lstnr->is_started() && size_t(lstnr->connections.load()) != clients_count) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+
+  auto target_con = clients.front();
+  auto m = std::make_shared<dialler::message>(10, dialler::message::kind_t(1));
+  EXPECT_TRUE(m->get_header()->is_single_message());
+  target_con->send_async(m);
+
+  while (lstnr->recv_msg_count.load() != 1) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+
+  std::vector<dialler::message_ptr> messages(5);
+  for (size_t i = 0; i < 5; ++i) {
+    m = std::make_shared<dialler::message>(10, dialler::message::kind_t(1));
+    if (i == 0) {
+      m->get_header()->is_start_block = 1;
+    } else {
+      m->get_header()->is_piece_block = 1;
+    }
+
+    messages[i] = m;
+  }
+  messages.back()->get_header()->is_end_block = 1;
+  messages.back()->get_header()->is_piece_block = 1;
+  target_con->send_async(messages);
+
+  while (lstnr->recv_msg_count.load() != messages.size() + 1) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
