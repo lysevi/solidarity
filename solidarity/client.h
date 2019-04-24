@@ -12,6 +12,7 @@
 #include <optional>
 #include <string>
 #include <thread>
+#include <shared_mutex>
 
 #include <boost/asio.hpp>
 

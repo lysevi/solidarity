@@ -130,3 +130,5 @@ if(${solidarity_ENABLE_EXAMPLES})
   include_directories(extern/cxxopts/include)
   add_subdirectory(examples)
 endif(${solidarity_ENABLE_EXAMPLES})
+
+add_subdirectory(perftest)
