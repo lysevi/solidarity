@@ -263,18 +263,18 @@ TEST_CASE("serialisation.write_query_t", "[network]") {
 }
 
 TEST_CASE("serialisation.state_machine_updated_t", "[network]") {
-  solidarity::state_machine_updated_event_t smev;
+  solidarity::command_status_event_t smev;
   smev.crc = 33;
-  smev.kind = solidarity::state_machine_updated_event_t::event_kind::WAS_APPLIED;
-  solidarity::queries::clients::state_machine_updated_t qc(smev);
+  smev.status = solidarity::command_status::WAS_APPLIED;
+  solidarity::queries::clients::command_status_query_t qc(smev);
   auto msg = qc.to_message();
 
-  solidarity::queries::clients::state_machine_updated_t qc_u(msg);
+  solidarity::queries::clients::command_status_query_t qc_u(msg);
   EXPECT_EQ(
       msg->get_header()->kind,
-      (solidarity::dialler::message::kind_t)solidarity::queries::QUERY_KIND::UPDATE);
+      (solidarity::dialler::message::kind_t)solidarity::queries::QUERY_KIND::COMMAND_STATUS);
   EXPECT_EQ(qc_u.e.crc, qc.e.crc);
-  EXPECT_EQ(qc_u.e.kind, qc.e.kind);
+  EXPECT_EQ(qc_u.e.status, qc.e.status);
 }
 
 TEST_CASE("serialisation.raft_state_updated_t", "[network]") {

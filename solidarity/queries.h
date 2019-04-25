@@ -16,7 +16,7 @@ enum class QUERY_KIND : dialler::message::kind_t {
   COMMAND,
   READ,
   WRITE,
-  UPDATE,
+  COMMAND_STATUS,
   RAFT_STATE_UPDATE
 };
 
@@ -107,10 +107,10 @@ struct write_query_t {
   EXPORT std::vector<dialler::message_ptr> to_message() const;
 };
 
-struct state_machine_updated_t {
-  state_machine_updated_event_t e;
-  EXPORT state_machine_updated_t(const state_machine_updated_event_t&e_);
-  EXPORT state_machine_updated_t(const dialler::message_ptr &msg);
+struct command_status_query_t {
+  command_status_event_t e;
+  EXPORT command_status_query_t(const command_status_event_t&e_);
+  EXPORT command_status_query_t(const dialler::message_ptr &msg);
   EXPORT dialler::message_ptr to_message() const;
 };
 

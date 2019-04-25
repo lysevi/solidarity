@@ -286,24 +286,24 @@ std::vector<dialler::message_ptr> write_query_t::to_message() const {
   return result;
 }
 
-state_machine_updated_t::state_machine_updated_t(
-    const state_machine_updated_event_t &e_) {
+command_status_query_t::command_status_query_t(
+    const command_status_event_t &e_) {
   e = e_;
 }
 
-state_machine_updated_t::state_machine_updated_t(const message_ptr &msg) {
-  ENSURE(msg->get_header()->kind == (message::kind_t)queries::QUERY_KIND::UPDATE);
+command_status_query_t::command_status_query_t(const message_ptr &msg) {
+  ENSURE(msg->get_header()->kind == (message::kind_t)queries::QUERY_KIND::COMMAND_STATUS);
   msgpack::unpacker pac = get_unpacker(msg);
   msgpack::object_handle oh;
 
   pac.next(oh);
-  e.kind = (state_machine_updated_event_t::event_kind)oh.get().as<uint8_t>();
+  e.status = (command_status)oh.get().as<uint8_t>();
   pac.next(oh);
   e.crc = oh.get().as<uint32_t>();
 }
 
-message_ptr state_machine_updated_t::to_message() const {
-  return pack_to_message(queries::QUERY_KIND::UPDATE, (uint8_t)e.kind, e.crc);
+message_ptr command_status_query_t::to_message() const {
+  return pack_to_message(queries::QUERY_KIND::COMMAND_STATUS, (uint8_t)e.status, e.crc);
 }
 
 raft_state_updated_t::raft_state_updated_t(NODE_KIND f, NODE_KIND t) {

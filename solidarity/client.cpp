@@ -74,8 +74,8 @@ public:
           *_parent, sq.id, std::vector<uint8_t>(), sq.status, sq.msg);
       break;
     }
-    case QUERY_KIND::UPDATE: {
-      queries::clients::state_machine_updated_t smuq(d.front());
+    case QUERY_KIND::COMMAND_STATUS: {
+      queries::clients::command_status_query_t smuq(d.front());
       client_event_t cev;
       cev.kind = client_event_t::event_kind::STATE_MACHINE;
       cev.state_ev = smuq.e;

@@ -122,12 +122,10 @@ public:
     try {
       _target->apply_cmd(cmd);
       if (_parent->is_leader()) {
-        _parent->notify_state_machine_update(
-            cmd.crc(), state_machine_updated_event_t::event_kind::WAS_APPLIED);
+        _parent->notify_command_status(cmd.crc(), command_status::WAS_APPLIED);
       }
     } catch (...) {
-      _parent->notify_state_machine_update(
-          cmd.crc(), state_machine_updated_event_t::event_kind::APPLY_ERROR);
+      _parent->notify_command_status(cmd.crc(), command_status::APPLY_ERROR);
       throw;
     }
   }
@@ -150,11 +148,9 @@ public:
   bool can_apply(const command &cmd) override {
     bool res = _target->can_apply(cmd);
     if (res) {
-      _parent->notify_state_machine_update(
-          cmd.crc(), state_machine_updated_event_t::event_kind::CAN_BE_APPLY);
+      _parent->notify_command_status(cmd.crc(), command_status::CAN_BE_APPLY);
     } else {
-      _parent->notify_state_machine_update(
-          cmd.crc(), state_machine_updated_event_t::event_kind::CAN_NOT_BE_APPLY);
+      _parent->notify_command_status(cmd.crc(), command_status::CAN_NOT_BE_APPLY);
     }
     return res;
   }
@@ -171,16 +167,14 @@ public:
 
   logdb::reccord_info put(const index_t idx, const logdb::log_entry &e) override {
     if (_parent->is_leader()) {
-      _parent->notify_state_machine_update(
-          e.cmd_crc, state_machine_updated_event_t::event_kind::IN_LEADER_JOURNAL);
+      _parent->notify_command_status(e.cmd_crc, command_status::IN_LEADER_JOURNAL);
     }
     return _target->put(idx, e);
   }
 
   logdb::reccord_info put(const logdb::log_entry &e) override {
     if (_parent->is_leader()) {
-      _parent->notify_state_machine_update(
-          e.cmd_crc, state_machine_updated_event_t::event_kind::IN_LEADER_JOURNAL);
+      _parent->notify_command_status(e.cmd_crc, command_status::IN_LEADER_JOURNAL);
     }
     return _target->put(e);
   }
@@ -198,8 +192,7 @@ public:
       for (auto v : erased) {
         if (_parent->is_leader()) {
           // TODO implement batch version [{crc, kind}]
-          _parent->notify_state_machine_update(
-              v, state_machine_updated_event_t::event_kind::ERASED_FROM_JOURNAL);
+          _parent->notify_command_status(v, command_status::ERASED_FROM_JOURNAL);
         }
       }
     }
@@ -218,8 +211,7 @@ public:
       for (auto v : erased) {
         if (_parent->is_leader()) {
           // TODO implement batch version [{crc, kind}]
-          _parent->notify_state_machine_update(
-              v, state_machine_updated_event_t::event_kind::ERASED_FROM_JOURNAL);
+          _parent->notify_command_status(v, command_status::ERASED_FROM_JOURNAL);
         }
       }
     }
@@ -299,10 +291,9 @@ node::node(utils::logging::abstract_logger_ptr logger,
   _cluster_con
       = std::make_shared<solidarity::mesh_connection>(addr, _raft, _logger, params);
 
-  _cluster_con->set_state_machine_event_handler(
-      [this](const state_machine_updated_event_t &e) {
-        this->notify_state_machine_update(e.crc, e.kind);
-      });
+  _cluster_con->set_state_machine_event_handler([this](const command_status_event_t &e) {
+    this->notify_command_status(e.crc, e.status);
+  });
 
   _raft->set_cluster(_cluster_con.get());
 
@@ -382,14 +373,13 @@ size_t node::connections_count() const {
   return _clients.size();
 }
 
-void node::notify_state_machine_update(uint32_t crc,
-                                       state_machine_updated_event_t::event_kind k) {
-  _logger->dbg("notify_state_machine_update()");
+void node::notify_command_status(uint32_t crc, command_status k) {
+  _logger->dbg("notify_command_status() ", crc, k);
   std::shared_lock l(_locker);
   std::future<void> a;
-  state_machine_updated_event_t smev;
+  command_status_event_t smev;
   smev.crc = crc;
-  smev.kind = k;
+  smev.status = k;
 
   if (!_on_update_handlers.empty()) {
     a = std::async(std::launch::async, [this, smev]() {
@@ -404,7 +394,7 @@ void node::notify_state_machine_update(uint32_t crc,
 
   auto context = _cluster_con->context();
   for (auto v : _clients) {
-    auto m = clients::state_machine_updated_t(smev).to_message();
+    auto m = clients::command_status_query_t(smev).to_message();
     boost::asio::post(*context, [this, m, v]() { this->_listener->send_to(v, m); });
   }
 

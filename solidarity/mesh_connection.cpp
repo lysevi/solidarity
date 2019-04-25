@@ -86,8 +86,8 @@ void listener::on_new_message(dialler::listener_client_ptr i,
     _parent->on_write_status(name, sq.id, sq.status);
     break;
   }
-  case queries::QUERY_KIND::UPDATE: {
-    queries::clients::state_machine_updated_t smuq(d.front());
+  case queries::QUERY_KIND::COMMAND_STATUS: {
+    queries::clients::command_status_query_t smuq(d.front());
     if (_parent->_on_smue_handler != nullptr) {
       _parent->_on_smue_handler(smuq.e);
     }
@@ -219,10 +219,10 @@ void mesh_connection::send_all(const node_name &from, const append_entries &m) {
   }
 }
 
-void mesh_connection::send_all(const state_machine_updated_event_t &smuv) {
+void mesh_connection::send_all(const command_status_event_t &smuv) {
   _logger->dbg("send state_machine_updated_event_t to all");
   auto all = all_nodes();
-  queries::clients::state_machine_updated_t rsmuq(smuv);
+  queries::clients::command_status_query_t rsmuq(smuv);
   auto m = rsmuq.to_message();
   for (auto &&to : std::move(all)) {
     if (to == _self_addr) {

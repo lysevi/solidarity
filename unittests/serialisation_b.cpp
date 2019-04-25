@@ -88,17 +88,17 @@ TEST_CASE("serialisation", "[bench]") {
   }
 
   {
-    solidarity::state_machine_updated_event_t smev;
+    solidarity::command_status_event_t smev;
     smev.crc = 33;
-    smev.kind = solidarity::state_machine_updated_event_t::event_kind::WAS_APPLIED;
-    clients::state_machine_updated_t state_machine_u(smev);
+    smev.status = solidarity::command_status::CAN_BE_APPLY;
+    clients::command_status_query_t state_machine_u(smev);
     BENCHMARK("state_machine_updated_t::to_message") {
       UNUSED(state_machine_u.to_message());
     }
 
     auto sm_q = state_machine_u.to_message();
     BENCHMARK("state_machine_updated_t:unpack") {
-      clients::state_machine_updated_t unpacked(sm_q);
+      clients::command_status_query_t unpacked(sm_q);
     }
   }
 }

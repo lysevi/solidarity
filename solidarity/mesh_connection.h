@@ -71,7 +71,7 @@ public:
   send_to(const node_name &from, const node_name &to, const append_entries &m) override;
 
   EXPORT void send_all(const node_name &from, const append_entries &m) override;
-  EXPORT void send_all(const state_machine_updated_event_t &smuv);
+  EXPORT void send_all(const command_status_event_t &smuv);
   EXPORT void send_to(const node_name &to, const std::vector<dialler::message_ptr>&m);
   EXPORT size_t size() override;
   EXPORT std::vector<node_name> all_nodes() const override;
@@ -88,7 +88,7 @@ public:
                       std::function<void(ERROR_CODE)> callback);
 
   void set_state_machine_event_handler(
-      const std::function<void(const state_machine_updated_event_t &)> h) {
+      const std::function<void(const command_status_event_t &)> h) {
     _on_smue_handler = h;
   }
 
@@ -137,6 +137,6 @@ private:
       = std::unordered_map<uint64_t, std::function<void(ERROR_CODE)>>;
   std::unordered_map<solidarity::node_name, message_id_to_callback> _messages;
 
-  std::function<void(const state_machine_updated_event_t &)> _on_smue_handler;
+  std::function<void(const command_status_event_t &)> _on_smue_handler;
 };
 } // namespace solidarity

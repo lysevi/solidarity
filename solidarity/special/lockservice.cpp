@@ -156,16 +156,16 @@ bool lockservice_client::try_lock(const std::string &target) {
     if (ev.kind == solidarity::client_event_t::event_kind::STATE_MACHINE) {
       auto smev = ev.state_ev.value();
       if (smev.crc == crc) {
-        if (smev.kind
-            == solidarity::state_machine_updated_event_t::event_kind::WAS_APPLIED) {
+        if (smev.status
+            == solidarity::command_status::WAS_APPLIED) {
           is_success = true;
           break_waiter = true;
           cond.notify_all();
         }
-        if (smev.kind
-                == solidarity::state_machine_updated_event_t::event_kind::CAN_NOT_BE_APPLY
-            || smev.kind
-                   == solidarity::state_machine_updated_event_t::event_kind::
+        if (smev.status
+                == solidarity::command_status::CAN_NOT_BE_APPLY
+            || smev.status
+                   == solidarity::command_status::
                           APPLY_ERROR) {
           is_success = false;
           break_waiter = true;

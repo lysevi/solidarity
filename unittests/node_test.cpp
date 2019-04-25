@@ -184,7 +184,7 @@ TEST_CASE("node", "[network]") {
     bool is_state_changed = false;
     auto client_handler_id = kv.second->add_event_handler(
         [&is_state_changed, kv](const solidarity::client_event_t &rse) mutable {
-          std::cerr << kv.first << ": " << solidarity::to_string(rse) << std::endl;
+          //std::cerr << kv.first << ": " << solidarity::to_string(rse) << std::endl;
           if (rse.kind == solidarity::client_event_t::event_kind::RAFT) {
             is_state_changed = true;
           }
@@ -230,8 +230,10 @@ TEST_CASE("node", "[network]") {
     uint64_t node_handler_id = tnode->add_event_handler(
         [&writed_to_node_sm](const solidarity::client_event_t &ev) {
           if (ev.kind == solidarity::client_event_t::event_kind::STATE_MACHINE) {
-            if (ev.state_ev.value().kind
-                == solidarity::state_machine_updated_event_t::event_kind::WAS_APPLIED) {
+            auto cs = ev.state_ev.value();
+            std::cerr << "command status - crc=" << cs.crc
+                      << " status=" << solidarity::to_string(cs.status) << std::endl;
+            if (cs.status == solidarity::command_status::WAS_APPLIED) {
               writed_to_node_sm = true;
             }
           }
