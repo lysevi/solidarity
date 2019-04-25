@@ -55,6 +55,7 @@ struct append_entries {
   node_name leader;
   /// cmd
   command cmd;
+
   logdb::reccord_info current;
   logdb::reccord_info prev;
   logdb::reccord_info commited;

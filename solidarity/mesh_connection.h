@@ -1,15 +1,15 @@
 #pragma once
 
+#include <boost/asio.hpp>
 #include <solidarity/abstract_cluster.h>
 #include <solidarity/config.h>
 #include <solidarity/dialler/dialler.h>
 #include <solidarity/dialler/listener.h>
 #include <solidarity/dialler/message.h>
+#include <solidarity/event.h>
 #include <solidarity/protocol_version.h>
 #include <solidarity/raft.h>
 #include <solidarity/utils/logger.h>
-
-#include <boost/asio.hpp>
 
 namespace solidarity {
 class mesh_connection;
@@ -71,6 +71,7 @@ public:
   send_to(const node_name &from, const node_name &to, const append_entries &m) override;
 
   EXPORT void send_all(const node_name &from, const append_entries &m) override;
+  EXPORT void send_all(const state_machine_updated_event_t &smuv);
   EXPORT size_t size() override;
   EXPORT std::vector<node_name> all_nodes() const override;
 
@@ -84,6 +85,11 @@ public:
   EXPORT void send_to(const solidarity::node_name &target,
                       const solidarity::command &cmd,
                       std::function<void(ERROR_CODE)> callback);
+
+  void set_state_machine_event_handler(
+      const std::function<void(const state_machine_updated_event_t &)> h) {
+    _on_smue_handler = h;
+  }
 
 protected:
   void accept_out_connection(const node_name &name, const std::string &addr);
@@ -129,5 +135,7 @@ private:
   using message_id_to_callback
       = std::unordered_map<uint64_t, std::function<void(ERROR_CODE)>>;
   std::unordered_map<solidarity::node_name, message_id_to_callback> _messages;
+
+  std::function<void(const state_machine_updated_event_t &)> _on_smue_handler;
 };
 } // namespace solidarity

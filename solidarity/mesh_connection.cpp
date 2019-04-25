@@ -86,6 +86,12 @@ void listener::on_new_message(dialler::listener_client_ptr i,
     _parent->on_write_status(name, sq.id, sq.status);
     break;
   }
+  case queries::QUERY_KIND::UPDATE: {
+    queries::clients::state_machine_updated_t smuq(d.front());
+    if (_parent->_on_smue_handler != nullptr) {
+      _parent->_on_smue_handler(smuq.e);
+    }
+  }
   }
 } // namespace solidarity::impl
 
@@ -219,6 +225,25 @@ void mesh_connection::send_all(const node_name &from, const append_entries &m) {
   for (auto &&o : std::move(all)) {
     if (o != _self_addr) {
       send_to(from, std::move(o), m);
+    }
+  }
+}
+
+void mesh_connection::send_all(const state_machine_updated_event_t &smuv) {
+  _logger->dbg("send state_machine_updated_event_t to all");
+  auto all = all_nodes();
+  // TODO refact copy-past
+  for (auto &&to : std::move(all)) {
+    if (to == _self_addr) {
+      continue;
+    }
+    if (auto it = _accepted_out_connections.find(to);
+        it != _accepted_out_connections.end()) {
+      queries::clients::state_machine_updated_t rsmuq(smuv);
+      if (auto dl_it = _diallers.find(it->second); dl_it != _diallers.end()) {
+        auto messages = rsmuq.to_message();
+        dl_it->second->send_async(messages);
+      }
     }
   }
 }

@@ -119,26 +119,150 @@ public:
   }
 
   void apply_cmd(const command &cmd) override {
-    _parent->notify_state_machine_update();
-    _target->apply_cmd(cmd);
+    try {
+      _target->apply_cmd(cmd);
+      if (_parent->is_leader()) {
+        _parent->notify_state_machine_update(
+            cmd.crc(), state_machine_updated_event_t::event_kind::WAS_APPLIED);
+      }
+    } catch (...) {
+      _parent->notify_state_machine_update(
+          cmd.crc(), state_machine_updated_event_t::event_kind::APPLY_ERROR);
+      throw;
+    }
   }
 
   void reset() override {
-    _parent->notify_state_machine_update();
+    // TODO implement this
+    //_parent->notify_state_machine_update();
     _target->reset();
   }
 
   command snapshot() override { return _target->snapshot(); }
 
   void install_snapshot(const solidarity::command &cmd) override {
-    _parent->notify_state_machine_update();
+    //_parent->notify_state_machine_update();
     _target->install_snapshot(cmd);
   }
 
   command read(const command &cmd) override { return _target->read(cmd); }
 
-  bool can_apply(const command &cmd) override { return _target->can_apply(cmd); }
+  bool can_apply(const command &cmd) override {
+    bool res = _target->can_apply(cmd);
+    if (res) {
+      _parent->notify_state_machine_update(
+          cmd.crc(), state_machine_updated_event_t::event_kind::CAN_BE_APPLY);
+    } else {
+      _parent->notify_state_machine_update(
+          cmd.crc(), state_machine_updated_event_t::event_kind::CAN_NOT_BE_APPLY);
+    }
+    return res;
+  }
   solidarity::abstract_state_machine *_target;
+  node *_parent;
+};
+
+class journal_wrapper final : public logdb::abstract_journal {
+public:
+  journal_wrapper(logdb::journal_ptr target_, node *parent_) {
+    _target = target_;
+    _parent = parent_;
+  }
+
+  logdb::reccord_info put(const index_t idx, const logdb::log_entry &e) override {
+    if (_parent->is_leader()) {
+      _parent->notify_state_machine_update(
+          e.cmd_crc, state_machine_updated_event_t::event_kind::IN_LEADER_JOURNAL);
+    }
+    return _target->put(idx, e);
+  }
+
+  logdb::reccord_info put(const logdb::log_entry &e) override {
+    if (_parent->is_leader()) {
+      _parent->notify_state_machine_update(
+          e.cmd_crc, state_machine_updated_event_t::event_kind::IN_LEADER_JOURNAL);
+    }
+    return _target->put(e);
+  }
+
+  void erase_all_after(const index_t lsn) override {
+    std::list<uint32_t> erased;
+    if (_parent->is_leader()) {
+      _target->visit_after(lsn, [this, &erased](const logdb::log_entry &le) {
+        erased.push_back(le.cmd_crc);
+      });
+    }
+    _target->erase_all_after(lsn);
+
+    if (_parent->is_leader()) {
+      for (auto v : erased) {
+        if (_parent->is_leader()) {
+          // TODO implement batch version [{crc, kind}]
+          _parent->notify_state_machine_update(
+              v, state_machine_updated_event_t::event_kind::ERASED_FROM_JOURNAL);
+        }
+      }
+    }
+  }
+
+  void erase_all_to(const index_t lsn) override {
+    std::list<uint32_t> erased;
+    if (_parent->is_leader()) {
+      _target->visit_to(lsn, [this, &erased](const logdb::log_entry &le) {
+        erased.push_back(le.cmd_crc);
+      });
+    }
+    _target->erase_all_to(lsn);
+
+    if (_parent->is_leader()) {
+      for (auto v : erased) {
+        if (_parent->is_leader()) {
+          // TODO implement batch version [{crc, kind}]
+          _parent->notify_state_machine_update(
+              v, state_machine_updated_event_t::event_kind::ERASED_FROM_JOURNAL);
+        }
+      }
+    }
+  }
+
+  void visit(std::function<void(const logdb::log_entry &)> v) override {
+    return _target->visit(v);
+  }
+
+  void visit_after(const index_t lsn,
+                   std::function<void(const logdb::log_entry &)> e) override {
+    return _target->visit_after(lsn, e);
+  }
+  void visit_to(const index_t lsn,
+                std::function<void(const logdb::log_entry &)> e) override {
+    return _target->visit_after(lsn, e);
+  }
+
+  logdb::reccord_info prev_rec() const noexcept override { return _target->prev_rec(); }
+
+  logdb::reccord_info first_uncommited_rec() const noexcept override {
+    return _target->first_uncommited_rec();
+  }
+  logdb::reccord_info commited_rec() const noexcept override {
+    return _target->commited_rec();
+  }
+  logdb::reccord_info first_rec() const noexcept override { return _target->first_rec(); }
+  logdb::reccord_info restore_start_point() const noexcept override {
+    return _target->restore_start_point();
+  }
+  logdb::reccord_info info(index_t lsn) const noexcept override {
+    return _target->info(lsn);
+  }
+
+  virtual std::unordered_map<index_t, logdb::log_entry> dump() const override {
+    return _target->dump();
+  }
+  void commit(const index_t lsn) override { return _target->commit(lsn); }
+  logdb::log_entry get(const index_t lsn) override { return _target->get(lsn); }
+  size_t size() const override { return _target->size(); }
+  size_t reccords_count() const override { return _target->reccords_count(); }
+
+  logdb::journal_ptr _target;
   node *_parent;
 };
 
@@ -151,9 +275,12 @@ node::node(utils::logging::abstract_logger_ptr logger,
   _logger = logger;
 
   auto jrn = std::make_shared<solidarity::logdb::memory_journal>();
+  auto jrn_wrap = std::make_shared<journal_wrapper>(jrn, this);
+
   auto addr = solidarity::node_name().set_name(_params.name);
   auto s = _params.rft_settings.set_name(_params.name);
-  _raft = std::make_shared<solidarity::raft>(s, nullptr, jrn, _state_machine, _logger);
+  _raft
+      = std::make_shared<solidarity::raft>(s, nullptr, jrn_wrap, _state_machine, _logger);
 
   solidarity::mesh_connection::params_t params;
   params.listener_params.port = p.port;
@@ -171,6 +298,12 @@ node::node(utils::logging::abstract_logger_ptr logger,
 
   _cluster_con
       = std::make_shared<solidarity::mesh_connection>(addr, _raft, _logger, params);
+
+  _cluster_con->set_state_machine_event_handler(
+      [this](const state_machine_updated_event_t &e) {
+        this->notify_state_machine_update(e.crc, e.kind);
+      });
+
   _raft->set_cluster(_cluster_con.get());
 
   dialler::listener::params_t lst_params;
@@ -222,6 +355,10 @@ void node::stop() {
   }
 }
 
+bool node::is_leader() const {
+  return _raft->state().node_kind == NODE_KIND::LEADER;
+}
+
 raft_state_t node::state() const {
   return _raft->state();
 }
@@ -245,53 +382,48 @@ size_t node::connections_count() const {
   return _clients.size();
 }
 
-void node::notify_state_machine_update() {
+void node::notify_state_machine_update(uint32_t crc,
+                                       state_machine_updated_event_t::event_kind k) {
   _logger->dbg("notify_state_machine_update()");
   std::shared_lock l(_locker);
-  std::future<void> a1, a2;
+  std::future<void> a;
+  state_machine_updated_event_t smev;
+  smev.crc = crc;
+  smev.kind = k;
 
-  if (!_clients.empty()) {
-    a1 = std::async(std::launch::async, [this]() {
-      for (auto v : _clients) {
-        auto m = clients::state_machine_updated_t().to_message();
-        this->_listener->send_to(v, m);
-      }
-    });
-  }
   if (!_on_update_handlers.empty()) {
-    a2 = std::async(std::launch::async, [this]() {
+    a = std::async(std::launch::async, [this, smev]() {
       client_event_t ev;
       ev.kind = client_event_t::event_kind::STATE_MACHINE;
-      ev.state_ev = state_machine_updated_event_t{};
+      ev.state_ev = smev;
       for (auto &v : _on_update_handlers) {
         v.second(ev);
       }
     });
   }
-  if (a1.valid()) {
-    a1.wait();
+
+  auto context = _cluster_con->context();
+  for (auto v : _clients) {
+    auto m = clients::state_machine_updated_t(smev).to_message();
+    boost::asio::post(*context, [this, m, v]() { this->_listener->send_to(v, m); });
   }
-  if (a2.valid()) {
-    a2.wait();
+
+  if (is_leader()) {
+    _cluster_con->send_all(smev);
+  }
+
+  if (a.valid()) {
+    a.wait();
   }
 }
 
 void node::notify_raft_state_update(NODE_KIND old_state, NODE_KIND new_state) {
   _logger->dbg("notify_raft_state_update(): ", old_state, " => ", new_state);
   std::shared_lock l(_locker);
-  std::future<void> a1, a2;
-
-  if (!_clients.empty()) {
-    a1 = std::async(std::launch::async, [this, old_state, new_state]() {
-      for (auto v : _clients) {
-        auto m = clients::raft_state_updated_t(old_state, new_state).to_message();
-        this->_listener->send_to(v, m);
-      }
-    });
-  }
+  std::future<void> a;
 
   if (!_on_update_handlers.empty()) {
-    a2 = std::async(std::launch::async, [this, old_state, new_state]() {
+    a = std::async(std::launch::async, [this, old_state, new_state]() {
       client_event_t ev;
       ev.kind = client_event_t::event_kind::RAFT;
       ev.raft_ev = raft_state_event_t{old_state, new_state};
@@ -301,11 +433,18 @@ void node::notify_raft_state_update(NODE_KIND old_state, NODE_KIND new_state) {
       }
     });
   }
-  if (a1.valid()) {
-    a1.wait();
+
+  if (!_clients.empty()) {
+    auto context = _cluster_con->context();
+    clients::raft_state_updated_t rsu(old_state, new_state);
+    auto m = rsu.to_message();
+    for (auto v : _clients) {
+      boost::asio::post(*context, [m, this, v]() { this->_listener->send_to(v, m); });
+    }
   }
-  if (a2.valid()) {
-    a2.wait();
+
+  if (a.valid()) {
+    a.wait();
   }
 }
 

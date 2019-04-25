@@ -88,7 +88,10 @@ TEST_CASE("serialisation", "[bench]") {
   }
 
   {
-    clients::state_machine_updated_t state_machine_u;
+    solidarity::state_machine_updated_event_t smev;
+    smev.crc = 33;
+    smev.kind = solidarity::state_machine_updated_event_t::event_kind::WAS_APPLIED;
+    clients::state_machine_updated_t state_machine_u(smev);
     BENCHMARK("state_machine_updated_t::to_message") {
       UNUSED(state_machine_u.to_message());
     }

@@ -286,8 +286,9 @@ std::vector<dialler::message_ptr> write_query_t::to_message() const {
   return result;
 }
 
-state_machine_updated_t::state_machine_updated_t() {
-  f = true;
+state_machine_updated_t::state_machine_updated_t(
+    const state_machine_updated_event_t &e_) {
+  e = e_;
 }
 
 state_machine_updated_t::state_machine_updated_t(const message_ptr &msg) {
@@ -296,11 +297,13 @@ state_machine_updated_t::state_machine_updated_t(const message_ptr &msg) {
   msgpack::object_handle oh;
 
   pac.next(oh);
-  f = oh.get().as<bool>();
+  e.kind = (state_machine_updated_event_t::event_kind)oh.get().as<uint8_t>();
+  pac.next(oh);
+  e.crc = oh.get().as<uint32_t>();
 }
 
 message_ptr state_machine_updated_t::to_message() const {
-  return pack_to_message(queries::QUERY_KIND::UPDATE, f);
+  return pack_to_message(queries::QUERY_KIND::UPDATE, (uint8_t)e.kind, e.crc);
 }
 
 raft_state_updated_t::raft_state_updated_t(NODE_KIND f, NODE_KIND t) {

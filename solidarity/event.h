@@ -8,7 +8,19 @@
 
 namespace solidarity {
 
-struct state_machine_updated_event_t {};
+struct state_machine_updated_event_t {
+  enum class event_kind : uint8_t {
+    WAS_APPLIED,
+    APPLY_ERROR,
+    CAN_BE_APPLY,
+    CAN_NOT_BE_APPLY,
+    IN_LEADER_JOURNAL,
+	ERASED_FROM_JOURNAL
+  };
+
+  event_kind kind;
+  uint32_t crc;
+};
 
 struct network_state_event_t {
   ERROR_CODE ecode = ERROR_CODE::OK;

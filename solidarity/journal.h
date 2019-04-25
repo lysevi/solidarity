@@ -24,6 +24,7 @@ struct log_entry {
   index_t idx = UNDEFINED_INDEX;
   term_t term;
   command cmd;
+  uint32_t cmd_crc;
   LOG_ENTRY_KIND kind;
 };
 
@@ -69,7 +70,8 @@ public:
   virtual void erase_all_to(const index_t lsn) = 0;
 
   virtual void visit(std::function<void(const log_entry &)>) = 0;
-
+  virtual void visit_after(const index_t lsn, std::function<void(const log_entry &)>) = 0;
+  virtual void visit_to(const index_t lsn, std::function<void(const log_entry &)>) = 0;
   [[nodiscard]] virtual reccord_info prev_rec() const noexcept = 0;
   [[nodiscard]] virtual reccord_info first_uncommited_rec() const noexcept = 0;
   [[nodiscard]] virtual reccord_info commited_rec() const noexcept = 0;
@@ -94,6 +96,9 @@ public:
   EXPORT void erase_all_after(const index_t lsn) override;
   EXPORT void erase_all_to(const index_t lsn) override;
   EXPORT void visit(std::function<void(const log_entry &)>) override;
+  EXPORT void visit_after(const index_t lsn, std::function<void(const log_entry &)>) override;
+  EXPORT void visit_to(const index_t lsn,
+                       std::function<void(const log_entry &)>) override;
 
   [[nodiscard]] EXPORT reccord_info prev_rec() const noexcept override;
   [[nodiscard]] EXPORT reccord_info first_uncommited_rec() const noexcept override;

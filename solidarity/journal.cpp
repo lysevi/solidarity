@@ -204,6 +204,29 @@ void memory_journal::visit(std::function<void(const log_entry &)> f) {
   }
 }
 
+void memory_journal::visit_after(const index_t lsn,
+                                 std::function<void(const log_entry &)> e) {
+  std::shared_lock lg(_locker);
+  for (auto it = _wal.rbegin(); it != _wal.rend(); ++it) {
+    if (it->first == lsn) {
+      break;
+    }
+    e(it->second);
+  }
+}
+
+void memory_journal::visit_to(const index_t lsn,
+                              std::function<void(const log_entry &)> e) {
+  std::shared_lock lg(_locker);
+
+  for (auto it = _wal.begin(); it != _wal.end(); ++it) {
+    if (it->first >= lsn) {
+      break;
+    }
+    e(it->second);
+  }
+}
+
 reccord_info memory_journal::info(index_t lsn) const noexcept {
   std::shared_lock lg(_locker);
   if (auto it = _wal.find(lsn); it != _wal.end()) {

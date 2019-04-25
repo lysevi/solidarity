@@ -228,7 +228,14 @@ TEST_CASE("node", "[network]") {
     auto tnode = nodes[kv.first];
     bool writed_to_node_sm = false;
     uint64_t node_handler_id = tnode->add_event_handler(
-        [&writed_to_node_sm](auto) { writed_to_node_sm = true; });
+        [&writed_to_node_sm](const solidarity::client_event_t &ev) {
+          if (ev.kind == solidarity::client_event_t::event_kind::STATE_MACHINE) {
+            if (ev.state_ev.value().kind
+                == solidarity::state_machine_updated_event_t::event_kind::WAS_APPLIED) {
+              writed_to_node_sm = true;
+            }
+          }
+        });
 
     i = 0;
     do {
@@ -262,11 +269,14 @@ TEST_CASE("node", "[network]") {
                      expected_answer.end(),
                      answer.begin(),
                      answer.end())) {
-        EXPECT_TRUE(writed_to_node_sm);
         break;
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
+    while (!writed_to_node_sm) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
     tnode->rm_event_handler(node_handler_id);
     kv.second->rm_event_handler(client_handler_id);
   }

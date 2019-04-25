@@ -51,6 +51,7 @@ public:
 
   EXPORT void start();
   EXPORT void stop();
+  EXPORT bool is_leader() const;
   EXPORT raft_state_t state() const;
   EXPORT node_name self_name() const;
 
@@ -62,7 +63,7 @@ public:
   void rm_client(uint64_t id);
   EXPORT size_t connections_count() const;
 
-  void notify_state_machine_update();
+  void notify_state_machine_update(uint32_t crc, state_machine_updated_event_t::event_kind k);
   void notify_raft_state_update(NODE_KIND old_state, NODE_KIND new_state);
   EXPORT void send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd);
 

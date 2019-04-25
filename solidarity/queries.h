@@ -1,6 +1,7 @@
 #include <solidarity/abstract_cluster.h>
 #include <solidarity/dialler/message.h>
 #include <solidarity/error_codes.h>
+#include <solidarity/event.h>
 #include <solidarity/exports.h>
 #include <solidarity/node_kind.h>
 #include <vector>
@@ -107,8 +108,8 @@ struct write_query_t {
 };
 
 struct state_machine_updated_t {
-  bool f;
-  EXPORT state_machine_updated_t();
+  state_machine_updated_event_t e;
+  EXPORT state_machine_updated_t(const state_machine_updated_event_t&e_);
   EXPORT state_machine_updated_t(const dialler::message_ptr &msg);
   EXPORT dialler::message_ptr to_message() const;
 };

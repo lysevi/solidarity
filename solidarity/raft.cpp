@@ -587,6 +587,7 @@ ERROR_CODE raft::add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k) {
   }
   logdb::log_entry le;
   le.cmd = cmd;
+  le.cmd_crc = le.cmd.crc();
   le.term = _state.term;
   le.kind = k;
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <solidarity/exports.h>
+
 #include <cassert>
 #include <cstdint>
 #include <cstring>
@@ -9,7 +11,6 @@
 namespace solidarity {
 
 struct command {
-
   command() = default;
   command(const command &) = default;
   command(command &&) = default;
@@ -21,11 +22,11 @@ struct command {
       : data(sz) {}
   command &operator=(const command &) = default;
 
+  std::vector<std::uint8_t> data;
+
   bool is_empty() const { return data.empty(); }
   size_t size() const { return data.size(); }
   void resize(const size_t s) { return data.resize(s); }
-
-  std::vector<std::uint8_t> data;
 
   template <typename T>
   static command from_value(T pod) {
@@ -55,6 +56,8 @@ struct command {
   auto end() -> decltype(this->data.end()) { return data.end(); }
   auto cbegin() const -> decltype(this->data.cbegin()) { return data.cbegin(); }
   auto cend() const -> decltype(this->data.cend()) { return data.cend(); }
+
+  EXPORT uint32_t crc() const;
 };
 
 } // namespace solidarity
