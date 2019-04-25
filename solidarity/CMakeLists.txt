@@ -9,21 +9,25 @@ FILE(GLOB GLOB_HDRS "*.h")
 FILE(GLOB DIALLER_HDRS "dialler/*.h")
 FILE(GLOB UTILS_HDRS "utils/*.h")
 FILE(GLOB UTILS_ASYNC_HDRS "utils/async/*.h")
+FILE(GLOB SPECIAL_HDRS "special/*.h")
 
 FILE(GLOB GLOB_SRC "*.cpp")
 FILE(GLOB DIALLER_SRC "dialler/*.cpp")
 FILE(GLOB UTILS_SRC "utils/*.cpp")
 FILE(GLOB UTILS_ASYNC_SRC "utils/async/*.cpp")
+FILE(GLOB SPECIAL_SRC "special/*.cpp")
 
 source_group(\\ FILES ${GLOB_HDRS} ${GLOB_SRC})
 source_group(dialler FILES ${DIALLER_HDRS} ${DIALLER_SRC})
 source_group(utils FILES ${UTILS_HDRS} ${UTILS_SRC})
 source_group(utils\\async FILES ${UTILS_ASYNC_HDRS} ${UTILS_ASYNC_SRC})
+source_group(special FILES ${SPECIAL_HDRS} ${SPECIAL_SRC})
 
 SET(SRC ${GLOB_HDRS} ${GLOB_SRC} 
     ${UTILS_HDRS}  ${UTILS_SRC} 
     ${DIALLER_HDRS} ${DIALLER_SRC}
-	${UTILS_ASYNC_HDRS}  ${UTILS_ASYNC_SRC})
+    ${UTILS_ASYNC_HDRS}  ${UTILS_ASYNC_SRC}
+    ${SPECIAL_HDRS} ${SPECIAL_SRC})
 
 
 add_library(solidarity SHARED ${SRC})

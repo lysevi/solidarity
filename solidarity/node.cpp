@@ -137,6 +137,7 @@ public:
 
   command read(const command &cmd) override { return _target->read(cmd); }
 
+  bool can_apply(const command &cmd) override { return _target->can_apply(cmd); }
   solidarity::abstract_state_machine *_target;
   node *_parent;
 };

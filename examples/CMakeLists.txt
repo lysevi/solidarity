@@ -1,3 +1,3 @@
 MESSAGE(STATUS "Examples")
-add_subdirectory(inc)
+add_subdirectory(state)
 add_subdirectory(counter)
