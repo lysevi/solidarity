@@ -17,6 +17,9 @@ public:
   }
 
   void wait() {
+    if (answer_received) {
+      return;
+    }
     std::unique_lock ul(_mutex);
     while (true) {
       _condition.wait(ul, [this] { return answer_received; });
