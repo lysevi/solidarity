@@ -203,20 +203,10 @@ void mesh_connection::stop() {
 void mesh_connection::send_to(const node_name &from,
                               const node_name &to,
                               const append_entries &m) {
-  std::shared_lock l(_locker);
   _logger->dbg("send to ", to);
-  if (auto it = _accepted_out_connections.find(to);
-      it != _accepted_out_connections.end()) {
-    queries::command_t cmd(from, m);
-    if (auto dl_it = _diallers.find(it->second); dl_it != _diallers.end()) {
-      auto messages = cmd.to_message();
-      if (messages.size() == 1) {
-        dl_it->second->send_async(messages.front());
-      } else {
-        dl_it->second->send_async(messages);
-      }
-    }
-  }
+  queries::command_t cmd(from, m);
+  auto messages = cmd.to_message();
+  send_to(to, messages);
 }
 
 void mesh_connection::send_all(const node_name &from, const append_entries &m) {
@@ -232,18 +222,23 @@ void mesh_connection::send_all(const node_name &from, const append_entries &m) {
 void mesh_connection::send_all(const state_machine_updated_event_t &smuv) {
   _logger->dbg("send state_machine_updated_event_t to all");
   auto all = all_nodes();
-  // TODO refact copy-past
+  queries::clients::state_machine_updated_t rsmuq(smuv);
+  auto m = rsmuq.to_message();
   for (auto &&to : std::move(all)) {
     if (to == _self_addr) {
       continue;
     }
-    if (auto it = _accepted_out_connections.find(to);
-        it != _accepted_out_connections.end()) {
-      queries::clients::state_machine_updated_t rsmuq(smuv);
-      if (auto dl_it = _diallers.find(it->second); dl_it != _diallers.end()) {
-        auto messages = rsmuq.to_message();
-        dl_it->second->send_async(messages);
-      }
+    send_to(to, std::vector<dialler::message_ptr>{m});
+  }
+}
+
+void mesh_connection::send_to(const node_name &to,
+                              const std::vector<dialler::message_ptr> &m) {
+  std::shared_lock l(_locker);
+  if (auto it = _accepted_out_connections.find(to);
+      it != _accepted_out_connections.end()) {
+    if (auto dl_it = _diallers.find(it->second); dl_it != _diallers.end()) {
+      dl_it->second->send_async(m);
     }
   }
 }

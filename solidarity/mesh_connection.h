@@ -72,6 +72,7 @@ public:
 
   EXPORT void send_all(const node_name &from, const append_entries &m) override;
   EXPORT void send_all(const state_machine_updated_event_t &smuv);
+  EXPORT void send_to(const node_name &to, const std::vector<dialler::message_ptr>&m);
   EXPORT size_t size() override;
   EXPORT std::vector<node_name> all_nodes() const override;
 
