@@ -75,10 +75,10 @@ public:
       break;
     }
     case QUERY_KIND::UPDATE: {
-      state_machine_updated_event_t sme;
+      queries::clients::state_machine_updated_t smuq(d.front());
       client_event_t cev;
       cev.kind = client_event_t::event_kind::STATE_MACHINE;
-      cev.state_ev = sme;
+      cev.state_ev = smuq.e;
       inner::client_notify_update(*_parent, cev);
       break;
     }
