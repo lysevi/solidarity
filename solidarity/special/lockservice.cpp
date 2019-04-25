@@ -134,32 +134,69 @@ lockservice_client::lockservice_client(const std::string &owner,
   _client = c;
 }
 
-void lockservice_client::lock(const std::string &target) {
+bool lockservice_client::try_lock(const std::string &target) {
+  if (!_client->is_connected()) {
+    return false;
+  }
+
   lockservice::lock_action la;
   la.owner = _owner;
   la.target = target;
   la.state = true;
 
+  std::mutex locker;
+  std::unique_lock ulock(locker);
+  bool is_success = false;
+  bool break_waiter = false;
+  std::condition_variable cond;
+
+  auto la_cmd = la.to_cmd();
+  auto crc = la_cmd.crc();
+  _client->add_event_handler([&](const solidarity::client_event_t &ev) {
+    if (ev.kind == solidarity::client_event_t::event_kind::STATE_MACHINE) {
+      auto smev = ev.state_ev.value();
+      if (smev.crc == crc) {
+        if (smev.kind
+            == solidarity::state_machine_updated_event_t::event_kind::WAS_APPLIED) {
+          is_success = true;
+          break_waiter = true;
+          cond.notify_all();
+        }
+        if (smev.kind
+                == solidarity::state_machine_updated_event_t::event_kind::CAN_NOT_BE_APPLY
+            || smev.kind
+                   == solidarity::state_machine_updated_event_t::event_kind::
+                          APPLY_ERROR) {
+          is_success = false;
+          break_waiter = true;
+          cond.notify_all();
+        }
+      }
+    }
+  });
+
+  auto ec = _client->send(la_cmd);
+
+  if (ec != ERROR_CODE::OK) {
+    return false;
+  }
   while (true) {
-    if (!_client->is_connected()) {
+    cond.wait(ulock, [&break_waiter]() { return break_waiter; });
+    if (break_waiter) {
       break;
     }
+  }
 
-    auto ec = _client->send(la.to_cmd());
+  return is_success;
+}
 
-    if (ec != ERROR_CODE::OK) {
-      continue;
-    }
-    auto res = _client->read(la.to_cmd());
-    if (res.is_empty()) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(200));
-      continue;
-    }
-    auto answer = lockservice::lock_action::from_cmd(res);
-    if (answer.owner == _owner && answer.state == la.state && answer.target == target) {
+void lockservice_client::lock(const std::string &target) {
+  while (true) {
+    bool is_success = try_lock(target);
+    if (is_success) {
       break;
     } else {
-      std::this_thread::sleep_for(std::chrono::milliseconds(200));
+      std::this_thread::sleep_for(std::chrono::microseconds(300));
     }
   }
 }

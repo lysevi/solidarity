@@ -40,6 +40,7 @@ private:
 class lockservice_client {
 public:
   EXPORT lockservice_client(const std::string&owner, const std::shared_ptr<client> &c);
+  EXPORT bool try_lock(const std::string &target);
   EXPORT void lock(const std::string &target);
   EXPORT void unlock(const std::string &target);
 private:
