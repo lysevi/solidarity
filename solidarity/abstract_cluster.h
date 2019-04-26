@@ -48,7 +48,7 @@ struct append_entries {
   /// on election;
   ENTRIES_KIND kind = {ENTRIES_KIND::APPEND};
   /// term number;
-  term_t term;
+  term_t term = UNDEFINED_TERM;
   /// sender start time;
   uint64_t starttime = {};
   /// leader;

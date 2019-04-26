@@ -30,8 +30,8 @@ public:
   struct params_t {
     params_t() { thread_count = std::thread::hardware_concurrency(); }
     size_t thread_count = 0;
-    unsigned short port;
-    unsigned short client_port;
+    unsigned short port=0;
+    unsigned short client_port = 0;
     std::vector<std::string> cluster;
     std::string name;
     raft_settings rft_settings;

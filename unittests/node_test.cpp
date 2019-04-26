@@ -38,7 +38,7 @@ TEST_CASE("node", "[network]") {
   }
 
   std::vector<unsigned short> ports(cluster_size);
-  std::iota(ports.begin(), ports.end(), unsigned short(8000));
+  std::iota(ports.begin(), ports.end(), (unsigned short)(8000));
 
   std::unordered_map<std::string, std::shared_ptr<solidarity::node>> nodes;
   std::unordered_map<std::string, std::shared_ptr<mock_state_machine>> consumers;

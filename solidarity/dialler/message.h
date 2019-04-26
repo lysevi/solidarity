@@ -34,7 +34,7 @@ public:
   static const size_t SIZE_OF_HEADER = sizeof(header_t);
   static const size_t MAX_BUFFER_SIZE = MAX_MESSAGE_SIZE - SIZE_OF_HEADER - SIZE_OF_SIZE;
 
-  message(message &&other)
+  message(message &&other) noexcept
       : _data(std::move(other._data)) {
     _size = (size_t *)_data.data();
     *_size = *other._size;
@@ -46,9 +46,10 @@ public:
     *_size = *other._size;
   }
 
-  message(size_t sz) { init_for_size(sz); }
+  message(size_t sz):_data() { init_for_size(sz); }
 
-  message(size_t sz, const kind_t &kind_) {
+  message(size_t sz, const kind_t &kind_)
+      : _data() {
     auto full_size = static_cast<size_t>(sz + SIZE_OF_SIZE + SIZE_OF_HEADER);
     assert(full_size <= MAX_MESSAGE_SIZE);
     init_for_size(full_size);

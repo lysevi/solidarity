@@ -28,9 +28,11 @@ void out_connection::on_new_message(std::vector<dialler::message_ptr> &d, bool &
   }
   case QUERY_KIND::CONNECTION_ERROR: {
     // TODO erase connection;
-    cancel;
+    cancel=true;
     break;
   }
+  default:
+    break;
   }
 }
 
@@ -92,6 +94,8 @@ void listener::on_new_message(dialler::listener_client_ptr i,
       _parent->_on_smue_handler(smuq.e);
     }
   }
+  default:
+    break;
   }
 } // namespace solidarity::impl
 
@@ -109,7 +113,8 @@ mesh_connection::mesh_connection(node_name self_addr,
                                  const std::shared_ptr<abstract_cluster_client> &client,
                                  const utils::logging::abstract_logger_ptr &logger,
                                  const mesh_connection::params_t &params)
-    : _io_context((int)params.thread_count) {
+    : _stoped(true)
+    , _io_context((int)params.thread_count) {
 
   _message_id.store(0);
 

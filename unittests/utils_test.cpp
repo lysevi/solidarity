@@ -2,7 +2,6 @@
 #include <solidarity/utils/async/thread_pool.h>
 #include <solidarity/utils/property.h>
 #include <solidarity/utils/strings.h>
-#include <solidarity/utils/timer.h>
 #include <solidarity/utils/utils.h>
 #include <solidarity/utils/crc.h>
 
@@ -178,40 +177,6 @@ TEST_CASE("utils.property") {
   EXPECT_EQ(p.svalue(), "string");
 }
 
-TEST_CASE("utils.timer(cyclic)") {
-  volatile size_t calls = 0;
-  auto f = [&]() { calls++; };
-  solidarity::utils::timer::timer_t t(std::chrono::milliseconds(100), f);
-  t.start();
-
-  while (calls < 3) {
-    solidarity::utils::sleep_mls(100);
-  }
-  t.stop();
-  calls = 0;
-  t.start();
-  while (calls < 2) {
-    solidarity::utils::sleep_mls(100);
-  }
-}
-
-TEST_CASE("utils.timer(single)") {
-  volatile size_t calls = 0;
-  auto f = [&]() { calls++; };
-  solidarity::utils::timer::timer_t t(std::chrono::milliseconds(100), f, false);
-  t.start();
-
-  while (calls == 0) {
-    solidarity::utils::sleep_mls(100);
-  }
-  EXPECT_FALSE(t.is_started());
-  calls = 0;
-
-  t.restart();
-  while (calls == 0) {
-    solidarity::utils::sleep_mls(100);
-  }
-}
 
 void f_throw() {
   throw solidarity::utils::exceptions::exception_t("error");

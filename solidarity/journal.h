@@ -24,7 +24,7 @@ struct log_entry {
   index_t idx = UNDEFINED_INDEX;
   term_t term;
   command cmd;
-  uint32_t cmd_crc;
+  uint32_t cmd_crc=0;
   LOG_ENTRY_KIND kind;
 };
 

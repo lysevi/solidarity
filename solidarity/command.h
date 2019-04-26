@@ -34,9 +34,9 @@ struct command {
     if constexpr (std::is_pod<T>::value) {
       cmd.data.resize(sizeof(pod));
       std::memcpy(cmd.data.data(), &pod, sizeof(pod));
-    } else {
-      static_assert(false);
-    }
+    } 
+
+	static_assert(std::is_pod<T>::value, "!is_pod");
     return cmd;
   }
 
@@ -47,9 +47,8 @@ struct command {
       T pod;
       std::memcpy(&pod, data.data(), sizeof(pod));
       return pod;
-    } else {
-      static_assert(false);
     }
+    static_assert(std::is_pod<T>::value, "!is_pod");
   }
 
   auto begin() -> decltype(this->data.begin()) { return data.begin(); }

@@ -51,7 +51,7 @@ public:
 
     size_t threads_count = 1;
     std::string host;
-    unsigned short port;
+    unsigned short port=0;
     std::string name;
   };
   client(const client &) = delete;

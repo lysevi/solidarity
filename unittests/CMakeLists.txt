@@ -4,7 +4,7 @@ FILE(GLOB HDRS "*.h")
 FILE(GLOB SRC "*.cpp")
 
 add_executable(solidarity_unittests ${HDRS} ${SRC})
-TARGET_LINK_LIBRARIES(solidarity_unittests ${solidarity_LIBRARIES})
+TARGET_LINK_LIBRARIES(solidarity_unittests ${solidarity_LIBRARIES} ${CMAKE_DL_LIBS})
 TARGET_LINK_DIRECTORIES(solidarity_unittests PUBLIC ${solidarity_LIBRARY_DIR})
 target_include_directories(solidarity_unittests PUBLIC ${solidarity_INCLUDE_DIR})
 

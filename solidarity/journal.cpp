@@ -49,8 +49,8 @@ void memory_journal::commit(const index_t lsn) {
   if (last->first < lsn) {
     to_commit = last->first;
   }
-
-  _commited = reccord_info(last->second, last->first);
+  auto r = _wal.find(to_commit);
+  _commited = reccord_info(r->second, lsn);
 }
 
 log_entry memory_journal::get(const index_t lsn) {

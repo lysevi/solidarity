@@ -1,14 +1,15 @@
 #pragma once
 
-#include <chrono>
 #include <solidarity/abstract_cluster.h>
 #include <solidarity/exports.h>
 #include <solidarity/journal.h>
 #include <solidarity/node_kind.h>
 #include <solidarity/raft_settings.h>
+
+#include <chrono>
 #include <string>
 #include <unordered_set>
-
+#include <cmath>
 namespace solidarity {
 
 struct changed_state_t;

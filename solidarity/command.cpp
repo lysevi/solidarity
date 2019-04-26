@@ -1,5 +1,3 @@
-#pragma once
-
 #include <array>
 #include <solidarity/command.h>
 #include <solidarity/utils/crc.h>

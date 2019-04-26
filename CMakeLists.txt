@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.1)
+cmake_minimum_required (VERSION 3.10)
 set(PROJECT "solidarity")
 project (${PROJECT} VERSION 0.0.1)
 
@@ -37,6 +37,7 @@ option(solidarity_ENABLE_DOUBLECHECKS "More checks in code." ${DOUBLE_CHECKS})
 option(solidarity_ENABLE_BENCHMARKS "Enable build benchmarks." ON)
 option(solidarity_ASAN_UBSAN "clang asan" OFF)
 option(solidarity_MSAN "clang msan" OFF)
+option(solidarity_ENABLE_COVERAGE "Generate coverage for codecov.io" OFF)
 
 if(solidarity_ASAN_UBSAN AND solidarity_MSAN)
   message(FATAL_ERROR "Sanitizers cannot be enabled simultaneously.")
@@ -99,9 +100,17 @@ IF(solidarity_ENABLE_DOUBLECHECKS)
  ENDIF(MSVC)
 endif(solidarity_ENABLE_DOUBLECHECKS)
 
-find_package (Threads)
+find_package (Threads REQUIRED)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+if (solidarity_ENABLE_COVERAGE)
+    set(ENABLE_COVERAGE ON CACHE BOOL "Enable coverage build." FORCE)
+    find_package(codecov)
+    add_coverage(SelfTest)
+    list(APPEND LCOV_REMOVE_PATTERNS "'/usr/*'")
+    coverage_evaluate()
+endif()
 
 if(solidarity_ENABLE_TESTS)
    include_directories(extern/Catch2/single_include/catch2/)
@@ -124,8 +133,8 @@ if (solidarity_ENABLE_TESTS)
 endif()
 
 if(${solidarity_ENABLE_EXAMPLES})
-  SET(CXXOPTS_BUILD_TESTS OFF)
-  SET(CXXOPTS_BUILD_EXAMPLES OFF)
+  SET(CXXOPTS_BUILD_TESTS CACHE BOOL OFF)
+  SET(CXXOPTS_BUILD_EXAMPLES  CACHE BOOL OFF)
   add_subdirectory(extern/cxxopts)
   include_directories(extern/cxxopts/include)
   add_subdirectory(examples)

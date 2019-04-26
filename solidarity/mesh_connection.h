@@ -54,7 +54,10 @@ class mesh_connection final : public abstract_cluster,
                               public std::enable_shared_from_this<mesh_connection> {
 public:
   struct params_t {
-    params_t() { thread_count = std::thread::hardware_concurrency(); }
+    params_t()
+        : listener_params() {
+      thread_count = std::thread::hardware_concurrency();
+    }
     dialler::listener::params_t listener_params;
     std::vector<dialler::dial::params_t> addrs;
     size_t thread_count = 0;

@@ -11,7 +11,7 @@ namespace solidarity {
 
 class async_result_t {
 public:
-  solidarity::async_result_t(uint64_t id_) {
+  async_result_t(uint64_t id_) {
     _id = id_;
     answer_received = false;
   }

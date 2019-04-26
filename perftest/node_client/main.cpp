@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
   std::vector<std::shared_ptr<dummy_fsm>> smachines(node_count);
 
   std::vector<unsigned short> ports(node_count);
-  std::iota(ports.begin(), ports.end(), unsigned short(start_port));
+  std::iota(ports.begin(), ports.end(), (unsigned short)(start_port));
 
   for (size_t i = 0; i < node_count; ++i) {
     std::vector<unsigned short> out_ports;
@@ -119,8 +119,8 @@ int main(int argc, char **argv) {
     solidarity::node::params_t params;
     params.rft_settings.set_max_log_size(1000).set_election_timeout(
         std::chrono::milliseconds(500));
-    params.port = start_port + unsigned short(i);
-    params.client_port = start_c_port + unsigned short(i);
+    params.port = start_port + (unsigned short)(i);
+    params.client_port = start_c_port + (unsigned short)(i);
     params.thread_count = 1;
     params.cluster = out_addrs;
     params.name = to_string("node_", params.port);

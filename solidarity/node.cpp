@@ -260,7 +260,7 @@ public:
 
 node::node(utils::logging::abstract_logger_ptr logger,
            const params_t &p,
-           abstract_state_machine *state_machine) {
+           abstract_state_machine *state_machine): _stoped(false) {
   _params = p;
   _state_machine = new consumer_wrapper(this, state_machine);
 

@@ -34,9 +34,9 @@ struct raft_state_event_t {
 };
 
 struct client_event_t {
-  enum class event_kind { RAFT, NETWORK, COMMAND_STATUS };
+  enum class event_kind { UNDEFINED, RAFT, NETWORK, COMMAND_STATUS };
 
-  event_kind kind;
+  event_kind kind = event_kind::UNDEFINED;
   std::optional<raft_state_event_t> raft_ev;
   std::optional<network_state_event_t> net_ev;
   std::optional<command_status_event_t> cmd_ev;

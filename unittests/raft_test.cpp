@@ -420,10 +420,6 @@ TEST_CASE("raft.apply_journal_on_start", "[raft]") {
   auto cons = std::make_shared<raft>(sett, cluster.get(), jrn, state_machine.get());
   cluster->add_new(node_name().set_name(sett.name()), cons);
 
-  auto data_eq = [&cmd](const std::shared_ptr<mock_state_machine> &c) -> bool {
-    return c->last_cmd.data == cmd.data;
-  };
-
   EXPECT_EQ(state_machine->last_cmd.data, cmd.data);
 }
 

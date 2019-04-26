@@ -13,7 +13,7 @@ namespace solidarity::special {
 class lockservice : public abstract_state_machine {
 public:
   struct lock_action {
-    bool state;
+    bool state=false;
     std::string target;
     std::string owner;
 

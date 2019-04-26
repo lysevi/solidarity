@@ -82,7 +82,7 @@ TEST_CASE("mesh_connection", "[network]") {
   }
 
   std::vector<unsigned short> ports(cluster_size);
-  std::iota(ports.begin(), ports.end(), unsigned short(8000));
+  std::iota(ports.begin(), ports.end(),(unsigned short)8000);
 
   std::vector<std::shared_ptr<solidarity::mesh_connection>> connections;
   std::unordered_map<solidarity::node_name, std::shared_ptr<mock_cluster_client>> clients;

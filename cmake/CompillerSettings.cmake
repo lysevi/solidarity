@@ -38,13 +38,11 @@ else(WIN32)
 ENDIF(WIN32)
 
 if(MSVC)
-  add_cxx_compiler_flag(-W4)
-  add_cxx_compiler_flag(-MP)
   add_definitions(-DMSVC)
   add_definitions(-D_ENABLE_ATOMIC_ALIGNMENT_FIX)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_WIN32_WINNT=0x0501")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_WIN32_WINNT=0x0501 /permissive /WX -W4 /MP")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Ox /GT /Ot -DNDEBUG")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Oy") #-fno-omit-frame-pointer analog
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -D_DEBUG")
