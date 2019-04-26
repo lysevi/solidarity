@@ -1,4 +1,7 @@
-#include "common.h"
+/**
+running example:
+ex_client_state.exe -p 11000 --host "localhost"
+*/
 #include <cxxopts.hpp>
 #include <iostream>
 #include <solidarity/client.h>
@@ -28,6 +31,8 @@ int main(int argc, char **argv) {
 
     if (result["help"].as<bool>()) {
       std::cout << options.help() << std::endl;
+      std::cout << "Usage example:" << std::endl;
+      std::cout << " ex_client_state.exe -p 11000 --host \"localhost\"" << std::endl;
       std::exit(0);
     }
 

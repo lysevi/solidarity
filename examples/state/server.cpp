@@ -1,3 +1,7 @@
+/**
+running example:
+ex_server_state.exe -p 10000 -c 11000 --cluster "localhost:10001" "localhost:10002"
+*/
 #include <cxxopts.hpp>
 #include <iostream>
 #include <solidarity/node.h>
@@ -37,6 +41,10 @@ int main(int argc, char **argv) {
 
     if (result["help"].as<bool>()) {
       std::cout << options.help() << std::endl;
+      std::cout << "Usage example:" << std::endl;
+      std::cout << " ex_server_state.exe -p 10000 -c 11000 --cluster \"localhost:10001\" "
+                   "\"localhost:10002\""
+                << std::endl;
       std::exit(0);
     }
 
@@ -72,7 +80,7 @@ int main(int argc, char **argv) {
   params.rft_settings.set_max_log_size(1000).set_election_timeout(
       std::chrono::milliseconds(500));
   params.port = port;
-  params.client_port = client_port++;
+  params.client_port = client_port;
   params.thread_count = 1;
   params.cluster = cluster;
   params.name = to_string("node_", port);

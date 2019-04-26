@@ -1,3 +1,7 @@
+/**
+running example:
+ex_counter.exe -p 10000 --cluster "localhost:10001" "localhost:10002"
+*/
 #include <cxxopts.hpp>
 #include <iostream>
 #include <solidarity/solidarity.h>
@@ -72,6 +76,9 @@ int main(int argc, char **argv) {
 
     if (result["help"].as<bool>()) {
       std::cout << options.help() << std::endl;
+
+      std::cout << "Usage example:" << std::endl;
+      std::cout << " ex_counter.exe -p 10000 --cluster \"localhost:10001\" \"localhost:10002\"" << std::endl;
       std::exit(0);
     }
 
