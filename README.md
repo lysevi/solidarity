@@ -1,5 +1,5 @@
 ![logo](artwork/logo.small.png)
-# SOLIDarity [![Build Status](https://travis-ci.com/lysevi/solidarity.svg?token=f5DQZyNQkzeWGPedHsM2&branch=master)](https://travis-ci.com/lysevi/solidarity)
+# SOLIDarity [![Build Status](https://travis-ci.org/lysevi/solidarity.svg?branch=master)](https://travis-ci.org/lysevi/solidarity)
 
 ## building
 1. add conan repo
