@@ -12,7 +12,6 @@
 #include <numeric>
 
 TEST_CASE("utils.crc") {
-  auto v = uint64_t(777);
   std::vector<int> data({1, 2, 3, 4, 5});
   auto crc1 = solidarity::utils::crc(data.cbegin(), data.cend());
   data[0]++;

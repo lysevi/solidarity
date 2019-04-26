@@ -25,15 +25,15 @@ boost:without_mpi=True
 boost:without_program_options=True
 boost:without_python=True
 boost:without_random=True
-boost:without_regex=False
+boost:without_regex=True
 boost:without_serialization=True
 boost:without_stacktrace=False
 boost:without_system=False
 boost:without_test=True
-boost:without_thread=False
+boost:without_thread=True
 boost:without_timer=True
 boost:without_type_erasure=True
-boost:without_wave=False
+boost:without_wave=True
 
 [generators]
 cmake
