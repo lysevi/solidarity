@@ -10,9 +10,9 @@
 #include <atomic>
 #include <mutex>
 #include <optional>
+#include <shared_mutex>
 #include <string>
 #include <thread>
-#include <shared_mutex>
 
 #include <boost/asio.hpp>
 
@@ -35,6 +35,15 @@ void client_update_async_result(client &c,
 void client_notify_update(client &c, const client_event_t &ev);
 } // namespace inner
 
+struct send_result {
+  ERROR_CODE ecode = solidarity::ERROR_CODE::UNDEFINED;
+  command_status status = solidarity::command_status::APPLY_ERROR;
+
+  bool is_ok() const {
+    return ecode == ERROR_CODE::OK && status == command_status::WAS_APPLIED;
+  }
+};
+
 class client {
 public:
   struct params_t {
@@ -55,7 +64,8 @@ public:
   EXPORT void connect();
   EXPORT void disconnect();
 
-  [[nodiscard]] EXPORT ERROR_CODE send(const solidarity::command &cmd);
+  [[nodiscard]] EXPORT ERROR_CODE send_weak(const solidarity::command &cmd);
+  [[nodiscard]] EXPORT send_result send_strong(const solidarity::command &cmd);
   EXPORT solidarity::command read(const solidarity::command &cmd);
 
   params_t params() const { return _params; }

@@ -117,6 +117,11 @@ TEST_CASE("node", "[network]") {
       for (auto &kv : nodes) {
         auto state = kv.second->state();
         auto nkind = state.node_kind;
+        if (nkind != solidarity::NODE_KIND::LEADER
+            && nkind != solidarity::NODE_KIND::FOLLOWER) {
+          election_complete = false;
+          break;
+        }
         if ((nkind == solidarity::NODE_KIND::LEADER
              || nkind == solidarity::NODE_KIND::FOLLOWER)
             && state.leader.name() != leader_name.name()) {
@@ -149,7 +154,7 @@ TEST_CASE("node", "[network]") {
   });
 
   {
-    auto ecode = leader_client->send(first_cmd);
+    auto ecode = leader_client->send_weak(first_cmd);
     EXPECT_EQ(ecode, solidarity::ERROR_CODE::OK);
   }
 
@@ -184,7 +189,7 @@ TEST_CASE("node", "[network]") {
     bool is_state_changed = false;
     auto client_handler_id = kv.second->add_event_handler(
         [&is_state_changed, kv](const solidarity::client_event_t &rse) mutable {
-          //std::cerr << kv.first << ": " << solidarity::to_string(rse) << std::endl;
+          // std::cerr << kv.first << ": " << solidarity::to_string(rse) << std::endl;
           if (rse.kind == solidarity::client_event_t::event_kind::RAFT) {
             is_state_changed = true;
           }
@@ -194,10 +199,11 @@ TEST_CASE("node", "[network]") {
     int i = 0;
     do {
       tst_logger->info("try resend cmd. step #", i++);
-      send_ecode = kv.second->send(first_cmd);
-      if (is_state_changed) {
+      auto sst = kv.second->send_strong(first_cmd);
+      if (is_state_changed || sst.is_ok()) {
         break;
       }
+      send_ecode = sst.ecode;
     } while (send_ecode != solidarity::ERROR_CODE::OK);
 
     auto expected_answer = first_cmd;
@@ -229,8 +235,8 @@ TEST_CASE("node", "[network]") {
     bool writed_to_node_sm = false;
     uint64_t node_handler_id = tnode->add_event_handler(
         [&writed_to_node_sm](const solidarity::client_event_t &ev) {
-          if (ev.kind == solidarity::client_event_t::event_kind::STATE_MACHINE) {
-            auto cs = ev.state_ev.value();
+          if (ev.kind == solidarity::client_event_t::event_kind::COMMAND_STATUS) {
+            auto cs = ev.cmd_ev.value();
             std::cerr << "command status - crc=" << cs.crc
                       << " status=" << solidarity::to_string(cs.status) << std::endl;
             if (cs.status == solidarity::command_status::WAS_APPLIED) {

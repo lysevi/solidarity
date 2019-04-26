@@ -8,7 +8,7 @@
 size_t thread_count = 1;
 unsigned short port = 11000;
 std::string host = "localhost";
-bool dont_read = false;
+bool strong = false;
 
 int main(int argc, char **argv) {
   cxxopts::Options options("Distributed increment", "Example distributed increment");
@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
   add_o("host", "Node addr", cxxopts::value<std::string>(host));
   add_o(
       "p,port", "Listening port for other servers", cxxopts::value<unsigned short>(port));
-  add_o("dont-read", "don't wait an answer from cluster after each writing.");
+  add_o("strong", "Use send_strong for to send messages to cluster.");
 
   try {
     cxxopts::ParseResult result = options.parse(argc, argv);
@@ -31,8 +31,8 @@ int main(int argc, char **argv) {
       std::exit(0);
     }
 
-    if (result["dont-read"].as<bool>()) {
-      dont_read = true;
+    if (result["strong"].as<bool>()) {
+      strong = true;
     }
 
   } catch (cxxopts::OptionException &ex) {
@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
   std::cout << "port: " << port << std::endl;
   std::cout << "threads: " << thread_count << std::endl;
   std::cout << "host: " << host << std::endl;
-  std::cout << "dont_read: " << dont_read << std::endl;
+  std::cout << "strong: " << strong << std::endl;
 
   solidarity::client::params_t cpar("client_");
   cpar.threads_count = 1;
@@ -65,49 +65,30 @@ int main(int argc, char **argv) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
+  bool is_network_error = false;
   while (true) {
     try {
       std::cout << "write i:" << i << std::endl;
-      std::mutex locker;
-      std::unique_lock ulock(locker);
-      bool is_on_update_received = false;
-      std::condition_variable cond;
-      bool is_network_error = false;
-      auto uh_id
-          = c->add_event_handler([&is_on_update_received, &cond, &is_network_error](
-                                     const solidarity::client_event_t ev) {
-              if (ev.kind == solidarity::client_event_t::event_kind::NETWORK) {
-                if (ev.net_ev.value().ecode != solidarity::ERROR_CODE::OK) {
-                  is_network_error = true;
-                }
-              }
-              std::cerr << solidarity::to_string(ev) << std::endl;
-              is_on_update_received = true;
-              cond.notify_all();
-            });
-
       solidarity::utils::elapsed_time el;
-
-      auto res = c->send(solidarity::command::from_value(i));
-      std::cout << solidarity::utils::strings::to_string("res: ", res) << std::endl;
-      if (res != solidarity::ERROR_CODE::OK) {
-        c->rm_event_handler(uh_id);
-        continue;
-      }
-      if (!dont_read) {
-        while (true) {
-          cond.wait(ulock, [&is_on_update_received]() { return is_on_update_received; });
-          if (is_on_update_received) {
-            break;
-          }
+      if (strong) {
+        auto sst = c->send_strong(solidarity::command::from_value(i));
+        if (!sst.is_ok()) {
+          std::cerr << "command status - cmd=" << i
+                    << " ecode=" << solidarity::to_string(sst.ecode)
+                    << " status=" << solidarity::to_string(sst.status) << std::endl;
         }
-
+        is_network_error = sst.ecode == solidarity::ERROR_CODE::NETWORK_ERROR;
+      } else {
+        auto ec = c->send_weak(solidarity::command::from_value(i));
+        if (ec != solidarity::ERROR_CODE::OK) {
+          is_network_error = ec == solidarity::ERROR_CODE::NETWORK_ERROR;
+          continue;
+        }
         auto answer = c->read({});
         std::cout << "sz: " << answer.size() << std::endl;
       }
-      std::cout << "elapsed: " << el.elapsed() << std::endl;
 
-      c->rm_event_handler(uh_id);
+      std::cout << "elapsed: " << el.elapsed() << std::endl;
 
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
       ++i;

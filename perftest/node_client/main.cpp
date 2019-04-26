@@ -151,13 +151,35 @@ int main(int argc, char **argv) {
   }
 
   std::cout << "election." << std::endl;
+  std::unordered_set<solidarity::node_name> leaders;
   while (true) {
-    auto leaders = std::count_if(
-        nodes.cbegin(), nodes.cend(), [](const std::shared_ptr<solidarity::node> &m) {
-          return m->state().node_kind == solidarity::NODE_KIND::LEADER;
-        });
-    if (leaders == size_t(1)) {
-      break;
+    leaders.clear();
+    for (auto &kv : nodes) {
+      if (kv->state().node_kind == solidarity::NODE_KIND::LEADER) {
+        leaders.insert(kv->self_name());
+      }
+    }
+    if (leaders.size() == 1) {
+      auto leader_name = *leaders.begin();
+      bool election_complete = true;
+      for (auto &kv : nodes) {
+        auto state = kv->state();
+        auto nkind = state.node_kind;
+        if (nkind != solidarity::NODE_KIND::LEADER
+            && nkind != solidarity::NODE_KIND::FOLLOWER) {
+          election_complete = false;
+          break;
+        }
+        if ((nkind == solidarity::NODE_KIND::LEADER
+             || nkind == solidarity::NODE_KIND::FOLLOWER)
+            && state.leader.name() != leader_name.name()) {
+          election_complete = false;
+          break;
+        }
+      }
+      if (election_complete) {
+        break;
+      }
     }
   }
 
@@ -166,56 +188,24 @@ int main(int argc, char **argv) {
   std::vector<double> etimes(writes_count);
   for (size_t i = 0; i < writes_count; ++i) {
     auto cmd = solidarity::command::from_value(v);
-    auto crc = cmd.crc();
-
-    std::mutex locker;
-    std::unique_lock ulock(locker);
-    bool is_success = false;
-    bool break_waiter = false;
-    std::condition_variable cond;
 
     auto c = clients[i % node_count];
-    uint64_t handler_id = 0;
-    if (sync_writes) {
-      handler_id = c->add_event_handler([&](const solidarity::client_event_t &ev) {
-        if (ev.kind == solidarity::client_event_t::event_kind::STATE_MACHINE) {
-          auto smev = ev.state_ev.value();
-          /*std::cerr << "command status - crc=" << smev.crc
-                    << " status=" << solidarity::to_string(smev.status) << std::endl;*/
-
-          if (smev.crc == crc) {
-            if (smev.status == solidarity::command_status::WAS_APPLIED) {
-              is_success = true;
-              break_waiter = true;
-              cond.notify_all();
-            }
-            if (smev.status == solidarity::command_status::CAN_NOT_BE_APPLY
-                || smev.status == solidarity::command_status::APPLY_ERROR) {
-              is_success = false;
-              break_waiter = true;
-              cond.notify_all();
-            }
-          }
-        }
-      });
-    }
 
     solidarity::utils::elapsed_time et;
-    while (true) {
-      auto st = c->send(cmd);
-      if (st == solidarity::ERROR_CODE::OK) {
-        break;
-      }
-    }
 
     if (sync_writes) {
-      while (true) {
-        cond.wait(ulock, [&break_waiter]() { return break_waiter; });
-        if (break_waiter) {
-          break;
-        }
+      auto sst = c->send_strong(cmd);
+      if (!sst.is_ok()) {
+        std::cerr << "command status - crc=" << cmd.crc()
+                  << " ecode=" << solidarity::to_string(sst.ecode)
+                  << " status=" << solidarity::to_string(sst.status) << std::endl;
       }
-      c->rm_event_handler(handler_id);
+    } else {
+      auto ec = c->send_weak(cmd);
+      if (ec != solidarity::ERROR_CODE::OK) {
+        std::cerr << "command status - crc=" << cmd.crc()
+                  << " ecode=" << solidarity::to_string(ec) << std::endl;
+      }
     }
     etimes[i] = et.elapsed();
     std::cout << "elapsed " << etimes[i] << std::endl;

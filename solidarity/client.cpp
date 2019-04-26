@@ -77,8 +77,8 @@ public:
     case QUERY_KIND::COMMAND_STATUS: {
       queries::clients::command_status_query_t smuq(d.front());
       client_event_t cev;
-      cev.kind = client_event_t::event_kind::STATE_MACHINE;
-      cev.state_ev = smuq.e;
+      cev.kind = client_event_t::event_kind::COMMAND_STATUS;
+      cev.cmd_ev = smuq.e;
       inner::client_notify_update(*_parent, cev);
       break;
     }
@@ -188,7 +188,7 @@ std::shared_ptr<async_result_t> client::make_waiter() {
   return waiter;
 }
 
-ERROR_CODE client::send(const solidarity::command &cmd) {
+ERROR_CODE client::send_weak(const solidarity::command &cmd) {
   if (!_connected) {
     return ERROR_CODE::NETWORK_ERROR;
   }
@@ -199,6 +199,49 @@ ERROR_CODE client::send(const solidarity::command &cmd) {
   _dialler->send_async(messages);
   waiter->wait();
   auto result = waiter->ecode();
+  return result;
+}
+
+solidarity::send_result client::send_strong(const solidarity::command &cmd) {
+  auto crc = cmd.crc();
+  solidarity::send_result result;
+
+  std::mutex locker;
+  std::unique_lock ulock(locker);
+  bool is_end = false;
+  std::condition_variable cond;
+
+  auto uh_id
+      = add_event_handler([&is_end, &cond, crc, &result](const client_event_t &cev) {
+          if (cev.kind == client_event_t::event_kind::COMMAND_STATUS) {
+            auto cmd_status = cev.cmd_ev.value();
+            if (cmd_status.crc == crc) {
+              if (cmd_status.status == command_status::WAS_APPLIED
+                  || cmd_status.status == command_status::CAN_NOT_BE_APPLY
+                  || cmd_status.status == command_status::APPLY_ERROR
+                  || cmd_status.status == command_status::ERASED_FROM_JOURNAL) {
+                result.status = cmd_status.status;
+                is_end = true;
+                cond.notify_all();
+              }
+            }
+          }
+        });
+
+  result.ecode = send_weak(cmd);
+  if (result.ecode != ERROR_CODE::OK) {
+    is_end = true;
+  } else {
+  }
+
+  while (!is_end) {
+    cond.wait(ulock, [&is_end]() { return is_end; });
+    if (is_end) {
+      break;
+    }
+  }
+
+  rm_event_handler(uh_id);
   return result;
 }
 

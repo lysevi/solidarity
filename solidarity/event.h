@@ -34,12 +34,12 @@ struct raft_state_event_t {
 };
 
 struct client_event_t {
-  enum class event_kind { RAFT, NETWORK, STATE_MACHINE };
+  enum class event_kind { RAFT, NETWORK, COMMAND_STATUS };
 
   event_kind kind;
   std::optional<raft_state_event_t> raft_ev;
   std::optional<network_state_event_t> net_ev;
-  std::optional<command_status_event_t> state_ev;
+  std::optional<command_status_event_t> cmd_ev;
 };
 
 [[nodiscard]] EXPORT std::string to_string(const client_event_t &cev);

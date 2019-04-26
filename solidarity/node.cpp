@@ -384,8 +384,8 @@ void node::notify_command_status(uint32_t crc, command_status k) {
   if (!_on_update_handlers.empty()) {
     a = std::async(std::launch::async, [this, smev]() {
       client_event_t ev;
-      ev.kind = client_event_t::event_kind::STATE_MACHINE;
-      ev.state_ev = smev;
+      ev.kind = client_event_t::event_kind::COMMAND_STATUS;
+      ev.cmd_ev = smev;
       for (auto &v : _on_update_handlers) {
         v.second(ev);
       }

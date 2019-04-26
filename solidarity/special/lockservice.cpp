@@ -144,50 +144,16 @@ bool lockservice_client::try_lock(const std::string &target) {
   la.target = target;
   la.state = true;
 
-  std::mutex locker;
-  std::unique_lock ulock(locker);
-  bool is_success = false;
-  bool break_waiter = false;
-  std::condition_variable cond;
 
   auto la_cmd = la.to_cmd();
-  auto crc = la_cmd.crc();
-  _client->add_event_handler([&](const solidarity::client_event_t &ev) {
-    if (ev.kind == solidarity::client_event_t::event_kind::STATE_MACHINE) {
-      auto smev = ev.state_ev.value();
-      if (smev.crc == crc) {
-        if (smev.status
-            == solidarity::command_status::WAS_APPLIED) {
-          is_success = true;
-          break_waiter = true;
-          cond.notify_all();
-        }
-        if (smev.status
-                == solidarity::command_status::CAN_NOT_BE_APPLY
-            || smev.status
-                   == solidarity::command_status::
-                          APPLY_ERROR) {
-          is_success = false;
-          break_waiter = true;
-          cond.notify_all();
-        }
-      }
-    }
-  });
+  
+  auto sst = _client->send_strong(la_cmd);
 
-  auto ec = _client->send(la_cmd);
-
-  if (ec != ERROR_CODE::OK) {
+  if (sst.ecode != ERROR_CODE::OK) {
     return false;
   }
-  while (true) {
-    cond.wait(ulock, [&break_waiter]() { return break_waiter; });
-    if (break_waiter) {
-      break;
-    }
-  }
 
-  return is_success;
+  return sst.status == command_status::WAS_APPLIED;
 }
 
 void lockservice_client::lock(const std::string &target) {
@@ -212,7 +178,7 @@ void lockservice_client::unlock(const std::string &target) {
       break;
     }
 
-    auto ec = _client->send(la.to_cmd());
+    auto ec = _client->send_weak(la.to_cmd());
 
     if (ec == ERROR_CODE::NETWORK_ERROR || ec == ERROR_CODE::UNDER_ELECTION) {
       std::this_thread::sleep_for(std::chrono::milliseconds(200));

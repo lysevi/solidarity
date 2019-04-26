@@ -574,7 +574,7 @@ void raft::replicate_log() {
       }
     }
     if (!is_append) {
-      _logger->info("send HELLO to ", naddr);
+      _logger->info("send HEARTBEAT to ", naddr);
       send(naddr, ENTRIES_KIND::HEARTBEAT);
     }
   }
