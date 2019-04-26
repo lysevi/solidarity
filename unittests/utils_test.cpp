@@ -4,11 +4,21 @@
 #include <solidarity/utils/strings.h>
 #include <solidarity/utils/timer.h>
 #include <solidarity/utils/utils.h>
+#include <solidarity/utils/crc.h>
 
 #include "helpers.h"
 #include <array>
 #include <catch.hpp>
 #include <numeric>
+
+TEST_CASE("utils.crc") {
+  auto v = uint64_t(777);
+  std::vector<int> data({1, 2, 3, 4, 5});
+  auto crc1 = solidarity::utils::crc(data.cbegin(), data.cend());
+  data[0]++;
+  auto crc2 = solidarity::utils::crc(data.cbegin(), data.cend());
+  EXPECT_NE(crc1, crc2);
+}
 
 TEST_CASE("utils.split") {
   std::array<int, 8> tst_a;
