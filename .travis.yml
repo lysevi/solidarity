@@ -2,6 +2,10 @@ language: cpp
 compiler: gcc
 dist: trusty
 
+cache: # see https://docs.travis-ci.com/user/caching/
+- directories:
+- $HOME/.cache
+
 common_sources: &all_sources
   - ubuntu-toolchain-r-test
   - llvm-toolchain-trusty
@@ -16,6 +20,7 @@ addons:
     - python3
     - python3-pip
     - g++-8
+    - lcov
 
 install: 
   - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
@@ -33,17 +38,43 @@ install:
   # don't forget to switch back to the main build directory once you are done
   - cd ${TRAVIS_BUILD_DIR}
   - pip install conan --user
-  #- sudo apt-get install -qq g++-8 cmake
-  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 90
+
+matrix:
+  include:
+    - os: linux
+      compiler: gcc
+      addons: &gcc7
+        apt:
+          sources: *all_sources
+          packages: ['g++-7']
+      env: COMPILER='g++-7' COMPVER='7' COMPNAME='gcc'
+
+    - os: linux
+      compiler: gcc
+      addons: &gcc8
+        apt:
+          sources: *all_sources
+          packages: ['g++-8']
+      env: COMPILER='g++-8' COMPVER='8' COMPNAME='gcc'
+
 
 script: 
+  - export CXX=${COMPILER}
   - conan remote add comunity https://api.bintray.com/conan/conan-community/conan 
   - conan remote list
   - git submodule update --init 
   - mkdir build
   - cd build
   - cmake --version
-  - conan install .. --build boost -s compiler=gcc -s compiler.version=8
-  - cmake ..
-  - make -j 2
-  - CTEST_OUTPUT_ON_FAILURE=1 ctest -C Debug .  --verbose
+  - conan install .. --build boost -s compiler=${COMPNAME} -s compiler.version=${COMPVER}  ${CFLAGS}
+  - cmake -Dsolidarity_ENABLE_COVERAGE=${COVERAGE} -Dsolidarity_ENABLE_TESTS=ON -Dsolidarity_ENABLE_EXAMPLES=ON -Dsolidarity_ENABLE_DOUBLECHECKS=ON ..
+  - make -k -j 2
+  #- CTEST_OUTPUT_ON_FAILURE=1 ctest -C Debug .  --verbose
+  #- |
+  #  if [[ "${TRAVIS_OS_NAME}" == "linux" ]] && [[ "${COVERAGE}" == "1" ]]; then
+  #       cd ${TRAVIS_BUILD_DIR}
+  #       lcov --directory . --capture --output-file coverage.info # capture coverage info
+  #       echo "lcov --list coverage.info"    
+  #       lcov --list coverage.info # debug before upload
+  #       bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
+  #  fi

@@ -1,11 +1,14 @@
 #pragma once
 
-#include <cstdint>
 #include <solidarity/exports.h>
+
+#include <cstdint>
 #include <string>
+#include <limits>
+
 
 namespace solidarity {
-// TODO rename to error code
+
 enum class ERROR_CODE : uint16_t {
   OK = 0,
   NOT_A_LEADER,

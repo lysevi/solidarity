@@ -274,6 +274,7 @@ void client::rm_event_handler(uint64_t id) {
 }
 
 void client::notify_on_update(const client_event_t &ev) {
+  std::unordered_map<uint64_t, std::function<void(const client_event_t &)>> copied;
   if (ev.kind == client_event_t::event_kind::NETWORK) {
     std::lock_guard l(_locker);
     for (auto &kv : _async_results) {
@@ -282,8 +283,14 @@ void client::notify_on_update(const client_event_t &ev) {
     _async_results.clear();
     _next_query_id.store(0);
   }
-  std::shared_lock l(_locker);
-  for (auto &kv : _on_update_handlers) {
+  {
+    std::lock_guard l(_locker);
+    if (!_on_update_handlers.empty()) {
+      copied.reserve(_on_update_handlers.size());
+      copied.insert(_on_update_handlers.cbegin(), _on_update_handlers.cend());
+    }
+  }
+  for (auto &kv : copied) {
     kv.second(ev);
   }
 }

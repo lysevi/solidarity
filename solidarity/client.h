@@ -91,7 +91,7 @@ private:
   params_t _params;
   bool _stoped = false;
   std::vector<std::thread> _threads;
-  std::shared_mutex _locker;
+  std::mutex _locker;
   std::shared_ptr<dialler::dial> _dialler;
   std::atomic_size_t _threads_at_work;
   boost::asio::io_context _io_context;

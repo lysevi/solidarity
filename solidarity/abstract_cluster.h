@@ -1,9 +1,11 @@
 #pragma once
 
-#include <memory>
 #include <solidarity/error_codes.h>
 #include <solidarity/journal.h>
 #include <solidarity/utils/property.h>
+
+#include <memory>
+#include <string_view>
 
 namespace solidarity {
 
@@ -86,7 +88,7 @@ public:
   virtual std::vector<node_name> all_nodes() const = 0;
 };
 
-}; // namespace solidarity
+} // namespace solidarity
 
 namespace std {
 template <>

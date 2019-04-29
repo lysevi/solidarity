@@ -24,7 +24,7 @@ struct log_entry {
   index_t idx = UNDEFINED_INDEX;
   term_t term;
   command cmd;
-  uint32_t cmd_crc=0;
+  uint32_t cmd_crc = 0;
   LOG_ENTRY_KIND kind;
 };
 
@@ -87,16 +87,18 @@ using journal_ptr = std::shared_ptr<abstract_journal>;
 class memory_journal final : public abstract_journal {
 public:
   [[nodiscard]] EXPORT static std::shared_ptr<memory_journal> make_new();
+
   EXPORT reccord_info put(const index_t idx, const log_entry &e) override;
   EXPORT reccord_info put(const log_entry &e) override;
   EXPORT void commit(const index_t lsn) override;
   [[nodiscard]] EXPORT log_entry get(const index_t lsn) override;
   [[nodiscard]] EXPORT size_t size() const override;
-  [[nodiscard]] EXPORT size_t reccords_count() const;
+  [[nodiscard]] EXPORT size_t reccords_count() const override;
   EXPORT void erase_all_after(const index_t lsn) override;
   EXPORT void erase_all_to(const index_t lsn) override;
   EXPORT void visit(std::function<void(const log_entry &)>) override;
-  EXPORT void visit_after(const index_t lsn, std::function<void(const log_entry &)>) override;
+  EXPORT void visit_after(const index_t lsn,
+                          std::function<void(const log_entry &)>) override;
   EXPORT void visit_to(const index_t lsn,
                        std::function<void(const log_entry &)>) override;
 

@@ -99,7 +99,7 @@ void listener::on_new_message(dialler::listener_client_ptr i,
   }
 } // namespace solidarity::impl
 
-bool listener::on_new_connection(dialler::listener_client_ptr i) {
+bool listener::on_new_connection(dialler::listener_client_ptr) {
   return true;
 }
 

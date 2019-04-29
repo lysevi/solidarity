@@ -62,7 +62,7 @@ void dial::start_async_connection() {
   auto self = this->shared_from_this();
   self->_async_io = std::make_shared<async_io>(self->_context);
 
-  auto con_handler = [self](auto ec, auto resoler_ir) {
+  auto con_handler = [self](auto ec, auto /*resoler_ir*/) {
     if (ec) {
       if (!self->is_stoped()) {
         self->reconnecton_error(ec);

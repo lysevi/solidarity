@@ -13,28 +13,6 @@ else(WIN32)
     MESSAGE(STATUS "Enable cc:rdynamic")
     add_cxx_compiler_flag(-rdynamic)
   ENDIF()
-
-  
-  set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_DEBUG}" CACHE STRING
-    "Flags used by the C++ compiler during coverage builds."
-    FORCE)
-  set(CMAKE_EXE_LINKER_FLAGS_COVERAGE
-    "${CMAKE_EXE_LINKER_FLAGS_DEBUG}" CACHE STRING
-    "Flags used for linking binaries during coverage builds."
-    FORCE)
-  set(CMAKE_SHARED_LINKER_FLAGS_COVERAGE
-    "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}" CACHE STRING
-    "Flags used by the shared libraries linker during coverage builds."
-    FORCE)
-  mark_as_advanced(
-    CMAKE_CXX_FLAGS_COVERAGE
-    CMAKE_EXE_LINKER_FLAGS_COVERAGE
-    CMAKE_SHARED_LINKER_FLAGS_COVERAGE)
-  set(CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}" CACHE STRING
-    "Choose the type of build, options are: None Debug Release Coverage."
-    FORCE)
-  #add_cxx_compiler_flag(--coverage COVERAGE)
-  #SET(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_COVERAGE} --coverage -O0")
 ENDIF(WIN32)
 
 if(MSVC)
@@ -52,46 +30,22 @@ endif(MSVC)
 
 if(CMAKE_COMPILER_IS_GNUCXX)
   MESSAGE(STATUS "gcc compiller")
-  add_definitions(-DGNU_CPP)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pipe")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -ftemplate-backtrace-limit=0")
+  add_definitions(-DGNU_CPP) 
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pipe ")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftemplate-backtrace-limit=0")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror -pedantic-errors -Wno-pedantic")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-missing-field-initializers")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wwrite-strings")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wdeprecated-declarations")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ftest-coverage")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wsign-compare")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
-  #for 'delete void*;'
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-delete-incomplete")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -fno-inline -g3 -fstack-protector-all -DDEBUG")
   set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -g0 -march=native -mtune=native -DNDEBUG")
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-omit-frame-pointer")
 
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-strict-aliasing -Werror=pragmas") #boost-shared-mutex error;
-
-
-  if(solidarity_ASAN_UBSAN)
-    MESSAGE(STATUS "address saniteze enabled.")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fsanitize=address  -fuse-ld=gold -fno-omit-frame-pointer")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -g -fsanitize=address -fuse-ld=gold")
-  endif(solidarity_ASAN_UBSAN)
-  if(solidarity_MSAN)
-    MESSAGE(STATUS "leak saniteze enabled.")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=leak  -fuse-ld=gold -fno-omit-frame-pointer")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -g -fsanitize=leak  -fuse-ld=gold")
-  endif(solidarity_MSAN)  
+  #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-strict-aliasing -Werror=pragmas") #boost-shared-mutex error;
 endif(CMAKE_COMPILER_IS_GNUCXX)
 
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   MESSAGE(STATUS "clang compiller")
   add_definitions(-DCLANG_CPP)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Weverything -Werror")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++ -Wall")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Weverything -Werror")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error=deprecated-declarations -Wno-error=deprecated")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-c++98-compat -Wno-c++98-compat-pedantic")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-return-stack-address -Wno-undef")
@@ -104,15 +58,4 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-documentation -Wno-documentation-unknown-command")
 
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-cast-align -Wno-disabled-macro-expansion -Wno-newline-eof -Wno-header-hygiene")
-
-  if(solidarity_ASAN_UBSAN)
-    MESSAGE(STATUS "address saniteze enabled.")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fsanitize=undefined")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -g -fsanitize=address")
-  endif(solidarity_ASAN_UBSAN)
-  if(solidarity_MSAN)
-    MESSAGE(STATUS "leak memory enabled.")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=memory")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -g -fsanitize=memory")
-  endif(solidarity_MSAN)  
-endif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+endif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
