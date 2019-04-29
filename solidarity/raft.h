@@ -27,7 +27,10 @@ public:
               const logdb::journal_ptr &jrn,
               abstract_state_machine *state_machine,
               utils::logging::abstract_logger_ptr logger = nullptr);
-  raft_state_t state() const { return _state; }
+  raft_state_t state() const {
+    std::lock_guard l(_locker);
+    return _state;
+  }
   raft_state_t &rw_state() { return _state; }
 
   NODE_KIND kind() const { return _state.node_kind; }
@@ -81,7 +84,7 @@ protected:
 
 private:
   abstract_state_machine *const _state_machine = nullptr;
-  mutable std::mutex _locker;
+  mutable std::recursive_mutex _locker;
   std::mt19937 _rnd_eng;
 
   raft_settings _settings;

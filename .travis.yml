@@ -2,6 +2,8 @@ language: cpp
 compiler: gcc
 dist: trusty
 
+repo_token: 8fED6K5jbjn44SCw2umhjAgXeTy21JTEX
+
 cache: # see https://docs.travis-ci.com/user/caching/
 - directories:
 - $HOME/.cache
@@ -9,9 +11,7 @@ cache: # see https://docs.travis-ci.com/user/caching/
 common_sources: &all_sources
   - ubuntu-toolchain-r-test
   - llvm-toolchain-trusty
-  - llvm-toolchain-trusty-4.0
-  - llvm-toolchain-trusty-5.0
-  - llvm-toolchain-trusty-6.0
+  - llvm-toolchain-trusty-8.0
 
 addons:
   apt:
@@ -21,23 +21,6 @@ addons:
     - python3-pip
     - g++-8
     - lcov
-
-install: 
-  - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
-  - mkdir ${DEPS_DIR} && cd ${DEPS_DIR}
-  # we use wget to fetch the cmake binaries
-  - travis_retry wget --no-check-certificate https://cmake.org/files/v3.14/cmake-3.14.2-Linux-x86_64.tar.gz
-  # extract the binaries; the output here is quite lengthy,
-  # so we swallow it to not clutter up the travis console
-  - tar -xvf cmake-3.14.2-Linux-x86_64.tar.gz > /dev/null
-  - mv cmake-3.14.2-Linux-x86_64 cmake-install
-  # add both the top-level directory and the bin directory from the archive
-  # to the system PATH. By adding it to the front of the path we hide the
-  # preinstalled CMake with our own.
-  - PATH=${DEPS_DIR}/cmake-install:${DEPS_DIR}/cmake-install/bin:$PATH
-  # don't forget to switch back to the main build directory once you are done
-  - cd ${TRAVIS_BUILD_DIR}
-  - pip install conan --user
 
 matrix:
   include:
@@ -56,7 +39,41 @@ matrix:
           sources: *all_sources
           packages: ['g++-8']
       env: COMPILER='g++-8' COMPVER='8' COMPNAME='gcc'
+    
+    - os: linux
+      compiler: gcc
+      addons: &gcc8
+        apt:
+          sources: *all_sources
+          packages: ['g++-8']
+      env: COMPILER='g++-8' COMPVER='8' COMPNAME='gcc' CODE_COVERAGE=true
+        # Clang 8
+    
+    - env: COMPILER=clang++-8 COMPVER='8.0' COMPNAME='clang'
+      sudo: required 
+      addons: &clang8
+        apt:
+          packages: ["clang-8", "valgrind", "libc6-dbg", "g++-6"]
 
+sources: *apt_sources
+
+install: 
+  - DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
+  - mkdir ${DEPS_DIR} && cd ${DEPS_DIR}
+  # we use wget to fetch the cmake binaries
+  - travis_retry wget --no-check-certificate https://cmake.org/files/v3.14/cmake-3.14.2-Linux-x86_64.tar.gz
+  # extract the binaries; the output here is quite lengthy,
+  # so we swallow it to not clutter up the travis console
+  - tar -xvf cmake-3.14.2-Linux-x86_64.tar.gz > /dev/null
+  - mv cmake-3.14.2-Linux-x86_64 cmake-install
+  # add both the top-level directory and the bin directory from the archive
+  # to the system PATH. By adding it to the front of the path we hide the
+  # preinstalled CMake with our own.
+  - PATH=${DEPS_DIR}/cmake-install:${DEPS_DIR}/cmake-install/bin:$PATH
+  # don't forget to switch back to the main build directory once you are done
+  - cd ${TRAVIS_BUILD_DIR}
+  - pip install conan --user
+  - if [[ "${CODE_COVERAGE}" == "true" ]]; then gem install coveralls-lcov ; fi
 
 script: 
   - export CXX=${COMPILER}
@@ -66,14 +83,21 @@ script:
   - cd build
   - cmake --version
   - conan install .. --build boost -s compiler=${COMPNAME} -s compiler.version=${COMPVER}  ${CFLAGS}
+  
+  - |
+    if [[ "${CODE_COVERAGE}" = "true" ]]; then
+      cmake ${CMAKE_OPTIONS_GLOBAL} ${CMAKE_OPTIONS} -Dsolidarity_ENABLE_EXAMPLES=OFF -DCMAKE_CXX_COMPILER=${CXX} -DCMAKE_CXX_FLAGS="-fprofile-arcs -ftest-coverage -std=c++17" -DCMAKE_BUILD_TYPE=Debug . || exit 1
+      make -k -j2 || exit 1
+      ctest -j2 -C Debug .  --verbose || exit 1
+      lcov -d . -c -o coverage.info                                      # parse coverage data
+      lcov -r coverage.info "/usr*"                     -o coverage.info # remove data for system headers
+      lcov -r coverage.info "$(readlink -f examples)/*" -o coverage.info # remove data for .cpp files
+      lcov -r coverage.info "$(readlink -f perftest)/*"  -o coverage.info # remove data for .cpp files
+      lcov -l coverage.info                                              # just list a short summary of the results
+      coveralls-lcov --repo-token=${COVERALLS_REPO_TOKEN} coverage.info  # upload results
+      # do not continue with other build configurations after that
+      exit
+    fi
   - cmake -Dsolidarity_ENABLE_COVERAGE=${COVERAGE} -Dsolidarity_ENABLE_TESTS=ON -Dsolidarity_ENABLE_EXAMPLES=ON -Dsolidarity_ENABLE_DOUBLECHECKS=ON ..
   - make -k -j 2
-  #- CTEST_OUTPUT_ON_FAILURE=1 ctest -C Debug .  --verbose
-  #- |
-  #  if [[ "${TRAVIS_OS_NAME}" == "linux" ]] && [[ "${COVERAGE}" == "1" ]]; then
-  #       cd ${TRAVIS_BUILD_DIR}
-  #       lcov --directory . --capture --output-file coverage.info # capture coverage info
-  #       echo "lcov --list coverage.info"    
-  #       lcov --list coverage.info # debug before upload
-  #       bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
-  #  fi
+
