@@ -13,7 +13,11 @@ if (WIN32)
 endif ()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
+	
+if (NOT EXISTS conanbuildinfo.cmake)
+  message(FATAL_ERROR "Conan needs to be executed: conan install <path_to_your_conanfile.txt>")
+endif ()
+ 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 

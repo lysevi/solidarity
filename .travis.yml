@@ -60,7 +60,6 @@ matrix:
 
 script: 
   - export CXX=${COMPILER}
-  - conan remote add comunity https://api.bintray.com/conan/conan-community/conan 
   - conan remote list
   - git submodule update --init 
   - mkdir build
