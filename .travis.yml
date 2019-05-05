@@ -20,6 +20,7 @@ addons:
 
 matrix:
   include:
+
     - os: linux
       compiler: gcc
       addons: &gcc7
@@ -36,7 +37,7 @@ matrix:
           packages: ['g++-8']
       env: COMPILER='g++-8' COMPVER='8' COMPNAME='gcc'
     
-     - os: linux
+    - os: linux
       compiler: gcc
       addons: &gcc8
         apt:
