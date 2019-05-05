@@ -18,5 +18,5 @@ void exception_t::init_msg(const std::string &msg_) {
   std::stringstream ss;
   ss << msg_
      << " Stacktrace:" << boost::stacktrace::to_string(boost::stacktrace::stacktrace());
-  _msg = std::move(ss.str());
+  _msg = ss.str();
 }

@@ -27,6 +27,8 @@ public:
               const logdb::journal_ptr &jrn,
               abstract_state_machine *state_machine,
               utils::logging::abstract_logger_ptr logger = nullptr);
+  EXPORT ~raft();
+
   raft_state_t state() const {
     std::lock_guard l(_locker);
     return _state;

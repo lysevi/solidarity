@@ -22,13 +22,13 @@ public:
   };
   EXPORT lockservice();
 
-  EXPORT void apply_cmd(const command &cmd);
+  EXPORT void apply_cmd(const command &cmd) override;
 
-  EXPORT void reset();
-  EXPORT command snapshot();
-  EXPORT void install_snapshot(const command &cmd);
+  EXPORT void reset() override;
+  EXPORT command snapshot() override;
+  EXPORT void install_snapshot(const command &cmd) override;
 
-  EXPORT command read(const command &cmd);
+  EXPORT command read(const command &cmd) override;
 
   EXPORT bool can_apply(const command &) override;
 

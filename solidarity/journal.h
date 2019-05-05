@@ -16,11 +16,12 @@ namespace solidarity::logdb {
 enum class LOG_ENTRY_KIND : uint8_t { APPEND, SNAPSHOT };
 
 struct log_entry {
-  log_entry()
-      : term(UNDEFINED_TERM)
-      , cmd()
-      , kind(LOG_ENTRY_KIND::APPEND) {}
-
+  EXPORT log_entry();
+  EXPORT log_entry(const log_entry &o);
+  EXPORT log_entry(log_entry &&o) noexcept;
+  log_entry &operator=(const log_entry &o) = default;
+  log_entry &operator=(log_entry &&o) = default;
+  ~log_entry() = default;
   index_t idx = UNDEFINED_INDEX;
   term_t term;
   command cmd;
@@ -60,7 +61,7 @@ EXPORT std::string to_string(const reccord_info &ri);
 class abstract_journal {
 public:
   virtual ~abstract_journal() {}
-  virtual reccord_info put(const index_t idx, const log_entry &e) = 0;
+  virtual reccord_info put(const index_t idx, log_entry &e) = 0;
   virtual reccord_info put(const log_entry &e) = 0;
   virtual void commit(const index_t lsn) = 0;
   [[nodiscard]] virtual log_entry get(const index_t lsn) = 0;
@@ -87,8 +88,8 @@ using journal_ptr = std::shared_ptr<abstract_journal>;
 class memory_journal final : public abstract_journal {
 public:
   [[nodiscard]] EXPORT static std::shared_ptr<memory_journal> make_new();
-
-  EXPORT reccord_info put(const index_t idx, const log_entry &e) override;
+  EXPORT ~memory_journal() override;
+  EXPORT reccord_info put(const index_t idx, log_entry &e) override;
   EXPORT reccord_info put(const log_entry &e) override;
   EXPORT void commit(const index_t lsn) override;
   [[nodiscard]] EXPORT log_entry get(const index_t lsn) override;

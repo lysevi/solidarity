@@ -8,6 +8,7 @@
 #include <atomic>
 #include <mutex>
 #include <unordered_map>
+#include <list>
 
 namespace solidarity::dialler {
 class listener;
@@ -67,15 +68,15 @@ protected:
   void on_new_message(listener_client_ptr i, std::vector<message_ptr> &d, bool &cancel);
 
 private:
-  void start_async_accept(async_io_ptr aio);
+  void start_async_accept();
 
-  EXPORT static void OnAcceptHandler(std::shared_ptr<listener> self,
-                                     async_io_ptr aio,
+  EXPORT static void on_accept_handler(std::shared_ptr<listener> self,
                                      const boost::system::error_code &err);
 
 protected:
   boost::asio::io_context *_context = nullptr;
   std::shared_ptr<boost::asio::ip::tcp::acceptor> _acc = nullptr;
+  std::shared_ptr<async_io> _aio = nullptr;
   std::atomic_int _next_id;
 
   abstract_listener_consumer_ptr _consumer;

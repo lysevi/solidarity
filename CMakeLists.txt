@@ -12,7 +12,7 @@ if (WIN32)
 	add_definitions(-D_SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING)
 endif ()
 
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+#set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 	
 if (NOT EXISTS conanbuildinfo.cmake)
   message(FATAL_ERROR "Conan needs to be executed: conan install <path_to_your_conanfile.txt>")
@@ -39,15 +39,13 @@ option(solidarity_ENABLE_TESTS "Enable testing of the solidarity." ON)
 option(solidarity_ENABLE_EXAMPLES "Enable examples of the solidarity." ON)
 option(solidarity_ENABLE_DOUBLECHECKS "More checks in code." ${DOUBLE_CHECKS})
 option(solidarity_ENABLE_BENCHMARKS "Enable build benchmarks." ON)
-option(solidarity_ENABLE_COVERAGE "Generate coverage for codecov.io" OFF)
-
+option(solidarity_COVER "coverage mode" OFF)
 
 MESSAGE(STATUS "Options: ")
 MESSAGE(STATUS "solidarity_ENABLE_TESTS - " ${solidarity_ENABLE_TESTS})
 MESSAGE(STATUS "solidarity_ENABLE_EXAMPLES - " ${solidarity_ENABLE_EXAMPLES})
 MESSAGE(STATUS "solidarity_ENABLE_DOUBLECHECKS - " ${solidarity_ENABLE_DOUBLECHECKS})
 MESSAGE(STATUS "solidarity_ENABLE_BENCHMARKS - " ${solidarity_ENABLE_BENCHMARKS})
-MESSAGE(STATUS "solidarity_ENABLE_COVERAGE - " ${solidarity_ENABLE_COVERAGE})
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cotire/CMake")
@@ -65,10 +63,15 @@ else()
  endmacro()
 endif()
 
+if(NOT ${solidarity_COVER})
+MESSAGE(STATUS "Build all to ./bin")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+else()
+MESSAGE(STATUS "Standart build folders.")
+endif()
 
 ########## BOOST
 IF(NOT HEADER_ONLY)
@@ -88,6 +91,7 @@ else()
   MESSAGE(FATAL_ERROR "boost not found")
   EXIT()
 ENDIF()
+
 ######### MSGPACK
 add_definitions(-DMSGPACK_CXX17=ON)
 
@@ -102,12 +106,13 @@ find_package (Threads REQUIRED)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-if (solidarity_ENABLE_COVERAGE)
-    MESSAGE(STATUS "add coverage options")
-    set(CMAKE_CXX_FLAGS="${CMAKE_CXX_FLAGS} -ftest-coverage -O0 -g --coverage")
-	add_cxx_compiler_flag(--coverage COVERAGE)
-endif(solidarity_ENABLE_COVERAGE)
+#### cxxopts
+SET(CXXOPTS_BUILD_TESTS CACHE BOOL OFF FORCE)
+SET(CXXOPTS_BUILD_EXAMPLES  CACHE BOOL OFF FORCE)
+add_subdirectory(extern/cxxopts)
+include_directories(extern/cxxopts/include)
 
+#### catch2
 if(solidarity_ENABLE_TESTS)
    include_directories(extern/Catch2/single_include/catch2/)
 endif(solidarity_ENABLE_TESTS)
@@ -129,10 +134,6 @@ if (solidarity_ENABLE_TESTS)
 endif()
 
 if(${solidarity_ENABLE_EXAMPLES})
-  SET(CXXOPTS_BUILD_TESTS CACHE BOOL OFF FORCE)
-  SET(CXXOPTS_BUILD_EXAMPLES  CACHE BOOL OFF FORCE)
-  add_subdirectory(extern/cxxopts)
-  include_directories(extern/cxxopts/include)
   add_subdirectory(examples)
 endif(${solidarity_ENABLE_EXAMPLES})
 

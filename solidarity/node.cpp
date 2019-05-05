@@ -7,7 +7,9 @@
 #include <solidarity/utils/utils.h>
 
 #include <boost/asio.hpp>
+
 #include <future>
+#include <list>
 
 using namespace solidarity;
 using namespace solidarity::queries;
@@ -165,7 +167,12 @@ public:
     _parent = parent_;
   }
 
-  logdb::reccord_info put(const index_t idx, const logdb::log_entry &e) override {
+  ~journal_wrapper() override {
+    _target = nullptr;
+    _parent = nullptr;
+  }
+
+  logdb::reccord_info put(const index_t idx, logdb::log_entry &e) override {
     if (_parent->is_leader()) {
       _parent->notify_command_status(e.cmd_crc, command_status::IN_LEADER_JOURNAL);
     }
@@ -182,9 +189,8 @@ public:
   void erase_all_after(const index_t lsn) override {
     std::list<uint32_t> erased;
     if (_parent->is_leader()) {
-      _target->visit_after(lsn, [this, &erased](const logdb::log_entry &le) {
-        erased.push_back(le.cmd_crc);
-      });
+      _target->visit_after(
+          lsn, [&erased](const logdb::log_entry &le) { erased.push_back(le.cmd_crc); });
     }
     _target->erase_all_after(lsn);
 
@@ -201,9 +207,8 @@ public:
   void erase_all_to(const index_t lsn) override {
     std::list<uint32_t> erased;
     if (_parent->is_leader()) {
-      _target->visit_to(lsn, [this, &erased](const logdb::log_entry &le) {
-        erased.push_back(le.cmd_crc);
-      });
+      _target->visit_to(
+          lsn, [&erased](const logdb::log_entry &le) { erased.push_back(le.cmd_crc); });
     }
     _target->erase_all_to(lsn);
 
@@ -249,6 +254,7 @@ public:
   virtual std::unordered_map<index_t, logdb::log_entry> dump() const override {
     return _target->dump();
   }
+
   void commit(const index_t lsn) override { return _target->commit(lsn); }
   logdb::log_entry get(const index_t lsn) override { return _target->get(lsn); }
   size_t size() const override { return _target->size(); }
@@ -260,13 +266,14 @@ public:
 
 node::node(utils::logging::abstract_logger_ptr logger,
            const params_t &p,
-           abstract_state_machine *state_machine): _stoped(false) {
+           abstract_state_machine *state_machine)
+    : _stoped(false) {
   _params = p;
   _state_machine = new consumer_wrapper(this, state_machine);
 
   _logger = logger;
 
-  auto jrn = std::make_shared<solidarity::logdb::memory_journal>();
+  auto jrn = solidarity::logdb::memory_journal::make_new();
   auto jrn_wrap = std::make_shared<journal_wrapper>(jrn, this);
 
   auto addr = solidarity::node_name().set_name(_params.name);
@@ -310,13 +317,17 @@ node::node(utils::logging::abstract_logger_ptr logger,
 }
 
 node::~node() {
+
   if (_cluster_con != nullptr) {
     stop();
   }
+  _raft = nullptr;
   if (_state_machine != nullptr) {
     delete _state_machine;
     _state_machine = nullptr;
   }
+  _logger = nullptr;
+  _clients.clear();
 }
 
 void node::start() {
@@ -338,6 +349,7 @@ void node::stop() {
     _listener->stop();
     _listener->wait_stoping();
     _listener = nullptr;
+    _listener_consumer = nullptr;
   }
 
   if (_cluster_con != nullptr) {
@@ -410,32 +422,34 @@ void node::notify_command_status(uint32_t crc, command_status k) {
 void node::notify_raft_state_update(NODE_KIND old_state, NODE_KIND new_state) {
   _logger->dbg("notify_raft_state_update(): ", old_state, " => ", new_state);
   std::shared_lock l(_locker);
-  std::future<void> a;
+  // std::future<void> a;
 
-  if (!_on_update_handlers.empty()) {
-    a = std::async(std::launch::async, [this, old_state, new_state]() {
-      client_event_t ev;
-      ev.kind = client_event_t::event_kind::RAFT;
-      ev.raft_ev = raft_state_event_t{old_state, new_state};
+  if (!_on_update_handlers.empty() && !_stoped) {
+    // a = std::async(std::launch::async, [this, old_state, new_state]() {
+    client_event_t ev;
+    ev.kind = client_event_t::event_kind::RAFT;
+    ev.raft_ev = raft_state_event_t{old_state, new_state};
 
-      for (auto &v : _on_update_handlers) {
-        v.second(ev);
-      }
-    });
+    for (auto &v : _on_update_handlers) {
+      v.second(ev);
+    }
+    //});
   }
 
   if (!_clients.empty()) {
-    auto context = _cluster_con->context();
+    // auto context = _cluster_con->context();
     clients::raft_state_updated_t rsu(old_state, new_state);
     auto m = rsu.to_message();
     for (auto v : _clients) {
-      boost::asio::post(*context, [m, this, v]() { this->_listener->send_to(v, m); });
+      this->_listener->send_to(v, m);
+      // TODO shared_from_this;
+      // boost::asio::post(*context, [m, this, v]() { this->_listener->send_to(v, m); });
     }
   }
 
-  if (a.valid()) {
+  /*if (a.valid()) {
     a.wait();
-  }
+  }*/
 }
 
 abstract_state_machine *node::state_machine() {
@@ -555,7 +569,7 @@ std::shared_ptr<async_result_t> node::add_command_to_cluster(const command &cmd)
     return result;
   }
 
-  auto callback = [result, this](ERROR_CODE s) {
+  auto callback = [result](ERROR_CODE s) {
     result->set_result({}, s, s == ERROR_CODE::OK ? "" : to_string(s));
   };
   _cluster_con->send_to(leader, cmd, callback);

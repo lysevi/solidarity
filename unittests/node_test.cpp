@@ -189,7 +189,7 @@ TEST_CASE("node", "[network]") {
     bool is_state_changed = false;
     auto client_handler_id = kv.second->add_event_handler(
         [&is_state_changed, kv](const solidarity::client_event_t &rse) mutable {
-          // std::cerr << kv.first << ": " << solidarity::to_string(rse) << std::endl;
+           std::cerr << kv.first << ": " << solidarity::to_string(rse) << std::endl;
           if (rse.kind == solidarity::client_event_t::event_kind::RAFT) {
             is_state_changed = true;
           }
@@ -197,6 +197,7 @@ TEST_CASE("node", "[network]") {
 
     solidarity::ERROR_CODE send_ecode = solidarity::ERROR_CODE::UNDEFINED;
     int i = 0;
+    std::cerr << "resend cycle" <<  std::endl;
     do {
       tst_logger->info("try resend cmd. step #", i++);
       auto sst = kv.second->send_strong(first_cmd);
@@ -211,6 +212,7 @@ TEST_CASE("node", "[network]") {
                    expected_answer.end(),
                    expected_answer.begin(),
                    [](auto &v) -> uint8_t { return uint8_t(v + 1); });
+    std::cerr << "wait command" << std::endl;
     while (!is_state_changed) {
       auto answer = kv.second->read({1});
       if (std::equal(expected_answer.begin(),
@@ -221,7 +223,6 @@ TEST_CASE("node", "[network]") {
       }
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-
     /// write over node
     std::cerr << "write over node " << kv.first << suffix << std::endl;
     std::transform(first_cmd.begin(),
@@ -314,4 +315,5 @@ TEST_CASE("node", "[network]") {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
   }
+  nodes.clear();
 }

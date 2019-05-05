@@ -68,7 +68,7 @@ public:
                          const params_t &params);
   EXPORT void start();
   EXPORT void stop();
-  EXPORT ~mesh_connection();
+  EXPORT ~mesh_connection() override;
 
   EXPORT void
   send_to(const node_name &from, const node_name &to, const append_entries &m) override;
@@ -82,7 +82,7 @@ public:
   friend impl::out_connection;
   friend impl::listener;
 
-  node_name self_addr() const { return _self_addr; };
+  node_name self_addr() const { return _self_addr; }
 
   boost::asio::io_context *context() { return &_io_context; }
 

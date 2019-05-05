@@ -10,6 +10,6 @@ public:
   virtual command snapshot() = 0;
   virtual void install_snapshot(const command &cmd) = 0;
   virtual command read(const command &cmd) = 0;
-  virtual bool can_apply(const command &) { return true; };
+  virtual bool can_apply(const command &) { return true; }
 };
 } // namespace solidarity

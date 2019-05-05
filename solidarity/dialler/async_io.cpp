@@ -1,5 +1,6 @@
 #include <cassert>
 #include <exception>
+
 #include <solidarity/dialler/async_io.h>
 #include <solidarity/utils/exception.h>
 #include <solidarity/utils/utils.h>
@@ -62,6 +63,9 @@ void async_io::fullStop(bool waitAllmessages) {
           }
         }
         _recv_message_pool.clear();
+        next_message = nullptr;
+        _on_recv_hadler = nullptr;
+        _on_error_handler = nullptr;
         _context = nullptr;
         _is_stoped = true;
       }
@@ -83,13 +87,12 @@ void async_io::send(const message_ptr d) {
   _messages_to_send.fetch_add(1);
   auto buf = boost::asio::buffer(ds.data, ds.size);
 
-  auto on_write = [self, d](auto err, auto /*read_bytes*/) {
+  auto on_write = [self](auto err, auto /*read_bytes*/) {
     if (err) {
       self->_on_error_handler(err);
     }
     self->_messages_to_send.fetch_sub(1);
   };
-
   async_write(_sock, buf, on_write);
 }
 
@@ -106,17 +109,17 @@ void async_io::send(const std::vector<message_ptr> &d) {
 void async_io::readNextAsync() {
   auto self = shared_from_this();
 
-  auto on_read_message = [self](
-                             auto err, auto read_bytes, auto data_left, message_ptr d) {
+  auto on_read_message = [self](auto err, auto read_bytes, auto data_left) {
     UNUSED(data_left);
     UNUSED(read_bytes);
     if (err) {
       self->_on_error_handler(err);
+      self->next_message = nullptr;
       self->_recv_message_pool.clear();
     } else {
       ENSURE(read_bytes == data_left);
-      self->_recv_message_pool.push_back(d);
-      auto hdr = d->get_header();
+      self->_recv_message_pool.push_back(self->next_message);
+      auto hdr = self->next_message->get_header();
       bool cancel_flag = false;
       if (hdr->is_single_message() || hdr->is_end_block) {
         try {
@@ -144,18 +147,21 @@ void async_io::readNextAsync() {
 
   auto on_read_size = [self, on_read_message](auto err, auto read_bytes) {
     UNUSED(read_bytes);
+    if (self->_begin_stoping_flag) {
+      return;
+    }
     if (err) {
       self->_on_error_handler(err);
     } else {
       ENSURE(read_bytes == message::SIZE_OF_SIZE);
 
       auto data_left = self->next_message_size - message::SIZE_OF_SIZE;
-      message_ptr d = std::make_shared<message>(self->next_message_size);
+      self->next_message = std::make_shared<message>(self->next_message_size);
 
-      auto buf_ptr = (uint8_t *)(d->get_header());
+      auto buf_ptr = (uint8_t *)(self->next_message->get_header());
       auto buf = boost::asio::buffer(buf_ptr, data_left);
-      auto callback = [self, on_read_message, data_left, d](auto err, auto read_bytes) {
-        on_read_message(err, read_bytes, data_left, d);
+      auto callback = [self, on_read_message, data_left](auto err, auto read_bytes) {
+        on_read_message(err, read_bytes, data_left);
       };
       async_read(self->_sock, buf, callback);
     };

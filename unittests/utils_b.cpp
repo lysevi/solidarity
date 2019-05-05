@@ -2,6 +2,7 @@
 #include <solidarity/utils/crc.h>
 #include <solidarity/utils/strings.h>
 #include <solidarity/utils/utils.h>
+#include <numeric>
 
 #ifdef ENABLE_BENCHMARKS
 TEST_CASE("utils::strings", "[bench]") {

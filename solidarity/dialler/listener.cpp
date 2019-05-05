@@ -41,19 +41,19 @@ listener::~listener() {
 void listener::start() {
   initialisation_begin();
   tcp::endpoint ep(tcp::v4(), _params.port);
-  auto aio = std::make_shared<async_io>(_context);
+  _aio = std::make_shared<async_io>(_context);
   _acc = std::make_shared<boost::asio::ip::tcp::acceptor>(*_context, ep);
 
   if (_consumer != nullptr) {
     _consumer->initialisation_begin();
   }
-  start_async_accept(aio);
+  start_async_accept();
 }
 
-void listener::start_async_accept(async_io_ptr aio) {
+void listener::start_async_accept() {
   auto self = shared_from_this();
-  _acc->async_accept(aio->socket(),
-                     [self, aio](auto ec) { self->OnAcceptHandler(self, aio, ec); });
+  _acc->async_accept(_aio->socket(),
+                     [self](auto ec) { self->on_accept_handler(self, ec); });
   if (self->is_stopping_started()) {
     return;
   }
@@ -63,9 +63,8 @@ void listener::start_async_accept(async_io_ptr aio) {
   }
 }
 
-void listener::OnAcceptHandler(std::shared_ptr<listener> self,
-                               async_io_ptr aio,
-                               const boost::system::error_code &err) {
+void listener::on_accept_handler(std::shared_ptr<listener> self,
+                                 const boost::system::error_code &err) {
   if (self->is_stopping_started()) {
     return;
   }
@@ -73,7 +72,7 @@ void listener::OnAcceptHandler(std::shared_ptr<listener> self,
     if (err == boost::asio::error::operation_aborted
         || err == boost::asio::error::connection_reset
         || err == boost::asio::error::eof) {
-      aio->fullStop();
+      self->_aio->fullStop();
       return;
     } else {
       throw std::logic_error("listener: error on accept - " + err.message());
@@ -84,8 +83,10 @@ void listener::OnAcceptHandler(std::shared_ptr<listener> self,
     std::shared_ptr<listener_client> new_client = nullptr;
     {
       std::lock_guard lg(self->_locker_connections);
-      new_client
-          = std::make_shared<listener_client>(self->_next_id.fetch_add(1), aio, self);
+      auto a = self->_aio;
+      self->_aio = nullptr;
+      new_client = std::make_shared<listener_client>(
+          self->_next_id.fetch_add(1), a, self);
     }
     bool connectionAccepted = false;
     if (self->_consumer != nullptr) {
@@ -96,16 +97,16 @@ void listener::OnAcceptHandler(std::shared_ptr<listener> self,
       new_client->start();
       self->_connections.push_back(new_client);
     } else {
-      aio->fullStop();
+      self->_aio->fullStop();
     }
   }
 
   boost::asio::ip::tcp::socket new_sock(*self->_context);
-  auto newaio = std::make_shared<async_io>(self->_context);
+  self->_aio = std::make_shared<async_io>(self->_context);
   if (self->is_stopping_started()) {
     return;
   }
-  self->start_async_accept(newaio);
+  self->start_async_accept();
 }
 
 void listener::stop() {
@@ -132,7 +133,12 @@ void listener::stop() {
 
     _acc->close();
     _acc = nullptr;
+    _connections.clear();
     stopping_completed();
+    if (_aio != nullptr) {
+      _aio->fullStop();
+      _aio = nullptr;
+    }
   }
 }
 

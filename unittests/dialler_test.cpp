@@ -43,7 +43,7 @@ struct Listener final : public dialler::abstract_listener_consumer {
 };
 
 struct Connection final : public dialler::abstract_dial {
-  void on_connect() override { mock_is_connected = true; };
+  void on_connect() override { mock_is_connected = true; }
   void on_new_message(std::vector<dialler::message_ptr> &, bool &) override {}
   void on_network_error(const boost::system::error_code &err) override {
     bool isError = err == boost::asio::error::operation_aborted

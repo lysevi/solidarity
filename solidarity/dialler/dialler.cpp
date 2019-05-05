@@ -33,6 +33,7 @@ void dial::disconnect() {
   if (!is_stoped()) {
     stopping_started();
     _async_io->fullStop();
+    _async_io = nullptr;
     stopping_completed();
   }
 }
@@ -57,12 +58,14 @@ void dial::start_async_connection() {
 
   using namespace boost::asio::ip;
   tcp::resolver resolver(*_context);
-  auto const results = resolver.resolve(_params.host, std::to_string(_params.port));
-
+  auto const endpoint_iterator
+      = resolver.resolve(_params.host, std::to_string(_params.port));
+  resolver.cancel();
   auto self = this->shared_from_this();
+  self->_async_io = nullptr;
   self->_async_io = std::make_shared<async_io>(self->_context);
 
-  auto con_handler = [self](auto ec, auto /*resoler_ir*/) {
+  auto con_handler = [self](auto ec, auto /*it*/) {
     if (ec) {
       if (!self->is_stoped()) {
         self->reconnecton_error(ec);
@@ -84,9 +87,10 @@ void dial::start_async_connection() {
       }
     }
   };
-
-  boost::asio::async_connect(
-      self->_async_io->socket(), results.begin(), results.end(), con_handler);
+  boost::asio::async_connect(self->_async_io->socket(),
+                             endpoint_iterator.begin(),
+                             endpoint_iterator.end(),
+                             con_handler);
 }
 
 void dial::on_data_receive(std::vector<message_ptr> &d, bool &cancel) {

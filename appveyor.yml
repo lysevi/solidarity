@@ -1,0 +1,34 @@
+clone_depth: 100
+
+matrix:
+  fast_finish: false
+
+environment:
+  matrix:
+  - gen: "Visual Studio 15 2017"
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+
+install:
+  - "python -m pip install --upgrade pip"
+  - pip install conan 
+  - git submodule update --init  
+  - mkdir build
+  - cd build
+  - conan install .. --build boost
+  - cmake --version
+  - cmake .. -G "%gen%" -Dsolidarity_ENABLE_DOUBLECHECKS=ON -A x64
+  - cd ..
+
+configuration:
+  - Debug
+  - Release
+
+build:
+  project: build\solidarity.sln
+  parallel: true               
+  verbosity: normal 
+
+test_script:
+  - set CTEST_OUTPUT_ON_FAILURE=1
+  - cd build
+  - ctest -j2 -C Debug .  --verbose

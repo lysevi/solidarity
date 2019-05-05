@@ -1,5 +1,6 @@
 #include <solidarity/event.h>
 #include <solidarity/utils/utils.h>
+#include <sstream>
 
 std::string solidarity::to_string(const command_status s) {
   switch (s) {

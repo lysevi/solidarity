@@ -8,6 +8,25 @@ using namespace logdb;
 namespace solidarity {
 namespace logdb {
 
+log_entry::log_entry()
+    : term(UNDEFINED_TERM)
+    , cmd()
+    , kind(LOG_ENTRY_KIND::APPEND) {}
+
+log_entry::log_entry(const log_entry &o)
+    : idx(o.idx)
+    , term(o.term)
+    , cmd(o.cmd)
+    , cmd_crc(o.cmd_crc)
+    , kind(o.kind) {}
+
+log_entry::log_entry(log_entry &&o) noexcept
+    : idx(o.idx)
+    , term(o.term)
+    , cmd(std::move(o.cmd))
+    , cmd_crc(o.cmd_crc)
+    , kind(o.kind) {}
+
 std::string to_string(const reccord_info &ri) {
   std::stringstream ss;
   ss << "{t:" << ri.term << ", lsn:" << ri.lsn << "}";
@@ -20,6 +39,10 @@ std::shared_ptr<memory_journal> memory_journal::make_new() {
   return std::make_shared<memory_journal>();
 }
 
+memory_journal::~memory_journal() {
+  _wal.clear();
+}
+
 reccord_info memory_journal::put(const log_entry &e) {
   std::lock_guard<std::shared_mutex> lg(_locker);
   _wal.insert(std::make_pair(_idx, e));
@@ -28,14 +51,13 @@ reccord_info memory_journal::put(const log_entry &e) {
   return _prev;
 }
 
-reccord_info memory_journal::put(const index_t idx, const log_entry &e) {
+reccord_info memory_journal::put(const index_t idx, log_entry &e) {
   std::lock_guard<std::shared_mutex> lg(_locker);
   ENSURE(idx >= _idx);
-  auto cp = e;
-  cp.idx = idx;
+  e.idx = idx;
   _idx = idx;
-  _wal.insert(std::make_pair(cp.idx, cp));
-  _prev = reccord_info(e, cp.idx);
+  _wal.insert(std::make_pair(idx, e));
+  _prev = reccord_info(e, e.idx);
   _idx++;
   return _prev;
 }

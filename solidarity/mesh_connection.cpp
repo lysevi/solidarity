@@ -174,6 +174,7 @@ void mesh_connection::start() {
     _diallers.insert(std::make_pair(cnaddr, d));
     d->start_async_connection();
   }
+  _messages.clear();
 }
 
 void mesh_connection::stop() {
@@ -201,6 +202,7 @@ void mesh_connection::stop() {
     _listener = nullptr;
     _listener_consumer = nullptr;
   }
+  _client = nullptr;
 
   _logger->info("stopped.");
 }

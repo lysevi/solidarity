@@ -3,12 +3,15 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
+#include <memory>
+#include <vector>
+
 #include <solidarity/exports.h>
 
 namespace solidarity::dialler {
 struct buffer {
   size_t size;
-  uint8_t *data;
+  std::vector<uint8_t> data;
 };
 
 #pragma pack(push, 1)
@@ -69,8 +72,11 @@ public:
   [[nodiscard]] buffer as_buffer() {
     uint8_t *v = reinterpret_cast<uint8_t *>(_data.data());
     auto buf_size = *_size;
-    return buffer{buf_size, v};
+    std::vector<uint8_t> d(buf_size);
+    std::memcpy(d.data(), v, buf_size);
+    return buffer{buf_size, d};
   }
+
   [[nodiscard]] header_t *get_header() {
     return reinterpret_cast<header_t *>(this->_data.data() + SIZE_OF_SIZE);
   }

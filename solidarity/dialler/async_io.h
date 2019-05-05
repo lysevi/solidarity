@@ -40,6 +40,7 @@ private:
   bool _is_stoped;
   std::atomic_bool _begin_stoping_flag;
   message::size_t next_message_size;
+  message_ptr next_message;
 
   data_handler_t _on_recv_hadler;
   error_handler_t _on_error_handler;

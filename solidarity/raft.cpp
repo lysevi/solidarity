@@ -53,6 +53,12 @@ raft::raft(const raft_settings &ns,
   }
 }
 
+raft::~raft() {
+  _logger->info("stopping...");
+  _jrn = nullptr;
+  _logger = nullptr;
+}
+
 void raft::set_cluster(abstract_cluster *cluster) {
   std::lock_guard lg(_locker);
   _cluster = cluster;
@@ -228,6 +234,7 @@ void raft::recv(const node_name &from, const append_entries &e) {
 #endif
 
   if (e.term < _state.term) {
+    // send(from, ENTRIES_KIND::HELLO);
     return;
   }
   /// if leader receive message from follower with other leader,

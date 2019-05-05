@@ -1,5 +1,7 @@
 #include <fstream>
 #include <iostream>
+#include <sstream>
+
 #include <solidarity/utils/logger.h>
 #include <solidarity/utils/utils.h>
 
