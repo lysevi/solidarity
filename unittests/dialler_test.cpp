@@ -55,16 +55,20 @@ struct Connection final : public dialler::abstract_dial {
     }
   }
 
-  bool mock_is_connected = false;
-  bool connection_error = false;
+  std::atomic_bool mock_is_connected = false;
+  std::atomic_bool connection_error = false;
 };
 
-bool server_stop = false;
+std::atomic_bool server_stop = false;
 std::shared_ptr<dialler::listener> server = nullptr;
 std::shared_ptr<Listener> lstnr = nullptr;
 boost::asio::io_context *context;
 
+std::atomic_bool server_is_started;
+
 void server_thread() {
+  server_is_started.store(false);
+
   dialler::listener::params_t p;
   p.port = 4040;
   context = new boost::asio::io_context();
@@ -74,6 +78,7 @@ void server_thread() {
   server->add_consumer(lstnr.get());
 
   server->start();
+  server_is_started.store(true);
   while (!server_stop) {
     context->poll_one();
   }
@@ -85,6 +90,8 @@ void server_thread() {
   EXPECT_TRUE(context->stopped());
   delete context;
   server = nullptr;
+  server_is_started.store(false);
+  lstnr = nullptr;
 }
 } // namespace
 
@@ -97,7 +104,7 @@ TEST_CASE("listener.client", "[network]") {
 
   server_stop = false;
   std::thread t(server_thread);
-  while (server == nullptr || !server->is_started()) {
+  while (!server_is_started.load()) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
@@ -156,7 +163,7 @@ TEST_CASE("listener.client", "[network]") {
   }
 
   server_stop = true;
-  while (server != nullptr) {
+  while (server_is_started.load()) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
   t.join();

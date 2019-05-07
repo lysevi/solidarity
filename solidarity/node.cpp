@@ -342,24 +342,30 @@ void node::start() {
 }
 
 void node::stop() {
-  if (_listener != nullptr) {
-    _stoped = true;
-    _timer->cancel();
+  if (_stoped) {
+    return;
+  }
+  _stoped = true;
 
+  _timer->cancel();
+  if (_listener != nullptr) {
     _listener->stop();
     _listener->wait_stoping();
-    _listener = nullptr;
-    _listener_consumer = nullptr;
   }
 
   if (_cluster_con != nullptr) {
     _cluster_con->stop();
     _cluster_con = nullptr;
   }
+
+  if (_listener != nullptr) {
+    _listener = nullptr;
+    _listener_consumer = nullptr;
+  }
 }
 
 bool node::is_leader() const {
-  return _raft->state().node_kind == NODE_KIND::LEADER;
+  return _kind == NODE_KIND::LEADER;
 }
 
 raft_state_t node::state() const {

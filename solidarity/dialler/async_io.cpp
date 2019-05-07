@@ -33,7 +33,11 @@ void async_io::start(data_handler_t onRecv, error_handler_t onErr) {
 }
 
 void async_io::fullStop(bool waitAllmessages) {
+  if (_begin_stoping_flag) {
+    return;
+  }
   _begin_stoping_flag = true;
+  
   try {
     if (_sock.is_open()) {
       if (waitAllmessages && _messages_to_send.load() != 0) {
@@ -109,64 +113,62 @@ void async_io::send(const std::vector<message_ptr> &d) {
 void async_io::readNextAsync() {
   auto self = shared_from_this();
 
-  auto on_read_message = [self](auto err, auto read_bytes, auto data_left) {
-    UNUSED(data_left);
-    UNUSED(read_bytes);
-    if (err) {
-      self->_on_error_handler(err);
-      self->next_message = nullptr;
-      self->_recv_message_pool.clear();
-    } else {
-      ENSURE(read_bytes == data_left);
-      self->_recv_message_pool.push_back(self->next_message);
-      auto hdr = self->next_message->get_header();
-      bool cancel_flag = false;
-      if (hdr->is_single_message() || hdr->is_end_block) {
-        try {
-#ifdef DOUBLE_CHECKS
-          auto first_kind = self->_recv_message_pool.front()->get_header()->kind;
-          auto pred = [first_kind](const message_ptr &m) -> bool {
-            return m->get_header()->kind == first_kind;
-          };
-
-          ENSURE(std::all_of(
-              self->_recv_message_pool.cbegin(), self->_recv_message_pool.cend(), pred));
-#endif
-          self->_on_recv_hadler(self->_recv_message_pool, cancel_flag);
-        } catch (std::exception &ex) {
-          THROW_EXCEPTION("exception on async readNextAsync::on_read_message. - ",
-                          ex.what());
-        }
-        self->_recv_message_pool.clear();
-      }
-      if (!cancel_flag) {
-        self->readNextAsync();
-      }
-    }
-  };
-
-  auto on_read_size = [self, on_read_message](auto err, auto read_bytes) {
-    UNUSED(read_bytes);
-    if (self->_begin_stoping_flag) {
-      return;
-    }
-    if (err) {
-      self->_on_error_handler(err);
-    } else {
-      ENSURE(read_bytes == message::SIZE_OF_SIZE);
-
-      auto data_left = self->next_message_size - message::SIZE_OF_SIZE;
-      self->next_message = std::make_shared<message>(self->next_message_size);
-
-      auto buf_ptr = (uint8_t *)(self->next_message->get_header());
-      auto buf = boost::asio::buffer(buf_ptr, data_left);
-      auto callback = [self, on_read_message, data_left](auto err, auto read_bytes) {
-        on_read_message(err, read_bytes, data_left);
-      };
-      async_read(self->_sock, buf, callback);
-    };
-  };
+  auto on_read_size_clbk = [self](auto e, auto r) { self->on_read_size(e, r); };
   auto buf = boost::asio::buffer(static_cast<void *>(&self->next_message_size),
                                  message::SIZE_OF_SIZE);
-  async_read(_sock, buf, on_read_size);
+  async_read(_sock, buf, on_read_size_clbk);
+}
+
+void async_io::on_read_size(boost::system::error_code err, size_t readed_bytes) {
+  UNUSED(readed_bytes);
+  if (_begin_stoping_flag) {
+    return;
+  }
+  if (err) {
+    _on_error_handler(err);
+  } else {
+    ENSURE(readed_bytes == message::SIZE_OF_SIZE);
+
+    auto data_left = next_message_size - message::SIZE_OF_SIZE;
+    next_message = std::make_shared<message>(next_message_size);
+
+    auto buf_ptr = (uint8_t *)(next_message->get_header());
+    auto buf = boost::asio::buffer(buf_ptr, data_left);
+    auto self = shared_from_this();
+    auto callback = [self](auto e, auto r) { self->on_read_message(e, r); };
+    async_read(_sock, buf, callback);
+  };
+}
+
+void async_io::on_read_message(boost::system::error_code err, size_t) {
+  if (err) {
+    _on_error_handler(err);
+    next_message = nullptr;
+    _recv_message_pool.clear();
+  } else {
+    _recv_message_pool.push_back(next_message);
+    auto hdr = next_message->get_header();
+    bool cancel_flag = false;
+    if (hdr->is_single_message() || hdr->is_end_block) {
+      try {
+#ifdef DOUBLE_CHECKS
+        auto first_kind = _recv_message_pool.front()->get_header()->kind;
+        auto pred = [first_kind](const message_ptr &m) -> bool {
+          return m->get_header()->kind == first_kind;
+        };
+
+        ENSURE(std::all_of(_recv_message_pool.cbegin(), _recv_message_pool.cend(), pred));
+#endif
+        _on_recv_hadler(_recv_message_pool, cancel_flag);
+      } catch (std::exception &ex) {
+        THROW_EXCEPTION("exception on async readNextAsync::on_read_message. - ",
+                        ex.what());
+      }
+      _recv_message_pool.clear();
+    }
+    next_message = nullptr;
+    if (!cancel_flag) {
+      readNextAsync();
+    }
+  }
 }

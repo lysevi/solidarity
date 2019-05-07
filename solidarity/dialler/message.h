@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
+#include <cstring>
 
 #include <solidarity/exports.h>
 

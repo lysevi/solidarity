@@ -51,10 +51,10 @@ void listener::start() {
 }
 
 void listener::start_async_accept() {
-  auto self = shared_from_this();
-  _acc->async_accept(_aio->socket(),
-                     [self](auto ec) { self->on_accept_handler(self, ec); });
-  if (self->is_stopping_started()) {
+
+  _acc->async_accept(_aio->socket(), [this](auto ec) { this->on_accept_handler(ec); });
+  if (is_stopping_started()) {
+    _aio = nullptr;
     return;
   }
   initialisation_complete();
@@ -63,54 +63,53 @@ void listener::start_async_accept() {
   }
 }
 
-void listener::on_accept_handler(std::shared_ptr<listener> self,
-                                 const boost::system::error_code &err) {
-  if (self->is_stopping_started()) {
+void listener::on_accept_handler(const boost::system::error_code &err) {
+  if (is_stopping_started()) {
     return;
   }
   if (err) {
     if (err == boost::asio::error::operation_aborted
         || err == boost::asio::error::connection_reset
         || err == boost::asio::error::eof) {
-      self->_aio->fullStop();
       return;
     } else {
       throw std::logic_error("listener: error on accept - " + err.message());
     }
   } else {
-    assert(!self->is_stoped());
+    assert(!is_stoped());
 
     std::shared_ptr<listener_client> new_client = nullptr;
     {
-      std::lock_guard lg(self->_locker_connections);
-      auto a = self->_aio;
-      self->_aio = nullptr;
-      new_client = std::make_shared<listener_client>(
-          self->_next_id.fetch_add(1), a, self);
+      std::lock_guard lg(_locker_connections);
+      auto a = _aio;
+      _aio = nullptr;
+      new_client = std::make_shared<listener_client>(_next_id.fetch_add(1), a, this);
     }
     bool connectionAccepted = false;
-    if (self->_consumer != nullptr) {
-      connectionAccepted = self->_consumer->on_new_connection(new_client);
+    if (_consumer != nullptr) {
+      connectionAccepted = _consumer->on_new_connection(new_client);
     }
     if (true == connectionAccepted) {
-      std::lock_guard lg(self->_locker_connections);
+      std::lock_guard lg(_locker_connections);
       new_client->start();
-      self->_connections.push_back(new_client);
+      _connections.push_back(new_client);
     } else {
-      self->_aio->fullStop();
+      _aio->fullStop();
+      _aio = nullptr;
     }
   }
 
-  boost::asio::ip::tcp::socket new_sock(*self->_context);
-  self->_aio = std::make_shared<async_io>(self->_context);
-  if (self->is_stopping_started()) {
+  boost::asio::ip::tcp::socket new_sock(*_context);
+  _aio = std::make_shared<async_io>(_context);
+  if (is_stopping_started()) {
+    _aio = nullptr;
     return;
   }
-  self->start_async_accept();
+  start_async_accept();
 }
 
 void listener::stop() {
-  if (!is_stoped()) {
+  if (!stoping.is_started()) {
     stopping_started();
 
     if (_consumer != nullptr) {
@@ -130,15 +129,18 @@ void listener::stop() {
     if (_consumer != nullptr) {
       _consumer->stopping_completed();
     }
+    if (_aio != nullptr) {
+      _aio->socket().close();
+      //_aio->fullStop();
+      _aio = nullptr;
+    }
 
     _acc->close();
     _acc = nullptr;
+    _consumer = nullptr;
     _connections.clear();
     stopping_completed();
-    if (_aio != nullptr) {
-      _aio->fullStop();
-      _aio = nullptr;
-    }
+    
   }
 }
 

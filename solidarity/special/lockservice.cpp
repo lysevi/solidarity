@@ -158,7 +158,7 @@ bool lockservice_client::try_lock(const std::string &target) {
 
 void lockservice_client::lock(const std::string &target) {
   while (true) {
-    bool is_success = try_lock(target);
+    std::atomic_bool is_success = try_lock(target);
     if (is_success) {
       break;
     } else {

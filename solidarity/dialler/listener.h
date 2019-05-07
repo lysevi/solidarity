@@ -70,8 +70,7 @@ protected:
 private:
   void start_async_accept();
 
-  EXPORT static void on_accept_handler(std::shared_ptr<listener> self,
-                                     const boost::system::error_code &err);
+  EXPORT void on_accept_handler(const boost::system::error_code &err);
 
 protected:
   boost::asio::io_context *_context = nullptr;

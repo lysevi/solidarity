@@ -40,6 +40,23 @@ public:
 
   bool can_apply(const solidarity::command &) override { return _can_apply; }
 
+  solidarity::command get_last_cmd() {
+    std::shared_lock l(_locker);
+    solidarity::command res = last_cmd;
+    return res;
+  }
+
+  bool get_can_apply() {
+    std::shared_lock l(_locker);
+    return _can_apply;
+  }
+
+  void set_can_apply(bool f) {
+    std::lock_guard l(_locker);
+    _can_apply = f;
+  }
+
+private:
   std::shared_mutex _locker;
   solidarity::command last_cmd;
   bool _can_apply;

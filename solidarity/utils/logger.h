@@ -52,8 +52,8 @@ public:
   prefix_logger(abstract_logger_ptr target, const std::string &prefix)
       : _prefix(prefix)
       , _shared_target(target) {}
-
-  void message(MESSAGE_KIND kind, const std::string &msg) noexcept {
+  ~prefix_logger() override { _shared_target = nullptr; }
+  void message(MESSAGE_KIND kind, const std::string &msg) noexcept override {
     _shared_target->message(kind, utils::strings::to_string(_prefix, msg));
   }
 

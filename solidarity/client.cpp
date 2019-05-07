@@ -145,6 +145,7 @@ void client::disconnect() {
   _threads.clear();
   _dialler->disconnect();
   _dialler->wait_stoping();
+  _dialler = nullptr;
   _connected = false;
 }
 
@@ -208,7 +209,7 @@ solidarity::send_result client::send_strong(const solidarity::command &cmd) {
 
   std::mutex locker;
   std::unique_lock ulock(locker);
-  bool is_end = false;
+  std::atomic_bool is_end = false;
   std::condition_variable cond;
 
   auto uh_id
@@ -235,7 +236,7 @@ solidarity::send_result client::send_strong(const solidarity::command &cmd) {
   }
 
   while (!is_end) {
-    cond.wait(ulock, [&is_end]() { return is_end; });
+    cond.wait(ulock, [&is_end]() { return is_end.load(); });
     if (is_end) {
       break;
     }

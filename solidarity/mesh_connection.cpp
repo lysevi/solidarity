@@ -130,6 +130,7 @@ mesh_connection::mesh_connection(node_name self_addr,
 
 mesh_connection::~mesh_connection() {
   stop();
+  _logger = nullptr;
 }
 
 void mesh_connection::start() {
@@ -388,7 +389,6 @@ void mesh_connection::on_write_resend(const node_name &target,
                                       solidarity::command &cmd) {
   dialler::message_ptr result;
   {
-    std::shared_lock l(_locker);
     auto s = _client->add_command(cmd);
     auto m = s == ERROR_CODE::OK ? "" : to_string(s);
     result = queries::status_t(mess_id, s, m).to_message();

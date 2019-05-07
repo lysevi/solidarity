@@ -20,6 +20,7 @@ class out_connection final : public dialler::abstract_dial {
 public:
   out_connection(const std::shared_ptr<mesh_connection> parent,
                  const std::string &target_addr);
+  ~out_connection() override { _parent = nullptr; }
   void on_connect() override;
   void on_new_message(std::vector<dialler::message_ptr> &d, bool &cancel) override;
   void on_network_error(const boost::system::error_code &err) override;
@@ -32,7 +33,7 @@ private:
 class listener final : public dialler::abstract_listener_consumer {
 public:
   listener(const std::shared_ptr<mesh_connection> parent);
-
+  ~listener() override { _parent = nullptr; }
   void on_network_error(dialler::listener_client_ptr i,
                         const boost::system::error_code &err) override;
 
@@ -75,7 +76,7 @@ public:
 
   EXPORT void send_all(const node_name &from, const append_entries &m) override;
   EXPORT void send_all(const command_status_event_t &smuv);
-  EXPORT void send_to(const node_name &to, const std::vector<dialler::message_ptr>&m);
+  EXPORT void send_to(const node_name &to, const std::vector<dialler::message_ptr> &m);
   EXPORT size_t size() override;
   EXPORT std::vector<node_name> all_nodes() const override;
 

@@ -27,7 +27,7 @@ public:
               const logdb::journal_ptr &jrn,
               abstract_state_machine *state_machine,
               utils::logging::abstract_logger_ptr logger = nullptr);
-  EXPORT ~raft();
+  EXPORT ~raft() override;
 
   raft_state_t state() const {
     std::lock_guard l(_locker);
@@ -53,12 +53,10 @@ public:
     return _state.leader;
   }
   node_name self_addr() const {
-    std::lock_guard l(_locker);
     return _self_addr;
   }
 
   raft_settings settings() const {
-    std::lock_guard l(_locker);
     return _settings;
   }
 

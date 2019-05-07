@@ -146,4 +146,6 @@ TEST_CASE("lockservice", "[special]") {
 
     kv.second->stop();
   }
+  consumers.clear();
+  clients.clear();
 }

@@ -37,13 +37,13 @@ matrix:
           packages: ['g++-8']
       env: COMPILER='g++-8' COMPVER='8' COMPNAME='gcc'
     
-    - os: linux
-      compiler: gcc
-      addons: &gcc8
-        apt:
-          sources: *all_sources
-          packages: ['g++-8', 'valgrind','libc6-dbg', 'linux-libc-dev']
-      env: COMPILER='g++-8' COMPVER='8' COMPNAME='gcc' VALGRIND=true
+  #  - os: linux
+  #    compiler: gcc
+  #    addons: &gcc8
+  #      apt:
+  #        sources: *all_sources
+  #        packages: ['g++-8', 'valgrind','libc6-dbg', 'linux-libc-dev']
+  #    env: COMPILER='g++-8' COMPVER='8' COMPNAME='gcc' VALGRIND=true
 
     - os: linux
       compiler: gcc
@@ -141,7 +141,7 @@ script:
   - echo "TSAN_OPTIONS => " ${TSAN_OPTIONS}
   - |
     if [[ "${HAS_TSAN}" = "true" ]];  then 
-      cmake -Dsolidarity_ENABLE_TESTS=ON -Dsolidarity_ENABLE_EXAMPLES=ON -Dsolidarity_ENABLE_DOUBLECHECKS=ON -DCMAKE_BUILD_TYPE=Debug   -DCMAKE_CXX_FLAGS="${CXX_FLAGS} -g  -O1 -fsanitize=thread -fPIE -pie" -DCMAKE_BUILD_TYPE=Debug ..
+      cmake -Dsolidarity_ENABLE_TESTS=ON -Dsolidarity_ENABLE_EXAMPLES=ON -Dsolidarity_ENABLE_DOUBLECHECKS=ON -DCMAKE_BUILD_TYPE=Debug   -DCMAKE_CXX_FLAGS="${CXX_FLAGS} -g  -O1 -fsanitize=thread -fPIE" -DCMAKE_BUILD_TYPE=Debug ..
       make -k -j2 
       ctest -j2 -C Debug .  --verbose || exit 1
       exit

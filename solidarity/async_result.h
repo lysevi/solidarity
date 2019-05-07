@@ -39,6 +39,7 @@ public:
   void set_result(const std::vector<uint8_t> &r,
                   solidarity::ERROR_CODE ec,
                   const std::string &err_) {
+    std::lock_guard l(_mutex);
     answer = r;
     _ec = ec;
     err = err_;

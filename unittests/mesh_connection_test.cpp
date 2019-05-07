@@ -41,6 +41,13 @@ struct mock_cluster_client : solidarity::abstract_cluster_client {
     return solidarity::ERROR_CODE::OK;
   }
 
+  std::vector<std::uint8_t> get_data() {
+    std::lock_guard l(locker);
+    std::vector<std::uint8_t> res(data);
+    return res;
+  }
+
+private:
   std::vector<std::uint8_t> data;
   mutable std::mutex locker;
   std::unordered_set<solidarity::node_name> lost_con;
@@ -82,7 +89,7 @@ TEST_CASE("mesh_connection", "[network]") {
   }
 
   std::vector<unsigned short> ports(cluster_size);
-  std::iota(ports.begin(), ports.end(),(unsigned short)8000);
+  std::iota(ports.begin(), ports.end(), (unsigned short)8000);
 
   std::vector<std::shared_ptr<solidarity::mesh_connection>> connections;
   std::unordered_map<solidarity::node_name, std::shared_ptr<mock_cluster_client>> clients;
@@ -182,8 +189,9 @@ TEST_CASE("mesh_connection", "[network]") {
       }
       auto target_clnt = dynamic_cast<mock_cluster_client *>(clients[node].get());
       while (true) {
-        if (target_clnt->data.size() == ae.cmd.size()
-            && target_clnt->data[0] == ae.cmd.data[0]) {
+        auto data = target_clnt->get_data();
+        if (data.size() == ae.cmd.size()
+            && data[0] == ae.cmd.data[0]) {
           break;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));

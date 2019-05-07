@@ -128,7 +128,7 @@ TEST_CASE("raft", "[raft]") {
   cmd.data[0] = 0;
 
   auto data_eq = [&cmd](const std::shared_ptr<mock_state_machine> &c) -> bool {
-    return c->last_cmd.data == cmd.data;
+    return c->get_last_cmd().data == cmd.data;
   };
 
   while (cluster->size() > 2) {
@@ -245,7 +245,7 @@ TEST_CASE("raft.replication", "[raft]") {
   cmd.data[0] = 0;
 
   auto data_eq = [&cmd](const std::shared_ptr<mock_state_machine> &c) -> bool {
-    return c->last_cmd.data == cmd.data;
+    return c->get_last_cmd().data == cmd.data;
   };
 
   cluster->wait_leader_eletion();
@@ -327,7 +327,7 @@ TEST_CASE("raft.log_compaction", "[raft]") {
   cmd.data[0] = 0;
 
   auto data_eq = [&cmd](const std::shared_ptr<mock_state_machine> &c) -> bool {
-    return c->last_cmd.data == cmd.data;
+    return c->get_last_cmd().data == cmd.data;
   };
 
   std::vector<std::shared_ptr<solidarity::raft>> leaders;
@@ -420,7 +420,7 @@ TEST_CASE("raft.apply_journal_on_start", "[raft]") {
   auto cons = std::make_shared<raft>(sett, cluster.get(), jrn, state_machine.get());
   cluster->add_new(node_name().set_name(sett.name()), cons);
 
-  EXPECT_EQ(state_machine->last_cmd.data, cmd.data);
+  EXPECT_EQ(state_machine->get_last_cmd().data, cmd.data);
 }
 
 TEST_CASE("raft.rollback", "[raft]") {
@@ -590,7 +590,7 @@ TEST_CASE("raft.can_apply", "[raft]") {
   cmd.data[0] = 0;
 
   auto data_eq = [&cmd](const std::shared_ptr<mock_state_machine> &c) -> bool {
-    return c->last_cmd.data == cmd.data;
+    return c->get_last_cmd().data == cmd.data;
   };
 
   cluster->wait_leader_eletion();
@@ -603,7 +603,7 @@ TEST_CASE("raft.can_apply", "[raft]") {
   auto st = leaders[0]->add_command(cmd);
 
   EXPECT_EQ(st, solidarity::ERROR_CODE::STATE_MACHINE_CAN_T_APPLY_CMD);
-  (*consumers.begin())->_can_apply = true;
+  (*consumers.begin())->set_can_apply(true);
 
   st = leaders[0]->add_command(cmd);
   EXPECT_EQ(st, solidarity::ERROR_CODE::OK);

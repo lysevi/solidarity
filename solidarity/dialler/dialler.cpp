@@ -34,6 +34,7 @@ void dial::disconnect() {
     stopping_started();
     _async_io->fullStop();
     _async_io = nullptr;
+    _consumers = nullptr;
     stopping_completed();
   }
 }

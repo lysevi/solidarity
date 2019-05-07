@@ -29,7 +29,8 @@ public:
 
 private:
   void readNextAsync();
-
+  void on_read_message(boost::system::error_code ecode, size_t readed_bytes);
+  void on_read_size(boost::system::error_code err, size_t readed_bytes);
 private:
   std::recursive_mutex _send_locker;
   std::atomic_int _messages_to_send;

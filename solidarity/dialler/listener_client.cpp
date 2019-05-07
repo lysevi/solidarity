@@ -9,15 +9,15 @@ using namespace boost::asio::ip;
 
 using namespace solidarity::dialler;
 
-listener_client::listener_client(uint64_t id_,
-                                 async_io_ptr async_io,
-                                 std::shared_ptr<listener> s)
+listener_client::listener_client(uint64_t id_, async_io_ptr async_io, listener *s)
     : id(id_)
     , _listener(s) {
   _async_connection = async_io;
 }
 
-listener_client::~listener_client() {}
+listener_client::~listener_client() {
+  _async_connection = nullptr;
+}
 
 void listener_client::start() {
   initialisation_begin();
