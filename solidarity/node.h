@@ -76,7 +76,7 @@ private:
 
 private:
   mutable std::shared_mutex _locker;
-  bool _stoped;
+  std::atomic_bool _stoped;
   params_t _params;
   std::shared_ptr<raft> _raft;
   std::shared_ptr<mesh_connection> _cluster_con;
@@ -98,6 +98,7 @@ private:
   std::unordered_map<uint64_t, std::function<void(const client_event_t &)>>
       _on_update_handlers;
 
+  mutable std::shared_mutex _state_locker;
   node_name _leader;
   NODE_KIND _kind = NODE_KIND::ELECTION;
 };

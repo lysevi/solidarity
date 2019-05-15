@@ -140,7 +140,6 @@ void listener::stop() {
     _consumer = nullptr;
     _connections.clear();
     stopping_completed();
-    
   }
 }
 
@@ -152,12 +151,12 @@ void listener::erase_client_description(const listener_client_ptr client) {
   if (it == _connections.cend()) {
     throw std::logic_error("delete error");
   }
-  if (_consumer != nullptr) {
-    _consumer->on_disconnect(client->shared_from_this());
-  }
   _connections.erase(it);
   if (locked_localy) {
     _locker_connections.unlock();
+  }
+  if (_consumer != nullptr) {
+    _consumer->on_disconnect(client->shared_from_this());
   }
   client->stopping_completed();
 }

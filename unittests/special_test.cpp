@@ -61,13 +61,13 @@ TEST_CASE("lockservice", "[special]") {
     auto n = std::make_shared<solidarity::node>(node_logger, params, state_machine.get());
 
     n->start();
-   /* n->add_event_handler([](const solidarity::client_event_t &ev) {
-      if (ev.kind == solidarity::client_event_t::event_kind::STATE_MACHINE) {
-        auto cs = ev.state_ev.value();
-        std::cerr << "command status - crc=" << cs.crc
-                  << " status=" << solidarity::to_string(cs.kind) << std::endl;
+    n->add_event_handler([](const solidarity::client_event_t &ev) {
+      if (ev.kind == solidarity::client_event_t::event_kind::COMMAND_STATUS) {
+        std::stringstream ss;
+        ss << "command "<<solidarity::to_string(ev);
+        std::cerr << ss.str() << std::endl;
       }
-    });*/
+    });
 
     solidarity::client::params_t cpar(
         solidarity::utils::strings::to_string("client_", params.name));

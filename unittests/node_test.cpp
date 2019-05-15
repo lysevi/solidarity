@@ -238,8 +238,12 @@ TEST_CASE("node", "[network]") {
         [&writed_to_node_sm](const solidarity::client_event_t &ev) {
           if (ev.kind == solidarity::client_event_t::event_kind::COMMAND_STATUS) {
             auto cs = ev.cmd_ev.value();
-            std::cerr << "command status - crc=" << cs.crc
+            
+			std::stringstream ss;
+            ss << "command status - crc=" << cs.crc
                       << " status=" << solidarity::to_string(cs.status) << std::endl;
+
+			std::cerr << ss.str();
             if (cs.status == solidarity::command_status::WAS_APPLIED) {
               writed_to_node_sm = true;
             }

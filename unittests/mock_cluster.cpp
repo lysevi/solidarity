@@ -18,13 +18,6 @@ void worker_t::stop() {
     _cond.notify_all();
   }
   _tread.join();
-  /* try {
-     _tread.join();
-   } catch (...) {
-   }*/
-  /* while (_tread.joinable()) {
-     std::this_thread::yield();
-   }*/
 }
 
 void worker_t::add_task(const message_t &mt) {
@@ -112,13 +105,21 @@ void mock_cluster::send_to(const solidarity::node_name &from,
 
 void mock_cluster::send_all(const solidarity::node_name &from,
                             const solidarity::append_entries &m) {
-  std::shared_lock lg(_cluster_locker);
-  ENSURE(!from.is_empty());
-  for (const auto &kv : _cluster) {
-    if (kv.first != from) {
-      message_t me{from, kv.first, m};
-      _workers[kv.first]->add_task(me);
+  std::unordered_map<solidarity::node_name, std::shared_ptr<worker_t>> cp;
+  {
+    std::shared_lock lg(_cluster_locker);
+    ENSURE(!from.is_empty());
+    cp.reserve(_cluster.size());
+    for (const auto &kv : _workers) {
+      if (kv.first != from) {
+        cp.insert(kv);
+      }
     }
+  }
+
+  for (const auto &kv : cp) {
+    message_t me{from, kv.first, m};
+    kv.second->add_task(me);
   }
 }
 
@@ -136,7 +137,7 @@ void mock_cluster::add_new(const solidarity::node_name &addr,
 
 std::vector<std::shared_ptr<solidarity::raft>> mock_cluster::by_filter(
     std::function<bool(const std::shared_ptr<solidarity::raft>)> pred) {
-  std::shared_lock lg(_cluster_locker);
+  //std::shared_lock lg(_cluster_locker);
   std::vector<std::shared_ptr<solidarity::raft>> result;
   result.reserve(_cluster.size());
   for (const auto &kv : _cluster) {
@@ -152,9 +153,16 @@ std::vector<std::shared_ptr<solidarity::raft>> mock_cluster::get_all() {
 }
 
 void mock_cluster::apply(std::function<void(const std::shared_ptr<solidarity::raft>)> f) {
-  std::shared_lock lg(_cluster_locker);
-  for (const auto &kv : _cluster) {
-    f(kv.second);
+  std::vector<std::shared_ptr<solidarity::raft>> cp;
+  {
+    std::shared_lock lg(_cluster_locker);
+    cp.resize(_cluster.size());
+    std::transform(_cluster.cbegin(), _cluster.cend(), cp.begin(), [](auto kv) {
+      return kv.second;
+    });
+  }
+  for (const auto &v : cp) {
+    f(v);
   }
 }
 
@@ -164,12 +172,7 @@ void mock_cluster::heartbeat() {
 
 void mock_cluster::print_cluster() {
   solidarity::utils::logging::logger_info("----------------------------");
-  /*std::cout << "----------------------------\n";*/
   apply([](auto n) {
-    /*std::cout << solidarity::utils::strings::to_string("?: ", n->self_addr(), "{",
-       n->kind(),
-                                                ":", n->term(), "}", " => ",
-                                                n->get_leader(), "\n");*/
     solidarity::utils::logging::logger_info("?: ",
                                             n->self_addr(),
                                             "{",
@@ -186,6 +189,7 @@ void mock_cluster::erase_if(
     std::function<bool(const std::shared_ptr<solidarity::raft>)> pred) {
 
   solidarity::node_name target;
+  std::unordered_map<solidarity::node_name, std::shared_ptr<solidarity::raft>> cp_cluster;
   {
     _cluster_locker.lock_shared();
     auto it = std::find_if(
@@ -203,10 +207,13 @@ void mock_cluster::erase_if(
     _cluster.erase(target);
     _workers.erase(target);
     update_size();
+    cp_cluster.reserve(_cluster.size());
+    for (auto &kv : _cluster) {
+      cp_cluster.insert(kv);
+    }
   }
   if (!target.is_empty()) {
-    std::shared_lock lg(_cluster_locker);
-    for (auto &kv : _cluster) {
+    for (auto &kv : cp_cluster) {
       kv.second->lost_connection_with(target);
     }
   }
@@ -214,6 +221,11 @@ void mock_cluster::erase_if(
 
 size_t mock_cluster::size() {
   return _size;
+}
+
+solidarity::cluster_state mock_cluster::state() {
+  solidarity::cluster_state result(_size);
+  return result;
 }
 
 std::vector<solidarity::node_name> mock_cluster::all_nodes() const {

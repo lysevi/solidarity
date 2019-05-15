@@ -332,22 +332,30 @@ node::~node() {
 
 void node::start() {
   _stoped = false;
+  
+  _leader = _raft->get_leader();
+  _kind = _raft->state().node_kind;
+
   _cluster_con->start();
   _timer->async_wait([this](auto) { this->heartbeat_timer(); });
   _listener->start();
   _listener->wait_starting();
-
-  _leader = _raft->get_leader();
-  _kind = _raft->state().node_kind;
 }
 
 void node::stop() {
   if (_stoped) {
     return;
   }
-  _stoped = true;
 
-  _timer->cancel();
+  {
+    std::lock_guard l(_locker);
+    if (_stoped) {
+      return;
+    }
+    _stoped = true;
+    _timer->cancel();
+  }
+
   if (_listener != nullptr) {
     _listener->stop();
     _listener->wait_stoping();
@@ -365,6 +373,7 @@ void node::stop() {
 }
 
 bool node::is_leader() const {
+  std::shared_lock l(_state_locker);
   return _kind == NODE_KIND::LEADER;
 }
 
@@ -392,7 +401,12 @@ size_t node::connections_count() const {
 }
 
 void node::notify_command_status(uint32_t crc, command_status k) {
+  if (_stoped) {
+    return;
+  }
   _logger->dbg("notify_command_status() ", crc, k);
+
+  bool is_leader_flag = is_leader();
   std::shared_lock l(_locker);
   std::future<void> a;
   command_status_event_t smev;
@@ -416,7 +430,7 @@ void node::notify_command_status(uint32_t crc, command_status k) {
     boost::asio::post(*context, [this, m, v]() { this->_listener->send_to(v, m); });
   }
 
-  if (is_leader()) {
+  if (is_leader_flag) {
     _cluster_con->send_all(smev);
   }
 
@@ -426,36 +440,36 @@ void node::notify_command_status(uint32_t crc, command_status k) {
 }
 
 void node::notify_raft_state_update(NODE_KIND old_state, NODE_KIND new_state) {
+  if (_stoped) {
+    return;
+  }
   _logger->dbg("notify_raft_state_update(): ", old_state, " => ", new_state);
-  std::shared_lock l(_locker);
-  // std::future<void> a;
 
-  if (!_on_update_handlers.empty() && !_stoped) {
-    // a = std::async(std::launch::async, [this, old_state, new_state]() {
+  std::unordered_map<uint64_t, std::function<void(const client_event_t &)>> handlers_cp;
+  std::unordered_set<uint64_t> clients_cp;
+  {
+    std::shared_lock l(_locker);
+    handlers_cp = _on_update_handlers;
+    clients_cp = _clients;
+  }
+
+  if (!handlers_cp.empty() && !_stoped) {
     client_event_t ev;
     ev.kind = client_event_t::event_kind::RAFT;
     ev.raft_ev = raft_state_event_t{old_state, new_state};
 
-    for (auto &v : _on_update_handlers) {
+    for (auto &v : handlers_cp) {
       v.second(ev);
     }
-    //});
   }
 
-  if (!_clients.empty()) {
-    // auto context = _cluster_con->context();
+  if (!clients_cp.empty()) {
     clients::raft_state_updated_t rsu(old_state, new_state);
     auto m = rsu.to_message();
-    for (auto v : _clients) {
+    for (auto v : clients_cp) {
       this->_listener->send_to(v, m);
-      // TODO shared_from_this;
-      // boost::asio::post(*context, [m, this, v]() { this->_listener->send_to(v, m); });
     }
   }
-
-  /*if (a.valid()) {
-    a.wait();
-  }*/
 }
 
 abstract_state_machine *node::state_machine() {
@@ -488,7 +502,7 @@ void node::heartbeat_timer() {
     _raft->heartbeat();
     auto leader = _raft->get_leader();
     auto kind = _raft->state().node_kind;
-
+    std::lock_guard l(_state_locker);
     if (leader != _leader || kind != _kind) {
       notify_raft_state_update(_kind, kind);
       _leader = leader;
@@ -503,6 +517,7 @@ void node::heartbeat_timer() {
                   qr);
   }
   if (!_stoped) {
+    std::lock_guard l(_locker);
     _timer->expires_at(_timer->expires_at()
                        + boost::posix_time::milliseconds(_timer_period));
     _timer->async_wait([this](auto) { this->heartbeat_timer(); });
@@ -510,6 +525,10 @@ void node::heartbeat_timer() {
 }
 
 void node::send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd) {
+  if (_stoped) {
+    return;
+  }
+
   auto leader = _raft->state().leader;
   if (leader.is_empty()) {
     queries::status_t s(message_id, solidarity::ERROR_CODE::UNDER_ELECTION, _params.name);
@@ -532,21 +551,32 @@ void node::on_message_sended_status(uint64_t client,
                                     ERROR_CODE status) {
   _logger->dbg(
       "on_message_sended_status client:", client, " #", message, " status:", status);
-  std::lock_guard l(_locker);
-  // TODO refact
+  if (_stoped) {
+    return;
+  }
+  dialler::message_ptr answer = nullptr;
+  {
+    std::lock_guard l(_locker);
+    // TODO refact
 
-  auto pos = std::find_if(_message_resend[client].begin(),
-                          _message_resend[client].end(),
-                          [message](auto p) { return p.first = message; });
-  if (pos != _message_resend[client].end()) {
-    status_t s(message, status, std::string());
-    auto answer = s.to_message();
+    auto pos = std::find_if(_message_resend[client].begin(),
+                            _message_resend[client].end(),
+                            [message](auto p) { return p.first = message; });
+    if (pos != _message_resend[client].end()) {
+      status_t s(message, status, std::string());
+      answer = s.to_message();
+      _message_resend[client].erase(pos);
+    }
+  }
+  if (answer != nullptr) {
     _listener->send_to(client, answer);
-    _message_resend[client].erase(pos);
   }
 }
 
 ERROR_CODE node::add_command(const command &cmd) {
+  if (_stoped) {
+    return ERROR_CODE::NETWORK_ERROR;
+  }
   auto nk = state().node_kind;
   if (nk != NODE_KIND::LEADER && nk != NODE_KIND::FOLLOWER) {
     return ERROR_CODE::UNDER_ELECTION;
@@ -560,6 +590,9 @@ ERROR_CODE node::add_command(const command &cmd) {
 }
 
 std::shared_ptr<async_result_t> node::add_command_to_cluster(const command &cmd) {
+  if (_stoped) {
+    return nullptr;
+  }
   _logger->dbg("add_command_to_cluster");
   auto result = std::make_shared<async_result_t>(uint64_t(0));
   auto st = add_command(cmd);

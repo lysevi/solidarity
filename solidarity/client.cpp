@@ -130,7 +130,9 @@ client::~client() {
 }
 
 void client::disconnect() {
-  if (_threads.empty()) {
+  std::lock_guard l(_connect_locker);
+
+  if (_stoped.load()) {
     return;
   }
 
@@ -150,6 +152,11 @@ void client::disconnect() {
 }
 
 void client::connect() {
+  std::lock_guard l(_connect_locker);
+  if (_stoped.load()) {
+    return;
+  }
+
   if (_dialler != nullptr) {
     throw utils::exceptions::exception_t("called twice!");
   }
@@ -206,43 +213,53 @@ ERROR_CODE client::send_weak(const solidarity::command &cmd) {
 solidarity::send_result client::send_strong(const solidarity::command &cmd) {
   auto crc = cmd.crc();
   solidarity::send_result result;
+  
+  
+  struct waiter_t {
+    std::mutex locker;
+    std::condition_variable cond;
+    std::atomic_bool is_end = false;
+    command_status status = command_status::APPLY_ERROR;
+  };
 
-  std::mutex locker;
-  std::unique_lock ulock(locker);
-  std::atomic_bool is_end = false;
-  std::condition_variable cond;
+  auto w = std::make_shared<waiter_t>();
 
-  auto uh_id
-      = add_event_handler([&is_end, &cond, crc, &result](const client_event_t &cev) {
-          if (cev.kind == client_event_t::event_kind::COMMAND_STATUS) {
-            auto cmd_status = cev.cmd_ev.value();
-            if (cmd_status.crc == crc) {
-              if (cmd_status.status == command_status::WAS_APPLIED
-                  || cmd_status.status == command_status::CAN_NOT_BE_APPLY
-                  || cmd_status.status == command_status::APPLY_ERROR
-                  || cmd_status.status == command_status::ERASED_FROM_JOURNAL) {
-                result.status = cmd_status.status;
-                is_end = true;
-                cond.notify_all();
+  auto uh_id = add_event_handler(
+      [w, crc](const client_event_t &cev) {
+        if (cev.kind == client_event_t::event_kind::COMMAND_STATUS) {
+          auto cmd_status = cev.cmd_ev.value();
+          if (cmd_status.crc == crc) {
+            if (cmd_status.status == command_status::WAS_APPLIED
+                || cmd_status.status == command_status::CAN_NOT_BE_APPLY
+                || cmd_status.status == command_status::APPLY_ERROR
+                || cmd_status.status == command_status::ERASED_FROM_JOURNAL) {
+              {
+                std::lock_guard l(w->locker);
+                w->status = cmd_status.status;
+                w->is_end.store(true);
+                w->cond.notify_all();
               }
             }
           }
-        });
+        }
+      });
 
   result.ecode = send_weak(cmd);
   if (result.ecode != ERROR_CODE::OK) {
-    is_end = true;
-  } else {
+    rm_event_handler(uh_id);
+    return result;
   }
 
-  while (!is_end) {
-    cond.wait(ulock, [&is_end]() { return is_end.load(); });
-    if (is_end) {
+  std::unique_lock ulock(w->locker);
+  while (!w->is_end) {
+    w->cond.wait(ulock, [w]() { return w->is_end.load(); });
+    if (w->is_end) {
       break;
     }
   }
-
   rm_event_handler(uh_id);
+
+  result.status = w->status;
   return result;
 }
 

@@ -37,9 +37,11 @@ std::string solidarity::to_string(const client_event_t &cev) {
        << " => to:" << to_string(re.new_state);
     break;
   }
-  case client_event_t::event_kind::COMMAND_STATUS:
-    ss << "COMMAND_STATUS";
+  case client_event_t::event_kind::COMMAND_STATUS: {
+    auto cmd_ev = cev.cmd_ev.value();
+    ss << "COMMAND_STATUS, crc=" << cmd_ev.crc << " status=" << to_string(cmd_ev.status);
     break;
+  }
   default:
     NOT_IMPLEMENTED;
   }

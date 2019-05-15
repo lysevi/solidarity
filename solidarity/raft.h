@@ -35,8 +35,9 @@ public:
   }
   raft_state_t &rw_state() { return _state; }
 
-  NODE_KIND kind() const { return _state.node_kind; }
-  term_t term() const { return _state.term; }
+  NODE_KIND kind() const { return _node_kind; }
+
+  term_t term() const { return state().term; }
   logdb::journal_ptr journal() const { return _jrn; }
   abstract_state_machine *state_machine() { return _state_machine; }
 
@@ -49,8 +50,7 @@ public:
   [[nodiscard]] EXPORT ERROR_CODE add_command(const command &cmd) override;
 
   node_name get_leader() const {
-    std::lock_guard l(_locker);
-    return _state.leader;
+    return state().leader;
   }
   node_name self_addr() const {
     return _self_addr;
@@ -77,7 +77,7 @@ protected:
   void update_next_heartbeat_interval();
 
   void commit_reccord(const logdb::reccord_info &target);
-  void replicate_log();
+  void replicate_log(const std::vector<solidarity::node_name> &all);
 
   [[nodiscard]] ERROR_CODE add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k);
   void add_reccord(const logdb::log_entry &le);
@@ -93,6 +93,7 @@ private:
   logdb::journal_ptr _jrn;
 
   raft_state_t _state;
+  std::atomic<NODE_KIND> _node_kind{NODE_KIND::FOLLOWER};
 
   std::unordered_map<node_name, log_state_t> _logs_state;
   std::unordered_map<node_name, logdb::reccord_info> _last_sended;

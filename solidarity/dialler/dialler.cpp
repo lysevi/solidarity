@@ -66,20 +66,28 @@ void dial::start_async_connection() {
   self->_async_io = nullptr;
   self->_async_io = std::make_shared<async_io>(self->_context);
 
-  auto con_handler = [self](auto ec, auto /*it*/) {
-    if (ec) {
-      if (!self->is_stoped()) {
-        self->reconnecton_error(ec);
-      }
-    } else {
+  boost::asio::async_connect(self->_async_io->socket(),
+                             endpoint_iterator.begin(),
+                             endpoint_iterator.end(),
+                             [self](auto ec, auto) { self->con_handler(ec); });
+}
 
-      if (self->_async_io->socket().is_open()) {
+void dial::con_handler(const boost::system::error_code &ec) {
+  auto self = this->shared_from_this();
+  if (ec) {
+    if (!self->is_stoped()) {
+      self->reconnecton_error(ec);
+    }
+  } else {
+    auto aio = self->_async_io;
+    if (aio != nullptr) {
+      if (aio->socket().is_open()) {
         async_io::data_handler_t on_d
             = [self](auto d, auto cancel) { self->on_data_receive(d, cancel); };
         async_io::error_handler_t on_n
             = [self](auto err) { self->reconnecton_error(err); };
 
-        self->_async_io->start(on_d, on_n);
+        aio->start(on_d, on_n);
 
         if (self->_consumers != nullptr) {
           self->_consumers->on_connect();
@@ -87,11 +95,7 @@ void dial::start_async_connection() {
         self->initialisation_complete();
       }
     }
-  };
-  boost::asio::async_connect(self->_async_io->socket(),
-                             endpoint_iterator.begin(),
-                             endpoint_iterator.end(),
-                             con_handler);
+  }
 }
 
 void dial::on_data_receive(std::vector<message_ptr> &d, bool &cancel) {

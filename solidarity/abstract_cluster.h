@@ -67,6 +67,12 @@ struct append_entries {
   from_byte_array(const std::vector<uint8_t> &bytes);
 };
 
+struct cluster_state {
+  cluster_state(size_t sz)
+      : size(sz) {}
+  size_t size;
+};
+
 struct abstract_cluster_client {
   virtual ~abstract_cluster_client() {}
   virtual void recv(const node_name &from, const append_entries &e) = 0;
@@ -86,6 +92,7 @@ public:
   /// total nodes count
   virtual size_t size() = 0;
   virtual std::vector<node_name> all_nodes() const = 0;
+  virtual cluster_state state()  = 0;
 };
 
 } // namespace solidarity

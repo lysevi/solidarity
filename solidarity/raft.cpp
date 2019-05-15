@@ -60,7 +60,6 @@ raft::~raft() {
 }
 
 void raft::set_cluster(abstract_cluster *cluster) {
-  std::lock_guard lg(_locker);
   _cluster = cluster;
 }
 
@@ -158,6 +157,7 @@ void raft::on_heartbeat(const node_name &from, const append_entries &e) {
   const auto old_s = _state;
   const auto ns = raft_state_t::on_append_entries(_state, from, _jrn.get(), e);
   _state = ns;
+  _node_kind = _state.node_kind;
   if (old_s.leader.is_empty() || old_s.leader != _state.leader
       || old_s.node_kind != _state.node_kind) {
     _logger->info("on_heartbeat. change leader from: ",
@@ -183,7 +183,8 @@ void raft::on_vote(const node_name &from, const append_entries &e) {
 
   const raft_state_t ns = change_state_v.new_state;
   _state = ns;
-  if (_state.node_kind != old_s.node_kind) {
+  _node_kind = _state.node_kind;
+  if (_node_kind != old_s.node_kind) {
     if (old_s.node_kind == NODE_KIND::CANDIDATE
         && ns.node_kind == NODE_KIND::LEADER) { // if CANDIDATE => LEADER
       std::stringstream ss;
@@ -294,6 +295,7 @@ void raft::on_append_entries(const node_name &from, const append_entries &e) {
 
   if (ns.term != _state.term) {
     _state = ns;
+    _node_kind = _state.node_kind;
     _logs_state.clear();
     return;
   }
@@ -456,57 +458,67 @@ void raft::commit_reccord(const logdb::reccord_info &target) {
 }
 
 void raft::heartbeat() {
-  std::lock_guard l(_locker);
+  auto all_nodes = _cluster->all_nodes();
+  auto cluster_size = _cluster->size();
+  bool vote_to_all = false;
+  append_entries ae;
+  {
+    std::lock_guard l(_locker);
 
-  if (_state.node_kind == NODE_KIND::LEADER) {
-    auto prev = _jrn->prev_rec();
-    bool prev_is_not_replicated
-        = std::any_of(_logs_state.cbegin(),
-                      _logs_state.cend(),
-                      [prev](const auto &kv) -> bool { return kv.second.prev != prev; });
-    if (!prev_is_not_replicated) {
+    if (_state.node_kind == NODE_KIND::LEADER) {
+      auto prev = _jrn->prev_rec();
+      bool prev_is_not_replicated = std::any_of(
+          _logs_state.cbegin(), _logs_state.cend(), [prev](const auto &kv) -> bool {
+            return kv.second.prev != prev;
+          });
+      if (!prev_is_not_replicated) {
+        if (!_state.is_heartbeat_missed()) {
+          return;
+        }
+      }
+    } else {
       if (!_state.is_heartbeat_missed()) {
         return;
       }
     }
-  } else {
-    if (!_state.is_heartbeat_missed()) {
-      return;
+
+    if (_state.node_kind != NODE_KIND::LEADER) {
+      const auto old_s = _state;
+      ENSURE(_cluster != nullptr);
+      const auto ns = raft_state_t::heartbeat(_state, _self_addr, cluster_size);
+      _state = ns;
+      _node_kind = _state.node_kind;
+
+      _logger->info("heartbeat. ", old_s, " => ", _state);
     }
-  }
 
-  if (_state.node_kind != NODE_KIND::LEADER) {
-    const auto old_s = _state;
-    ENSURE(_cluster != nullptr);
-    const auto ns = raft_state_t::heartbeat(_state, _self_addr, _cluster->size());
-    _state = ns;
-
-    _logger->info("heartbeat. ", old_s, " => ", _state);
-  }
-
-  if (_state.node_kind == NODE_KIND::CANDIDATE || _state.node_kind == NODE_KIND::LEADER) {
-    if (_state.node_kind == NODE_KIND::LEADER) { /// CANDIDATE => LEADER
-      if (_logs_state.find(_self_addr) == _logs_state.end()) {
+    if (_state.node_kind == NODE_KIND::CANDIDATE
+        || _state.node_kind == NODE_KIND::LEADER) {
+      if (_state.node_kind == NODE_KIND::LEADER) { /// CANDIDATE => LEADER
+        if (_logs_state.find(_self_addr) == _logs_state.end()) {
+          _logs_state[_self_addr].prev = _jrn->prev_rec();
+        }
+        replicate_log(all_nodes);
+      } else { /// CANDIDATE => CANDIDATE
+        _logs_state.clear();
         _logs_state[_self_addr].prev = _jrn->prev_rec();
+        _last_sended.clear();
+        vote_to_all = true;
+        ae = make_append_entries();
+        ae.kind = ENTRIES_KIND::VOTE;
       }
-      replicate_log();
-    } else { /// CANDIDATE => CANDIDATE
-      _logs_state.clear();
-      _logs_state[_self_addr].prev = _jrn->prev_rec();
-      _last_sended.clear();
-      auto ae = make_append_entries();
-      ae.kind = ENTRIES_KIND::VOTE;
-      _logger->info("send vote to all.");
-      _cluster->send_all(_self_addr, ae);
     }
+    update_next_heartbeat_interval();
   }
-  update_next_heartbeat_interval();
+  if (vote_to_all) {
+    _logger->info("send vote to all.");
+    _cluster->send_all(_self_addr, ae);
+  }
 }
 
-void raft::replicate_log() {
+void raft::replicate_log(const std::vector<solidarity::node_name> &all) {
   _logger->info("log replication");
   auto self_log_state = _logs_state[_self_addr];
-  auto all = _cluster->all_nodes();
 
   auto jrn_sz = _jrn->size();
   auto jrn_is_empty = jrn_sz == size_t(0);

@@ -60,6 +60,8 @@ public:
   EXPORT void add_consumer(const abstract_connection_consumer_ptr &c);
   EXPORT void erase_consumer();
 
+private:
+  void con_handler(const boost::system::error_code &err);
 protected:
   std::shared_ptr<async_io> _async_io = nullptr;
   boost::asio::io_context *_context = nullptr;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <condition_variable>
 #include <deque>
 #include <shared_mutex>
@@ -17,14 +18,14 @@ struct message_t {
 
 class worker_t {
   std::mutex _tasks_locker;
-  volatile bool _stop_flag = false;
+  std::atomic_bool _stop_flag = false;
   std::shared_ptr<solidarity::raft> _target;
   std::condition_variable _cond;
 
   std::thread _tread;
   bool _is_node_stoped = false;
 
-  volatile bool _is_stoped = false;
+  std::atomic_bool _is_stoped = false;
   solidarity::node_name self_addr;
 
 public:
@@ -52,6 +53,7 @@ public:
                 const solidarity::append_entries &m) override;
   size_t size() override;
   std::vector<solidarity::node_name> all_nodes() const override;
+  solidarity::cluster_state state() override;
 
   void add_new(const solidarity::node_name &addr,
                const std::shared_ptr<solidarity::raft> &c);
@@ -89,7 +91,7 @@ private:
   std::unordered_map<solidarity::node_name, std::shared_ptr<worker_t>> _workers;
   std::unordered_set<solidarity::node_name> _stoped;
 
-  size_t _size = 0;
+  std::atomic_size_t _size = 0;
 };
 
 inline bool is_leader_pred(const std::shared_ptr<solidarity::raft> &v) {

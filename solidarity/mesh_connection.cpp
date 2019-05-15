@@ -255,6 +255,11 @@ size_t mesh_connection::size() {
   return all_nodes().size();
 }
 
+cluster_state mesh_connection::state()  {
+  solidarity::cluster_state result(size());
+  return result;
+}
+
 std::vector<node_name> mesh_connection::all_nodes() const {
   std::shared_lock l(_locker);
   std::vector<node_name> result;
@@ -336,9 +341,6 @@ void mesh_connection::rm_out_connection(const std::string &addr,
   }
   if (!name.is_empty()) {
     {
-      std::shared_lock l(_locker);
-      // ENSURE(!name.is_empty());
-
       _client->lost_connection_with(name);
     }
     on_write_status(name, ERROR_CODE::NETWORK_ERROR);
