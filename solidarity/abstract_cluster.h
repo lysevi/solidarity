@@ -47,7 +47,6 @@ enum class ENTRIES_KIND : uint8_t {
 };
 
 struct append_entries {
-  /// on election;
   ENTRIES_KIND kind = {ENTRIES_KIND::APPEND};
   /// term number;
   term_t term = UNDEFINED_TERM;
@@ -65,12 +64,6 @@ struct append_entries {
   [[nodiscard]] EXPORT std::vector<uint8_t> to_byte_array() const;
   [[nodiscard]] EXPORT static append_entries
   from_byte_array(const std::vector<uint8_t> &bytes);
-};
-
-struct cluster_state {
-  cluster_state(size_t sz)
-      : size(sz) {}
-  size_t size;
 };
 
 struct abstract_cluster_client {
@@ -92,7 +85,6 @@ public:
   /// total nodes count
   virtual size_t size() = 0;
   virtual std::vector<node_name> all_nodes() const = 0;
-  virtual cluster_state state()  = 0;
 };
 
 } // namespace solidarity

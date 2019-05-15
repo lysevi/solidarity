@@ -78,7 +78,6 @@ public:
   EXPORT void send_all(const command_status_event_t &smuv);
   EXPORT void send_to(const node_name &to, const std::vector<dialler::message_ptr> &m);
   EXPORT size_t size() override;
-  [[nodiscard]] EXPORT cluster_state state() override;
   EXPORT std::vector<node_name> all_nodes() const override;
 
   friend impl::out_connection;

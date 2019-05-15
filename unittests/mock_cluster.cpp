@@ -72,7 +72,7 @@ mock_cluster::~mock_cluster() {
 }
 
 void mock_cluster::update_size() {
-  _size = _cluster.size() - _stoped.size();
+  _size = _cluster.size();
 }
 
 void mock_cluster::start_workers() {
@@ -137,7 +137,7 @@ void mock_cluster::add_new(const solidarity::node_name &addr,
 
 std::vector<std::shared_ptr<solidarity::raft>> mock_cluster::by_filter(
     std::function<bool(const std::shared_ptr<solidarity::raft>)> pred) {
-  //std::shared_lock lg(_cluster_locker);
+  // std::shared_lock lg(_cluster_locker);
   std::vector<std::shared_ptr<solidarity::raft>> result;
   result.reserve(_cluster.size());
   for (const auto &kv : _cluster) {
@@ -223,22 +223,15 @@ size_t mock_cluster::size() {
   return _size;
 }
 
-solidarity::cluster_state mock_cluster::state() {
-  solidarity::cluster_state result(_size);
-  return result;
-}
-
 std::vector<solidarity::node_name> mock_cluster::all_nodes() const {
   std::shared_lock lg(_cluster_locker);
   std::vector<solidarity::node_name> result;
-  if (_cluster.size() != _stoped.size()) {
-    result.reserve(_cluster.size() - _stoped.size());
-    for (const auto &kv : _cluster) {
-      if (_stoped.find(kv.first) == _stoped.end()) {
-        result.push_back(kv.first);
-      }
-    }
+
+  result.reserve(_cluster.size());
+  for (const auto &kv : _cluster) {
+    result.push_back(kv.first);
   }
+
   return result;
 }
 
@@ -273,64 +266,4 @@ bool mock_cluster::is_leader_eletion_complete(size_t max_leaders) {
     }
   }
   return false;
-}
-
-void mock_cluster::stop_node(const solidarity::node_name &addr) {
-  std::lock_guard<std::shared_mutex> lg(_cluster_locker);
-  _stoped.insert(addr);
-  update_size();
-}
-
-void mock_cluster::restart_node(const solidarity::node_name &addr) {
-  std::lock_guard<std::shared_mutex> lg(_cluster_locker);
-  _stoped.erase(addr);
-  update_size();
-}
-
-std::shared_ptr<mock_cluster> mock_cluster::split(size_t count_to_move) {
-  auto result = std::make_shared<mock_cluster>();
-  // std::lock_guard<std::shared_mutex> lg_res(result->_cluster_locker);
-  stop_workers();
-  result->stop_workers();
-
-  for (size_t i = 0; i < count_to_move; ++i) {
-    if (_cluster.size() == 0) {
-      break;
-    }
-    auto it = _cluster.begin();
-    result->add_new(it->first, it->second);
-
-    _cluster.erase(it);
-    update_size();
-
-    std::deque<message_t> &_tasks = _workers[it->first]->_tasks;
-    _tasks.erase(std::remove_if(_tasks.begin(),
-                                _tasks.end(),
-                                [it](const message_t &m) -> bool {
-                                  return m.from == it->first || m.to == it->first;
-                                }),
-                 _tasks.end());
-  }
-  for (auto &rkv : result->_cluster) {
-    for (auto &kv : _cluster) {
-      kv.second->lost_connection_with(rkv.first);
-      rkv.second->lost_connection_with(kv.first);
-    }
-  }
-
-  start_workers();
-  result->start_workers();
-  return result;
-}
-
-void mock_cluster::union_with(std::shared_ptr<mock_cluster> other) {
-  other->stop_workers();
-  stop_workers();
-  for (auto &&kv : other->_cluster) {
-    kv.second->set_cluster(this);
-    _cluster.insert(std::move(kv));
-  }
-  update_size();
-  other->_cluster.clear();
-  start_workers();
 }

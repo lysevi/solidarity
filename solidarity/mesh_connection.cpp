@@ -255,10 +255,6 @@ size_t mesh_connection::size() {
   return all_nodes().size();
 }
 
-cluster_state mesh_connection::state()  {
-  solidarity::cluster_state result(size());
-  return result;
-}
 
 std::vector<node_name> mesh_connection::all_nodes() const {
   std::shared_lock l(_locker);

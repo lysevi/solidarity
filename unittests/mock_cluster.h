@@ -53,7 +53,6 @@ public:
                 const solidarity::append_entries &m) override;
   size_t size() override;
   std::vector<solidarity::node_name> all_nodes() const override;
-  solidarity::cluster_state state() override;
 
   void add_new(const solidarity::node_name &addr,
                const std::shared_ptr<solidarity::raft> &c);
@@ -74,12 +73,6 @@ public:
   void wait_leader_eletion(size_t max_leaders = 1);
   bool is_leader_eletion_complete(size_t max_leaders = 1);
 
-  void stop_node(const solidarity::node_name &addr);
-  void restart_node(const solidarity::node_name &addr);
-
-  std::shared_ptr<mock_cluster> split(size_t count_to_move);
-  void union_with(std::shared_ptr<mock_cluster> other);
-
 protected:
   void stop_workers();
   void start_workers();
@@ -89,7 +82,6 @@ private:
   mutable std::shared_mutex _cluster_locker;
   std::unordered_map<solidarity::node_name, std::shared_ptr<solidarity::raft>> _cluster;
   std::unordered_map<solidarity::node_name, std::shared_ptr<worker_t>> _workers;
-  std::unordered_set<solidarity::node_name> _stoped;
 
   std::atomic_size_t _size = 0;
 };
