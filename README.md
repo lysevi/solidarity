@@ -1,7 +1,46 @@
-![logo](artwork/logo.small.png)
-# SOLIDarity [![Build Status](https://travis-ci.org/lysevi/solidarity.svg?branch=master)](https://travis-ci.org/lysevi/solidarity) [![Build status](https://ci.appveyor.com/api/projects/status/xir9ui0vtu9806aq/branch/master?svg=true)](https://ci.appveyor.com/project/lysevi/solidarity/branch/master) [![Coverage Status](https://coveralls.io/repos/github/lysevi/solidarity/badge.svg?branch=master)](https://coveralls.io/github/lysevi/solidarity?branch=master)
+<p align="center"><img src="artwork/logo.small.png"></p>
+<b>
+<table>
+    <tr>
+        <td>
+            master branch
+        </td>
+        <td>
+            Linux/OSX <a href="https://travis-ci.org/lysevi/solidarity"><img src="https://travis-ci.org/lysevi/solidarity.svg?branch=master"></a>
+        </td>
+        <td>
+            Windows <a href="https://ci.appveyor.com/project/lysevi/solidarity/branch/master"><img src="https://ci.appveyor.com/api/projects/status/xir9ui0vtu9806aq/branch/master?svg=true"></a>
+        </td>
+        <td>
+            <a href="https://coveralls.io/github/lysevi/solidarity?branch=master"><img src="https://coveralls.io/repos/github/lysevi/solidarity/badge.svg?branch=master"></a>
+        </td>
+        <td>
+            <a href="https://codecov.io/gh/lysevi/solidarity"><img src="https://codecov.io/gh/lysevi/solidarity/branch/master/graph/badge.svg"></a>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            dev branch
+        </td>
+        <td>
+            Linux/OSX <a href="https://travis-ci.org/lysevi/solidarity"><img src="https://travis-ci.org/lysevi/solidarity.svg?branch=dev"></a>
+        </td>
+        <td>
+            Windows <a href="https://ci.appveyor.com/project/lysevi/solidarity/branch/dev"><img src="https://ci.appveyor.com/api/projects/status/xir9ui0vtu9806aq/branch/dev?svg=true"></a>
+        </td>
+        <td>
+            <a href="https://coveralls.io/github/lysevi/solidarity?branch=dev"><img src="https://coveralls.io/repos/github/lysevi/solidarity/badge.svg?branch=dev"></a>
+        </td>
+        <td>
+            <a href="https://codecov.io/gh/lysevi/solidarity"><img src="https://codecov.io/gh/lysevi/solidarity/branch/master/graph/badge.svg"></a>
+        </td>
+    </tr>
+</table>
+</b>
 
-# Dependencies
+# SOLIDarity 
+
+## Dependencies
 ---
 * Boost 1.69.0 or higher: system, asio, stacktrace, datetime.
 * cmake 3.10 or higher
