@@ -155,6 +155,8 @@ TEST_CASE("node", "[network]") {
 
   {
     auto ecode = leader_client->send_weak(first_cmd);
+    std::cerr << "leader_client->send_weak: ecode - " << solidarity::to_string(ecode)
+              << std::endl;
     EXPECT_EQ(ecode, solidarity::ERROR_CODE::OK);
   }
 
@@ -238,12 +240,12 @@ TEST_CASE("node", "[network]") {
         [&writed_to_node_sm](const solidarity::client_event_t &ev) {
           if (ev.kind == solidarity::client_event_t::event_kind::COMMAND_STATUS) {
             auto cs = ev.cmd_ev.value();
-            
-			std::stringstream ss;
-            ss << "command status - crc=" << cs.crc
-                      << " status=" << solidarity::to_string(cs.status) << std::endl;
 
-			std::cerr << ss.str();
+            std::stringstream ss;
+            ss << "command status - crc=" << cs.crc
+               << " status=" << solidarity::to_string(cs.status) << std::endl;
+
+            std::cerr << ss.str();
             if (cs.status == solidarity::command_status::WAS_APPLIED) {
               writed_to_node_sm = true;
             }
@@ -258,7 +260,7 @@ TEST_CASE("node", "[network]") {
 
       send_ecode = tnode->add_command(cmd);
       if (send_ecode != solidarity::ERROR_CODE::OK) {
-        //EXPECT_FALSE(is_a_leader);
+        // EXPECT_FALSE(is_a_leader);
 
         tst_logger->info("try resend cmd. step #", i);
         std::cerr << "try resend cmd. step #" << i << std::endl;
