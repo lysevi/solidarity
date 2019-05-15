@@ -135,7 +135,7 @@ script:
   - export ASAN_SYMBOLIZER_PATH=$(which llvm-symbolizer)
   - export MSAN_SYMBOLIZER_PATH=$(which llvm-symbolizer)
   - export TSAN_SYMBOLIZER_PATH=$(which llvm-symbolizer)
-  - export PATH=${PATH}:$(which llvm-symbolizer)
+  - export PATH=${PATH}:$(dirname $(which llvm-symbolizer))
   - echo "ASAN_SYMBOLIZER_PATH => " ${ASAN_SYMBOLIZER_PATH}
   - echo "MSAN_SYMBOLIZER_PATH => " ${MSAN_SYMBOLIZER_PATH}
   - echo "TSAN_SYMBOLIZER_PATH => " ${TSAN_SYMBOLIZER_PATH}
