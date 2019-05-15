@@ -11,6 +11,7 @@ using namespace solidarity::dialler;
 async_io::async_io(boost::asio::io_context *context)
     : _sock(*context)
     , next_message_size(0) {
+  _begin_stoping_flag = false;
   _messages_to_send = 0;
   _is_stoped = true;
   assert(context != nullptr);
@@ -18,7 +19,7 @@ async_io::async_io(boost::asio::io_context *context)
 }
 
 async_io::~async_io() noexcept {
-  fullStop();
+  full_stop();
 }
 
 void async_io::start(data_handler_t onRecv, error_handler_t onErr) {
@@ -29,10 +30,10 @@ void async_io::start(data_handler_t onRecv, error_handler_t onErr) {
   _on_error_handler = onErr;
   _is_stoped = false;
   _begin_stoping_flag = false;
-  readNextAsync();
+  read_next_async();
 }
 
-void async_io::fullStop(bool waitAllmessages) {
+void async_io::full_stop(bool waitAllmessages) {
   if (_begin_stoping_flag) {
     return;
   }
@@ -42,7 +43,7 @@ void async_io::fullStop(bool waitAllmessages) {
     if (_sock.is_open()) {
       if (waitAllmessages && _messages_to_send.load() != 0) {
         auto self = this->shared_from_this();
-        boost::asio::post(_context->get_executor(), [self]() { self->fullStop(); });
+        boost::asio::post(_context->get_executor(), [self]() { self->full_stop(); });
       } else {
         boost::system::error_code ec;
         _sock.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
@@ -110,7 +111,7 @@ void async_io::send(const std::vector<message_ptr> &d) {
   }
 }
 
-void async_io::readNextAsync() {
+void async_io::read_next_async() {
   auto self = shared_from_this();
 
   auto on_read_size_clbk = [self](auto e, auto r) { self->on_read_size(e, r); };
@@ -168,7 +169,7 @@ void async_io::on_read_message(boost::system::error_code err, size_t) {
     }
     next_message = nullptr;
     if (!cancel_flag) {
-      readNextAsync();
+      read_next_async();
     }
   }
 }

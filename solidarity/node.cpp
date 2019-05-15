@@ -370,6 +370,7 @@ void node::stop() {
     _listener = nullptr;
     _listener_consumer = nullptr;
   }
+  _timer = nullptr;
 }
 
 bool node::is_leader() const {

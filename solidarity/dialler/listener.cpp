@@ -94,7 +94,7 @@ void listener::on_accept_handler(const boost::system::error_code &err) {
       new_client->start();
       _connections.push_back(new_client);
     } else {
-      _aio->fullStop();
+      _aio->full_stop();
       _aio = nullptr;
     }
   }

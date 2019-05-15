@@ -32,7 +32,7 @@ dial::~dial() {
 void dial::disconnect() {
   if (!is_stoped()) {
     stopping_started();
-    _async_io->fullStop();
+    _async_io->full_stop();
     _async_io = nullptr;
     _consumers = nullptr;
     stopping_completed();

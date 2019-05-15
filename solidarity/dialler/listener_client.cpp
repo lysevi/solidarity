@@ -40,7 +40,7 @@ void listener_client::close() {
   if (!is_stopping_started() && !is_stoped()) {
     stopping_started(true);
     if (_async_connection != nullptr) {
-      _async_connection->fullStop();
+      _async_connection->full_stop();
       _async_connection = nullptr;
       this->_listener->erase_client_description(this->shared_from_this());
     }
