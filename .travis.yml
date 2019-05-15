@@ -11,13 +11,6 @@ common_sources: &all_sources
   - llvm-toolchain-xenial
   - llvm-toolchain-xenial-8
 
-addons:
-  apt:
-    sources: *all_sources
-    packages:
-    - python3
-    - python3-pip
-
 matrix:
   include:
 
