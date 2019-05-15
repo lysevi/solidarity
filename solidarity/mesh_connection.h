@@ -96,6 +96,7 @@ public:
     _on_smue_handler = h;
   }
 
+  void stop_event_loop();
 protected:
   void accept_out_connection(const node_name &name, const std::string &addr);
   void accept_input_connection(const node_name &name, uint64_t id);
@@ -115,7 +116,7 @@ private:
   node_name _self_addr;
 
   mutable std::shared_mutex _locker;
-  bool _stoped;
+  std::atomic_bool _stoped, _evl_stoped;
   params_t _params;
 
   std::vector<std::thread> _threads;

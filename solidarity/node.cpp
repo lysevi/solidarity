@@ -312,7 +312,7 @@ node::node(utils::logging::abstract_logger_ptr logger,
 
   auto original_period = _raft->settings().election_timeout().count();
   _timer_period = uint32_t(original_period * 0.1);
-  
+
   _timer = std::make_unique<boost::asio::deadline_timer>(
       *_cluster_con->context(), boost::posix_time::milliseconds(_timer_period));
 }
@@ -333,7 +333,7 @@ node::~node() {
 
 void node::start() {
   _stoped = false;
-  
+
   _leader = _raft->get_leader();
   _kind = _raft->state().node_kind;
 
@@ -355,6 +355,11 @@ void node::stop() {
     }
     _stoped = true;
     _timer->cancel();
+
+    if (_cluster_con != nullptr) {
+      _cluster_con->stop_event_loop();
+    }
+    
     _timer = nullptr;
   }
 
@@ -372,7 +377,6 @@ void node::stop() {
     _listener = nullptr;
     _listener_consumer = nullptr;
   }
-  
 }
 
 bool node::is_leader() const {

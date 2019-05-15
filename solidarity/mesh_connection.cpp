@@ -28,7 +28,7 @@ void out_connection::on_new_message(std::vector<dialler::message_ptr> &d, bool &
   }
   case QUERY_KIND::CONNECTION_ERROR: {
     // TODO erase connection;
-    cancel=true;
+    cancel = true;
     break;
   }
   default:
@@ -136,6 +136,7 @@ mesh_connection::~mesh_connection() {
 void mesh_connection::start() {
   std::lock_guard l(_locker);
   _stoped = false;
+  _evl_stoped = false;
   _threads.resize(_params.thread_count);
   for (size_t i = 0; i < _params.thread_count; ++i) {
     _threads[i] = std::thread([this]() {
@@ -143,7 +144,7 @@ void mesh_connection::start() {
       while (true) {
         try {
           _io_context.run();
-          if (_stoped) {
+          if (_evl_stoped) {
             break;
           }
           _io_context.restart();
@@ -180,17 +181,10 @@ void mesh_connection::start() {
 
 void mesh_connection::stop() {
   _logger->info("stoping...");
-  _stoped = true;
-
-  _io_context.stop();
-  while (_threads_at_work.load() != 0) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  }
-  for (auto &&t : _threads) {
-    t.join();
-  }
-  _threads.clear();
-
+  
+  
+  stop_event_loop();
+  
   for (auto &&kv : _diallers) {
     kv.second->disconnect();
     kv.second->wait_stoping();
@@ -206,6 +200,21 @@ void mesh_connection::stop() {
   _client = nullptr;
 
   _logger->info("stopped.");
+}
+
+void mesh_connection::stop_event_loop() {
+  if (_evl_stoped) {
+    return;
+  }
+  _evl_stoped = true;
+  _io_context.stop();
+  while (_threads_at_work.load() != 0) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+  for (auto &&t : _threads) {
+    t.join();
+  }
+  _threads.clear();
 }
 
 void mesh_connection::send_to(const node_name &from,
@@ -254,7 +263,6 @@ void mesh_connection::send_to(const node_name &to,
 size_t mesh_connection::size() {
   return all_nodes().size();
 }
-
 
 std::vector<node_name> mesh_connection::all_nodes() const {
   std::shared_lock l(_locker);
