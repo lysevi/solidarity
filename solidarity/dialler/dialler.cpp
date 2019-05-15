@@ -45,6 +45,9 @@ void dial::reconnecton_error(const boost::system::error_code &err) {
     if (_consumers != nullptr) {
       _consumers->on_network_error(err);
     }
+    if (this->_context->stopped()) {
+      return;
+    }
   }
 
   if (!is_stopping_started() && !is_stoped() && _params.auto_reconnection) {
