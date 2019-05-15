@@ -6,7 +6,7 @@
             master branch
         </td>
         <td>
-            Linux/OSX <a href="https://travis-ci.org/lysevi/solidarity"><img src="https://travis-ci.org/lysevi/solidarity.svg?branch=master"></a>
+            Linux <a href="https://travis-ci.org/lysevi/solidarity"><img src="https://travis-ci.org/lysevi/solidarity.svg?branch=master"></a>
         </td>
         <td>
             Windows <a href="https://ci.appveyor.com/project/lysevi/solidarity/branch/master"><img src="https://ci.appveyor.com/api/projects/status/xir9ui0vtu9806aq/branch/master?svg=true"></a>
@@ -23,7 +23,7 @@
             dev branch
         </td>
         <td>
-            Linux/OSX <a href="https://travis-ci.org/lysevi/solidarity"><img src="https://travis-ci.org/lysevi/solidarity.svg?branch=dev"></a>
+            Linux <a href="https://travis-ci.org/lysevi/solidarity"><img src="https://travis-ci.org/lysevi/solidarity.svg?branch=dev"></a>
         </td>
         <td>
             Windows <a href="https://ci.appveyor.com/project/lysevi/solidarity/branch/dev"><img src="https://ci.appveyor.com/api/projects/status/xir9ui0vtu9806aq/branch/dev?svg=true"></a>
