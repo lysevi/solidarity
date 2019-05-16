@@ -14,7 +14,8 @@ enum class command_status : uint8_t {
   CAN_BE_APPLY,
   CAN_NOT_BE_APPLY,
   IN_LEADER_JOURNAL,
-  ERASED_FROM_JOURNAL
+  ERASED_FROM_JOURNAL,
+  LAST
 };
 
 EXPORT std::string to_string(const command_status s);
@@ -34,7 +35,7 @@ struct raft_state_event_t {
 };
 
 struct client_event_t {
-  enum class event_kind { UNDEFINED, RAFT, NETWORK, COMMAND_STATUS };
+  enum class event_kind { UNDEFINED, RAFT, NETWORK, COMMAND_STATUS, LAST };
 
   event_kind kind = event_kind::UNDEFINED;
   std::optional<raft_state_event_t> raft_ev;
