@@ -84,19 +84,16 @@ void dial::con_handler(const boost::system::error_code &ec) {
   } else {
     auto aio = self->_async_io;
     if (aio != nullptr) {
-      if (aio->socket().is_open()) {
-        async_io::data_handler_t on_d
-            = [self](auto d, auto cancel) { self->on_data_receive(d, cancel); };
-        async_io::error_handler_t on_n
-            = [self](auto err) { self->reconnecton_error(err); };
+      async_io::data_handler_t on_d
+          = [self](auto d, auto cancel) { self->on_data_receive(d, cancel); };
+      async_io::error_handler_t on_n = [self](auto err) { self->reconnecton_error(err); };
 
-        aio->start(on_d, on_n);
+      aio->start(on_d, on_n);
 
-        if (self->_consumers != nullptr) {
-          self->_consumers->on_connect();
-        }
-        self->initialisation_complete();
+      if (self->_consumers != nullptr) {
+        self->_consumers->on_connect();
       }
+      self->initialisation_complete();
     }
   }
 }
