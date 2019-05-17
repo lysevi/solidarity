@@ -98,7 +98,7 @@ public:
 
   template <typename... T>
   void variadic_message(MESSAGE_KIND kind, T &&... args) noexcept {
-    std::lock_guard<utils::async::locker> lg(_msg_locker);
+    std::lock_guard lg(_msg_locker);
     _logger->variadic_message(kind, std::forward<T>(args)...);
   }
 

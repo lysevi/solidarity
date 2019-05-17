@@ -2,6 +2,8 @@
 
 #include <atomic>
 #include <ctime>
+#include <thread>
+
 #include <solidarity/utils/exception.h>
 
 #define NOT_IMPLEMENTED THROW_EXCEPTION("Not implemented");
