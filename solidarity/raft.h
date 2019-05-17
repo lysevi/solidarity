@@ -3,6 +3,7 @@
 #include <solidarity/abstract_state_machine.h>
 #include <solidarity/exports.h>
 #include <solidarity/journal.h>
+#include <solidarity/node_kind.h>
 #include <solidarity/raft_settings.h>
 #include <solidarity/raft_state.h>
 #include <solidarity/utils/logger.h>
@@ -11,6 +12,7 @@
 #include <random>
 #include <shared_mutex>
 #include <unordered_map>
+#include <atomic>
 
 namespace solidarity {
 
