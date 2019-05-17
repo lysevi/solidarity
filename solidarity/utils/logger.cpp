@@ -6,10 +6,9 @@
 #include <solidarity/utils/utils.h>
 
 using namespace solidarity::utils::logging;
-using namespace solidarity::utils::async;
 
 std::shared_ptr<logger_manager> logger_manager::_instance = nullptr;
-solidarity::utils::async::locker logger_manager::_locker;
+std::mutex logger_manager::_locker;
 
 VERBOSE_KIND logger_manager::verbose = VERBOSE_KIND::debug;
 
@@ -26,7 +25,7 @@ void logger_manager::stop() {
 logger_manager *logger_manager::instance() noexcept {
   auto tmp = _instance.get();
   if (tmp == nullptr) {
-    std::lock_guard<locker> lock(_locker);
+    std::lock_guard lock(_locker);
     tmp = _instance.get();
     if (tmp == nullptr) {
       abstract_logger_ptr l = std::make_shared<console_logger>();

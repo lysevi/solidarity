@@ -1,12 +1,12 @@
 #pragma once
 
 #include <solidarity/exports.h>
-#include <solidarity/utils/async/locker.h>
 #include <solidarity/utils/strings.h>
 
 #include <fstream>
 #include <memory>
 #include <utility>
+#include <mutex>
 
 namespace solidarity::utils::logging {
 
@@ -104,8 +104,8 @@ public:
 
 private:
   static std::shared_ptr<logger_manager> _instance;
-  static utils::async::locker _locker;
-  utils::async::locker _msg_locker;
+  static std::mutex _locker;
+  std::mutex _msg_locker;
   abstract_logger_ptr _logger;
 };
 
