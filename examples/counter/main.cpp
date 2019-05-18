@@ -97,7 +97,7 @@ void parse_cmd_line(int argc, char **argv) {
     }
 
     logger_ptr = std::make_shared<solidarity::utils::logging::file_logger>(
-        to_string("server_inc_", port), verbose);
+        to_string("server_counter_", port), verbose);
   } catch (cxxopts::OptionException &ex) {
     logger_ptr->fatal(ex.what());
   }
