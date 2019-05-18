@@ -54,7 +54,7 @@ unsigned short client_port = 11000;
 std::vector<std::string> cluster;
 bool verbose = false;
 
-int main(int argc, char **argv) {
+void parse_cmd_line(int argc, char **argv) {
   cxxopts::Options options("Distributed increment", "Example distributed increment");
   options.allow_unrecognised_options();
   options.positional_help("[optional args]").show_positional_help();
@@ -78,7 +78,9 @@ int main(int argc, char **argv) {
       std::cout << options.help() << std::endl;
 
       std::cout << "Usage example:" << std::endl;
-      std::cout << " ex_counter.exe -p 10000 --cluster \"localhost:10001\" \"localhost:10002\"" << std::endl;
+      std::cout
+          << " ex_counter.exe -p 10000 --cluster \"localhost:10001\" \"localhost:10002\""
+          << std::endl;
       std::exit(0);
     }
 
@@ -109,13 +111,17 @@ int main(int argc, char **argv) {
       cluster.cbegin(), cluster.cend(), std::ostream_iterator<std::string>(ss, " "));
   ss << "}";
   logger_ptr->info(ss.str());
+}
+
+int main(int argc, char **argv) {
+  parse_cmd_line(argc, argv);
 
   solidarity::node::params_t params;
   params.rft_settings.set_max_log_size(1000).set_election_timeout(
       std::chrono::milliseconds(500));
   params.port = port;
   params.client_port = client_port++;
-  params.thread_count = 1;
+  params.thread_count = thread_count;
   params.cluster = cluster;
   params.name = to_string("node_", port);
 
