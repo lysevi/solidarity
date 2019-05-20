@@ -60,6 +60,10 @@ void dial::start_async_connection() {
     initialisation_begin();
   }
 
+  if (_context->stopped()) {
+    return;
+  }
+
   using namespace boost::asio::ip;
   tcp::resolver resolver(*_context);
   auto const endpoint_iterator
