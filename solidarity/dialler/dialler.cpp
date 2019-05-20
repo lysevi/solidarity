@@ -33,21 +33,18 @@ void dial::disconnect() {
   if (!is_stoped()) {
     stopping_started();
     _async_io->full_stop();
-    _async_io = nullptr;
     _consumers = nullptr;
     stopping_completed();
   }
 }
 
 void dial::reconnecton_error(const boost::system::error_code &err) {
+  if (_consumers != nullptr) {
+    _consumers->on_network_error(err);
+  }
 
-  {
-    if (_consumers != nullptr) {
-      _consumers->on_network_error(err);
-    }
-    if (this->_context->stopped()) {
-      return;
-    }
+  if (this->_context->stopped()) {
+    return;
   }
 
   if (!is_stopping_started() && !is_stoped() && _params.auto_reconnection) {
@@ -64,7 +61,6 @@ void dial::start_async_connection() {
   tcp::resolver resolver(*_context);
   auto const endpoint_iterator
       = resolver.resolve(_params.host, std::to_string(_params.port));
-  resolver.cancel();
   auto self = this->shared_from_this();
   self->_async_io = nullptr;
   auto aio = std::make_shared<async_io>(self->_context);
