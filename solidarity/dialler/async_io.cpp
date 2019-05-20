@@ -33,49 +33,27 @@ void async_io::start(data_handler_t onRecv, error_handler_t onErr) {
   read_next_async();
 }
 
-void async_io::full_stop(bool waitAllmessages) {
+void async_io::full_stop() {
   if (_begin_stoping_flag) {
     return;
   }
   _begin_stoping_flag = true;
-  
-  try {
-    if (_sock.is_open()) {
-      if (waitAllmessages && _messages_to_send.load() != 0) {
-        auto self = this->shared_from_this();
-        boost::asio::post(_context->get_executor(), [self]() { self->full_stop(); });
-      } else {
-        boost::system::error_code ec;
-        _sock.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-        if (ec) {
-          //#ifdef DOUBLE_CHECKS
-          //          auto message = ec.message();
-          //
-          //          logger_fatal("AsyncIO::full_stop: _sock.shutdown() => code=",
-          //          ec.value(),
-          //                       " msg:", message);
-          //#endif
-        } else {
-          _sock.close(ec);
-          if (ec) {
-            //#ifdef DOUBLE_CHECKS
-            //            auto message = ec.message();
-            //
-            //            logger_fatal("AsyncIO::full_stop: _sock.close(ec)  => code=",
-            //            ec.value(),
-            //                         " msg:", message);
-            //#endif
-          }
-        }
-        _recv_message_pool.clear();
-        next_message = nullptr;
-        _on_recv_hadler = nullptr;
-        _on_error_handler = nullptr;
-        _context = nullptr;
-        _is_stoped = true;
-      }
-    }
 
+  try {
+    // if (_sock.is_open())
+
+    boost::system::error_code ec;
+    _sock.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+    if (ec) {
+    } else {
+      _sock.close(ec);
+    }
+    _recv_message_pool.clear();
+    next_message = nullptr;
+    _on_recv_hadler = nullptr;
+    _on_error_handler = nullptr;
+    _context = nullptr;
+    _is_stoped = true;
   } catch (...) {
   }
 }

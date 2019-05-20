@@ -22,7 +22,7 @@ public:
   EXPORT void send(const message_ptr d);
   EXPORT void send(const std::vector<message_ptr> &d);
   EXPORT void start(data_handler_t onRecv, error_handler_t onErr);
-  EXPORT void full_stop(bool waitAllMessages = false); /// stop thread, clean queue
+  EXPORT void full_stop(); /// stop thread, clean queue
 
   [[nodiscard]] int queueSize() const { return _messages_to_send; }
   [[nodiscard]] boost::asio::ip::tcp::socket &socket() { return _sock; }

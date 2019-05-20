@@ -73,7 +73,8 @@ void dial::start_async_connection() {
 }
 
 void dial::con_handler(const boost::system::error_code &ec) {
-  auto self = this->shared_from_this();
+  auto self = this;
+  //->shared_from_this();
   if (ec) {
     if (!self->is_stopping_started()) {
       self->reconnecton_error(ec);

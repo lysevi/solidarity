@@ -206,6 +206,7 @@ void mesh_connection::stop_event_loop() {
     return;
   }
   _evl_stoped = true;
+
   _io_context.stop();
   while (_threads_at_work.load() != 0) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
