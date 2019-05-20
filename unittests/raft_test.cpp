@@ -17,7 +17,7 @@ TEST_CASE("raft.add_nodes", "[raft]") {
   auto cluster = std::make_shared<mock_cluster>();
 
   /// SINGLE
-  auto settings_0 = solidarity::raft_settings().set_name("_0").set_election_timeout(
+  auto settings_0 = solidarity::raft_settings_t().set_name("_0").set_election_timeout(
       std::chrono::milliseconds(300));
 
   auto c_0_consumer = std::make_shared<mock_state_machine>();
@@ -38,7 +38,7 @@ TEST_CASE("raft.add_nodes", "[raft]") {
   EXPECT_EQ(c_0->term(), solidarity::term_t(0));
 
   /// TWO NODES
-  auto settings_1 = solidarity::raft_settings().set_name("_1").set_election_timeout(
+  auto settings_1 = solidarity::raft_settings_t().set_name("_1").set_election_timeout(
       std::chrono::milliseconds(300));
   auto c_1_consumer = std::make_shared<mock_state_machine>();
   auto c_1
@@ -58,7 +58,7 @@ TEST_CASE("raft.add_nodes", "[raft]") {
   EXPECT_EQ(c_1->get_leader(), c_0->get_leader());
 
   /// THREE NODES
-  auto settings_2 = solidarity::raft_settings().set_name("_2").set_election_timeout(
+  auto settings_2 = solidarity::raft_settings_t().set_name("_2").set_election_timeout(
       std::chrono::milliseconds(300));
   auto c_2_consumer = std::make_shared<mock_state_machine>();
   auto c_2
@@ -116,7 +116,7 @@ TEST_CASE("raft", "[raft]") {
   auto et = std::chrono::milliseconds(300);
   for (size_t i = 0; i < nodes_count; ++i) {
     auto nname = "_" + std::to_string(i);
-    auto sett = solidarity::raft_settings().set_name(nname).set_election_timeout(et);
+    auto sett = solidarity::raft_settings_t().set_name(nname).set_election_timeout(et);
     auto c = std::make_shared<mock_state_machine>();
     consumers.push_back(c);
     auto cons = std::make_shared<solidarity::raft>(
@@ -234,7 +234,7 @@ TEST_CASE("raft.replication", "[raft]") {
 
   for (size_t i = 0; i < exists_nodes_count; ++i) {
     auto nname = "_" + std::to_string(i);
-    auto sett = solidarity::raft_settings().set_name(nname).set_election_timeout(et);
+    auto sett = solidarity::raft_settings_t().set_name(nname).set_election_timeout(et);
     auto state_machine = std::make_shared<mock_state_machine>();
     consumers.push_back(state_machine);
     auto cons = std::make_shared<raft>(
@@ -270,7 +270,7 @@ TEST_CASE("raft.replication", "[raft]") {
 
   for (size_t i = 0; i < new_nodes_count; ++i) {
     auto nname = "_" + std::to_string(i + 1 + exists_nodes_count);
-    auto sett = solidarity::raft_settings().set_name(nname).set_election_timeout(et);
+    auto sett = solidarity::raft_settings_t().set_name(nname).set_election_timeout(et);
     auto state_machine = std::make_shared<mock_state_machine>();
     consumers.push_back(state_machine);
     auto cons = std::make_shared<raft>(
@@ -299,7 +299,7 @@ TEST_CASE("raft.log_compaction", "[raft]") {
       solidarity::utils::logging::logger_manager::instance()->get_shared_logger(),
       tst_log_prefix);
 
-  using solidarity::raft_settings;
+  using solidarity::raft_settings_t;
   auto cluster = std::make_shared<mock_cluster>();
 
   size_t nodes_count = 4;
@@ -310,7 +310,7 @@ TEST_CASE("raft.log_compaction", "[raft]") {
   auto et = std::chrono::milliseconds(300);
   for (size_t i = 0; i < nodes_count; ++i) {
     auto nname = "_" + std::to_string(i);
-    auto sett = raft_settings().set_name(nname).set_election_timeout(et).set_max_log_size(
+    auto sett = raft_settings_t().set_name(nname).set_election_timeout(et).set_max_log_size(
         max_log_size);
 
     auto c = std::make_shared<mock_state_machine>();
@@ -414,7 +414,7 @@ TEST_CASE("raft.apply_journal_on_start", "[raft]") {
   }
 
   auto nname = "_" + std::to_string(size_t(1));
-  auto sett = solidarity::raft_settings().set_name(nname).set_election_timeout(et);
+  auto sett = solidarity::raft_settings_t().set_name(nname).set_election_timeout(et);
   auto state_machine = std::make_shared<mock_state_machine>();
   consumers.push_back(state_machine);
   auto cons = std::make_shared<raft>(sett, cluster.get(), jrn, state_machine.get());
@@ -441,7 +441,7 @@ TEST_CASE("raft.rollback", "[raft]") {
   std::shared_ptr<solidarity::logdb::memory_journal> jrn1, jrn2;
   {
     auto nname = "_0";
-    auto sett = solidarity::raft_settings().set_name(nname).set_election_timeout(et);
+    auto sett = solidarity::raft_settings_t().set_name(nname).set_election_timeout(et);
     auto state_machine = std::make_shared<mock_state_machine>();
     consumers.push_back(state_machine);
     jrn1 = memory_journal::make_new();
@@ -460,7 +460,7 @@ TEST_CASE("raft.rollback", "[raft]") {
   }
   {
     auto nname = "_1";
-    auto sett = solidarity::raft_settings().set_name(nname).set_election_timeout(et);
+    auto sett = solidarity::raft_settings_t().set_name(nname).set_election_timeout(et);
     auto state_machine = std::make_shared<mock_state_machine>();
     consumers.push_back(state_machine);
     jrn2 = memory_journal::make_new();
@@ -579,7 +579,7 @@ TEST_CASE("raft.can_apply", "[raft]") {
 
   for (size_t i = 0; i < exists_nodes_count; ++i) {
     auto nname = "_" + std::to_string(i);
-    auto sett = solidarity::raft_settings().set_name(nname).set_election_timeout(et);
+    auto sett = solidarity::raft_settings_t().set_name(nname).set_election_timeout(et);
     auto state_machine = std::make_shared<mock_state_machine>(false);
     consumers.push_back(state_machine);
     auto cons = std::make_shared<raft>(

@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
                    });
 
     solidarity::node::params_t params;
-    params.rft_settings.set_max_log_size(1000).set_election_timeout(
+    params.raft_settings.set_max_log_size(1000).set_election_timeout(
         std::chrono::milliseconds(500));
     params.port = start_port + (unsigned short)(i);
     params.client_port = start_c_port + (unsigned short)(i);

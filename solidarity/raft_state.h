@@ -69,7 +69,7 @@ struct raft_state_t {
   void change_state(const NODE_KIND s, const term_t r, const node_name &leader_);
   void change_state(const node_name &cn, const term_t r);
   [[nodiscard]] EXPORT static changed_state_t on_vote(const raft_state_t &self,
-                                                      const raft_settings &settings,
+                                                      const raft_settings_t &settings,
                                                       const node_name &self_addr,
                                                       const logdb::reccord_info commited,
                                                       const size_t cluster_size,

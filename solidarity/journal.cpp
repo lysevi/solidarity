@@ -77,7 +77,6 @@ void memory_journal::commit(const index_t lsn) {
 
 log_entry memory_journal::get(const index_t lsn) {
   std::shared_lock lg(_locker);
-  // TODO check _prev and _commited for better speed;
 
   if (const auto wal_it = _wal.find(lsn); wal_it != _wal.end()) {
     return wal_it->second;

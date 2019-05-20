@@ -13,7 +13,7 @@ inline std::mt19937 make_seeded_engine() {
 }
 } // namespace
 
-raft::raft(const raft_settings &ns,
+raft::raft(const raft_settings_t &ns,
            abstract_cluster *cluster,
            const logdb::journal_ptr &jrn,
            abstract_state_machine *state_machine,

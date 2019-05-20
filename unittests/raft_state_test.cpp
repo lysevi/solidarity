@@ -4,7 +4,7 @@
 
 SCENARIO("raft_state_t.vote", "[raft]") {
   solidarity::raft_state_t self;
-  solidarity::raft_settings s;
+  solidarity::raft_settings_t s;
   self.term = 0;
   solidarity::node_name self_addr;
   self_addr.set_name("self_addr");

@@ -277,7 +277,7 @@ node::node(utils::logging::abstract_logger_ptr logger,
   auto jrn_wrap = std::make_shared<journal_wrapper>(jrn, this);
 
   auto addr = solidarity::node_name().set_name(_params.name);
-  auto s = _params.rft_settings.set_name(_params.name);
+  auto s = _params.raft_settings.set_name(_params.name);
   _raft
       = std::make_shared<solidarity::raft>(s, nullptr, jrn_wrap, _state_machine, _logger);
 
@@ -504,7 +504,7 @@ void node::rm_event_handler(uint64_t id) {
 void node::heartbeat_timer() {
   auto exists_size = _cluster_con->size();
   auto max_size = _params.cluster.size() + 1;
-  auto qr = quorum_for_cluster(max_size, _params.rft_settings.vote_quorum());
+  auto qr = quorum_for_cluster(max_size, _params.raft_settings.vote_quorum());
   if (exists_size >= qr) {
     _raft->heartbeat();
     auto leader = _raft->get_leader();

@@ -11,9 +11,9 @@ class abstract_logger;
 } // namespace solidarity::utils
 
 namespace solidarity {
-class raft_settings {
+class raft_settings_t {
 public:
-  raft_settings() {
+  raft_settings_t() {
     _vote_quorum = 0.5;
     _append_quorum = 1.0;
     _max_log_size = 100;

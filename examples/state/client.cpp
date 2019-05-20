@@ -4,9 +4,7 @@ ex_client_state.exe -p 11000 --host "localhost"
 */
 #include <cxxopts.hpp>
 #include <iostream>
-#include <solidarity/client.h>
-#include <solidarity/utils/strings.h>
-#include <solidarity/utils/utils.h>
+#include <solidarity/solidarity.h>
 
 size_t thread_count = 1;
 unsigned short port = 11000;

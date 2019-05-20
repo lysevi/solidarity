@@ -24,7 +24,7 @@ class raft : public abstract_cluster_client {
   };
 
 public:
-  EXPORT raft(const raft_settings &ns,
+  EXPORT raft(const raft_settings_t &ns,
               abstract_cluster *cluster,
               const logdb::journal_ptr &jrn,
               abstract_state_machine *state_machine,
@@ -58,7 +58,7 @@ public:
     return _self_addr;
   }
 
-  raft_settings settings() const {
+  raft_settings_t settings() const {
     return _settings;
   }
 
@@ -89,7 +89,7 @@ private:
   mutable std::recursive_mutex _locker;
   std::mt19937 _rnd_eng;
 
-  raft_settings _settings;
+  raft_settings_t _settings;
   node_name _self_addr;
   abstract_cluster *_cluster;
   logdb::journal_ptr _jrn;

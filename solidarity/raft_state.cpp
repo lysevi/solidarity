@@ -40,7 +40,7 @@ bool raft_state_t::is_my_jrn_biggest(const raft_state_t &self,
 }
 
 changed_state_t raft_state_t::on_vote(const raft_state_t &self,
-                                      const raft_settings &settings,
+                                      const raft_settings_t &settings,
                                       const node_name &self_addr,
                                       const logdb::reccord_info commited,
                                       const size_t cluster_size,

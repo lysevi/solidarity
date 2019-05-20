@@ -34,7 +34,7 @@ public:
     unsigned short client_port = 0;
     std::vector<std::string> cluster;
     std::string name;
-    raft_settings rft_settings;
+    raft_settings_t raft_settings;
   };
   node() = delete;
   node(const node &) = delete;

@@ -27,7 +27,7 @@ void out_connection::on_new_message(std::vector<dialler::message_ptr> &d, bool &
     break;
   }
   case QUERY_KIND::CONNECTION_ERROR: {
-    // TODO erase connection;
+    _parent->rm_out_connection(_target_addr, boost::asio::error::access_denied);
     cancel = true;
     break;
   }
@@ -181,10 +181,9 @@ void mesh_connection::start() {
 
 void mesh_connection::stop() {
   _logger->info("stoping...");
-  
-  
+
   stop_event_loop();
-  
+
   for (auto &&kv : _diallers) {
     kv.second->disconnect();
     kv.second->wait_stoping();
@@ -412,19 +411,13 @@ void mesh_connection::on_write_status(solidarity::node_name &target,
                                       uint64_t mess_id,
                                       ERROR_CODE status) {
   std::lock_guard l(_locker);
-  // if (status != ERROR_CODE::OK) {
-  //  // TODO IMPLEMENT!
-  //  THROW_EXCEPTION("not supported status kind: ", status);
-  //}
 
   if (auto mess_it = _messages.find(target); mess_it != _messages.end()) {
     auto pos = mess_it->second.find(mess_id);
     if (pos != mess_it->second.end()) {
       pos->second(status);
       mess_it->second.erase(pos);
-    } /*else {
-      THROW_EXCEPTION("on_write_status: mess_id ", mess_id, " not found");
-    }*/
+    }
   }
 }
 void mesh_connection::on_write_status(solidarity::node_name &target, ERROR_CODE status) {
