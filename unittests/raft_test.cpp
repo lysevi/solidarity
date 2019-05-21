@@ -310,8 +310,9 @@ TEST_CASE("raft.log_compaction", "[raft]") {
   auto et = std::chrono::milliseconds(300);
   for (size_t i = 0; i < nodes_count; ++i) {
     auto nname = "_" + std::to_string(i);
-    auto sett = raft_settings_t().set_name(nname).set_election_timeout(et).set_max_log_size(
-        max_log_size);
+    auto sett
+        = raft_settings_t().set_name(nname).set_election_timeout(et).set_max_log_size(
+            max_log_size);
 
     auto c = std::make_shared<mock_state_machine>();
     consumers.push_back(c);
@@ -603,7 +604,10 @@ TEST_CASE("raft.can_apply", "[raft]") {
   auto st = leaders[0]->add_command(cmd);
 
   EXPECT_EQ(st, solidarity::ERROR_CODE::STATE_MACHINE_CAN_T_APPLY_CMD);
-  (*consumers.begin())->set_can_apply(true);
+
+  for (auto &c : consumers) {
+    c->set_can_apply(true);
+  }
 
   st = leaders[0]->add_command(cmd);
   EXPECT_EQ(st, solidarity::ERROR_CODE::OK);
