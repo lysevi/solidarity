@@ -87,8 +87,7 @@ void server_thread() {
   context->stop();
   while (!context->stopped()) {
   }
-  
-  delete context;
+
   server = nullptr;
   server_is_started.store(false);
   lstnr = nullptr;
@@ -96,75 +95,81 @@ void server_thread() {
 } // namespace
 
 TEST_CASE("listener.client", "[network]") {
-  size_t clients_count = 0;
-  dialler::dial::params_t p("localhost", 4040);
+  {
+    size_t clients_count = 0;
+    dialler::dial::params_t p("localhost", 4040);
 
-  SECTION("listener.client: 1") { clients_count = 1; }
-  SECTION("listener.client: 10") { clients_count = 10; }
+    SECTION("listener.client: 1") { clients_count = 1; }
+    SECTION("listener.client: 10") { clients_count = 10; }
 
-  server_stop = false;
-  std::thread t(server_thread);
-  while (!server_is_started.load()) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  }
-
-  std::vector<std::shared_ptr<dialler::dial>> clients(clients_count);
-  std::vector<std::shared_ptr<Connection>> connections(clients_count);
-  for (size_t i = 0; i < clients_count; i++) {
-    clients[i] = std::make_shared<dialler::dial>(context, p);
-    connections[i] = std::make_shared<Connection>();
-    clients[i]->add_consumer(connections[i]);
-    clients[i]->start_async_connection();
-  }
-
-  for (auto &c : connections) {
-    while (!c->mock_is_connected) {
+    server_stop = false;
+    std::thread t(server_thread);
+    while (!server_is_started.load()) {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-  }
 
-  while (!lstnr->is_started() && size_t(lstnr->connections.load()) != clients_count) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  }
-
-  auto target_con = clients.front();
-  auto m = std::make_shared<dialler::message>(10, dialler::message::kind_t(1));
-  EXPECT_TRUE(m->get_header()->is_single_message());
-  target_con->send_async(m);
-
-  while (lstnr->recv_msg_count.load() != 1) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  }
-
-  std::vector<dialler::message_ptr> messages(5);
-  for (size_t i = 0; i < 5; ++i) {
-    m = std::make_shared<dialler::message>(10, dialler::message::kind_t(1));
-    if (i == 0) {
-      m->get_header()->is_start_block = 1;
-    } else {
-      m->get_header()->is_piece_block = 1;
+    std::vector<std::shared_ptr<dialler::dial>> clients(clients_count);
+    std::vector<std::shared_ptr<Connection>> connections(clients_count);
+    for (size_t i = 0; i < clients_count; i++) {
+      clients[i] = std::make_shared<dialler::dial>(context, p);
+      connections[i] = std::make_shared<Connection>();
+      clients[i]->add_consumer(connections[i]);
+      clients[i]->start_async_connection();
     }
 
-    messages[i] = m;
-  }
-  messages.back()->get_header()->is_end_block = 1;
-  messages.back()->get_header()->is_piece_block = 1;
-  target_con->send_async(messages);
+    for (auto &c : connections) {
+      while (!c->mock_is_connected) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      }
+    }
 
-  while (lstnr->recv_msg_count.load() != messages.size() + 1) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  }
-
-  for (auto &c : clients) {
-    c->disconnect();
-    while (!c->is_stoped()) {
+    while (!lstnr->is_started() && size_t(lstnr->connections.load()) != clients_count) {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-  }
 
-  server_stop = true;
-  while (server_is_started.load()) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    auto target_con = clients.front();
+    auto m = std::make_shared<dialler::message>(10, dialler::message::kind_t(1));
+    EXPECT_TRUE(m->get_header()->is_single_message());
+    target_con->send_async(m);
+
+    while (lstnr->recv_msg_count.load() != 1) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    std::vector<dialler::message_ptr> messages(5);
+    for (size_t i = 0; i < 5; ++i) {
+      m = std::make_shared<dialler::message>(10, dialler::message::kind_t(1));
+      if (i == 0) {
+        m->get_header()->is_start_block = 1;
+      } else {
+        m->get_header()->is_piece_block = 1;
+      }
+
+      messages[i] = m;
+    }
+    messages.back()->get_header()->is_end_block = 1;
+    messages.back()->get_header()->is_piece_block = 1;
+    target_con->send_async(messages);
+
+    while (lstnr->recv_msg_count.load() != messages.size() + 1) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    for (auto &c : clients) {
+      c->disconnect();
+      while (!c->is_stoped()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      }
+    }
+
+    server_stop = true;
+    while (server_is_started.load()) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    t.join();
+
+    clients.clear();
+    connections.clear();
   }
-  t.join();
+  delete context;
 }
