@@ -36,6 +36,8 @@ public:
 
   EXPORT bool can_apply(const command &) override;
 
+  std::unordered_map<std::string, lock_state> get_locks() const { return _locks; }
+
 private:
   std::unordered_map<std::string, lock_state> _locks;
   std::unordered_map<std::string, size_t> _lics;

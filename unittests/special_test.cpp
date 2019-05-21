@@ -127,6 +127,15 @@ TEST_CASE("lockservice", "[special]") {
     lc.lock(kv.first);
   }
 
+  for (auto &kv : consumers) {
+    auto origin_locks = kv.second->get_locks();
+    auto snap = kv.second->snapshot();
+    solidarity::special::lockservice ls;
+    ls.install_snapshot(snap);
+    auto locks = ls.get_locks();
+    EXPECT_GE(locks.size(), origin_locks.size());
+  }
+
   auto tr = std::thread([clients]() {
     auto kv = clients.begin();
     auto c = kv->second;
@@ -277,6 +286,19 @@ TEST_CASE("licenseservice", "[special]") {
             break;
           }
         }
+      }
+    }
+
+    for (auto &kv : consumers) {
+      auto origin_locks = kv.second->get_locks();
+      auto snap = kv.second->snapshot();
+      solidarity::special::licenseservice ls(lics);
+      ls.install_snapshot(snap);
+      auto locks = ls.get_locks();
+      EXPECT_EQ(locks.size(), lics.size());
+      for (auto &locks_kv : locks) {
+        EXPECT_GE(locks_kv.second.owners.size(),
+                  origin_locks[locks_kv.first].owners.size());
       }
     }
 
