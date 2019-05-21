@@ -62,19 +62,17 @@ void dial::start_async_connection() {
   auto const endpoint_iterator
       = resolver.resolve(_params.host, std::to_string(_params.port));
   auto self = this->shared_from_this();
-  self->_async_io = nullptr;
-  auto aio = std::make_shared<async_io>(self->_context);
-  self->_async_io = aio;
-
-  boost::asio::async_connect(aio->socket(),
+  if (self->_async_io == nullptr) {
+    self->_async_io = std::make_shared<async_io>(self->_context);
+  }
+  boost::asio::async_connect(self->_async_io->socket(),
                              endpoint_iterator.begin(),
                              endpoint_iterator.end(),
                              [self](auto ec, auto) { self->con_handler(ec); });
 }
 
 void dial::con_handler(const boost::system::error_code &ec) {
-  auto self = this;
-  //->shared_from_this();
+  auto self = shared_from_this();
   if (ec) {
     if (!self->is_stopping_started()) {
       self->reconnecton_error(ec);
