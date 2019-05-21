@@ -63,7 +63,6 @@ $ cmake --build . --config Release
 running example:
 ex_counter.exe -p 10000 --cluster "localhost:10001" "localhost:10002"
 */
-#include <cxxopts.hpp>
 #include <iostream>
 #include <solidarity/solidarity.h>
 
