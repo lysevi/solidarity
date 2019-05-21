@@ -87,7 +87,7 @@ void server_thread() {
   context->stop();
   while (!context->stopped()) {
   }
-  EXPECT_TRUE(context->stopped());
+  
   delete context;
   server = nullptr;
   server_is_started.store(false);
