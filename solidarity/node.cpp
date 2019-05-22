@@ -663,6 +663,6 @@ void node::query_cluster_status() {
     _cluster_con->send_to(leader,
                           queries::resend_query_kind::STATUS,
                           solidarity::command(),
-                          [this](ERROR_CODE) {});
+                          [](ERROR_CODE) {});
   }
 }

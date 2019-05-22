@@ -360,7 +360,6 @@ cluster_status_t::cluster_status_t(const std::vector<dialler::message_ptr> &mptr
 
 std::vector<dialler::message_ptr> cluster_status_t::to_message() const {
   std::vector<dialler::message_ptr> result(1);
-  const auto max_buf_sz = message::MAX_BUFFER_SIZE;
   msgpack::sbuffer buffer;
   msgpack::packer<msgpack::sbuffer> pk(&buffer);
 
