@@ -5,6 +5,7 @@
 #include <solidarity/command.h>
 #include <solidarity/event.h>
 #include <solidarity/exports.h>
+#include <solidarity/queries.h>
 #include <solidarity/raft_settings.h>
 #include <solidarity/raft_state.h>
 #include <solidarity/utils/logger.h>
@@ -30,7 +31,7 @@ public:
   struct params_t {
     params_t() { thread_count = std::thread::hardware_concurrency(); }
     size_t thread_count = 0;
-    unsigned short port=0;
+    unsigned short port = 0;
     unsigned short client_port = 0;
     std::vector<std::string> cluster;
     std::string name;
@@ -65,7 +66,10 @@ public:
 
   void notify_command_status(uint32_t crc, command_status k);
   void notify_raft_state_update(NODE_KIND old_state, NODE_KIND new_state);
-  EXPORT void send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd);
+  EXPORT void send_to_leader(uint64_t client_id,
+                             queries::resend_query_kind kind,
+                             uint64_t message_id,
+                             command &cmd);
 
   EXPORT uint64_t add_event_handler(const std::function<void(const client_event_t &)> &);
   EXPORT void rm_event_handler(uint64_t);

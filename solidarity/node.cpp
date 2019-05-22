@@ -89,7 +89,8 @@ public:
     auto res = _parent->add_command(wq.query);
 
     if (res == ERROR_CODE::NOT_A_LEADER) {
-      _parent->send_to_leader(i->get_id(), wq.msg_id, wq.query);
+      _parent->send_to_leader(
+          i->get_id(), queries::resend_query_kind::WRITE, wq.msg_id, wq.query);
     } else {
       queries::status_t st(wq.msg_id, res, std::string());
       i->send_data(st.to_message());
@@ -359,7 +360,7 @@ void node::stop() {
     if (_cluster_con != nullptr) {
       _cluster_con->stop_event_loop();
     }
-    
+
     _timer = nullptr;
   }
 
@@ -531,7 +532,10 @@ void node::heartbeat_timer() {
   }
 }
 
-void node::send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd) {
+void node::send_to_leader(uint64_t client_id,
+                          queries::resend_query_kind kind,
+                          uint64_t message_id,
+                          command &cmd) {
   if (_stoped) {
     return;
   }
@@ -547,7 +551,7 @@ void node::send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd)
       std::lock_guard l(_locker);
       _message_resend[client_id].push_back(std::pair(message_id, cmd));
     }
-    _cluster_con->send_to(leader, cmd, [client_id, message_id, this](ERROR_CODE s) {
+    _cluster_con->send_to(leader, kind, cmd, [client_id, message_id, this](ERROR_CODE s) {
       this->on_message_sended_status(client_id, message_id, s);
     });
   }
@@ -618,6 +622,6 @@ std::shared_ptr<async_result_t> node::add_command_to_cluster(const command &cmd)
   auto callback = [result](ERROR_CODE s) {
     result->set_result({}, s, s == ERROR_CODE::OK ? "" : to_string(s));
   };
-  _cluster_con->send_to(leader, cmd, callback);
+  _cluster_con->send_to(leader, queries::resend_query_kind::WRITE, cmd, callback);
   return result;
 }

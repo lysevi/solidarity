@@ -262,6 +262,41 @@ TEST_CASE("serialisation.write_query_t", "[network]") {
       qc.query.data.begin(), qc.query.data.end(), cmd.data.begin(), cmd.data.end()));
 }
 
+TEST_CASE("serialisation.resend_query_t", "[network]") {
+  solidarity::command cmd;
+  cmd.data = std::vector<uint8_t>{0, 1, 2, 3};
+
+  SECTION("small cmd") {
+    cmd.data.resize(100);
+    std::iota(cmd.data.begin(), cmd.data.end(), uint8_t(0));
+  }
+  SECTION("big cmd") {
+    cmd.data.resize(solidarity::dialler::message::MAX_BUFFER_SIZE * 11);
+    std::iota(cmd.data.begin(), cmd.data.end(), uint8_t(0));
+  }
+
+  solidarity::queries::resend_query_t qc(
+      777, solidarity::queries::resend_query_kind::WRITE, cmd);
+  auto msg = qc.to_message();
+
+  for (auto &v : msg) {
+    EXPECT_EQ(
+        v->get_header()->kind,
+        (solidarity::dialler::message::kind_t)solidarity::queries::QUERY_KIND::RESEND);
+  }
+
+  solidarity::queries::resend_query_t qc_u(msg);
+
+  EXPECT_EQ(qc.msg_id, qc_u.msg_id);
+  EXPECT_EQ(qc.kind, qc_u.kind);
+  EXPECT_TRUE(std::equal(qc.query.data.begin(),
+                         qc.query.data.end(),
+                         qc_u.query.data.begin(),
+                         qc_u.query.data.end()));
+  EXPECT_TRUE(std::equal(
+      qc.query.data.begin(), qc.query.data.end(), cmd.data.begin(), cmd.data.end()));
+}
+
 TEST_CASE("serialisation.state_machine_updated_t", "[network]") {
   solidarity::command_status_event_t smev;
   smev.crc = 33;
@@ -270,9 +305,9 @@ TEST_CASE("serialisation.state_machine_updated_t", "[network]") {
   auto msg = qc.to_message();
 
   solidarity::queries::clients::command_status_query_t qc_u(msg);
-  EXPECT_EQ(
-      msg->get_header()->kind,
-      (solidarity::dialler::message::kind_t)solidarity::queries::QUERY_KIND::COMMAND_STATUS);
+  EXPECT_EQ(msg->get_header()->kind,
+            (solidarity::dialler::message::kind_t)
+                solidarity::queries::QUERY_KIND::COMMAND_STATUS);
   EXPECT_EQ(qc_u.e.crc, qc.e.crc);
   EXPECT_EQ(qc_u.e.status, qc.e.status);
 }

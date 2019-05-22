@@ -269,7 +269,6 @@ write_query_t::write_query_t(const std::vector<dialler::message_ptr> &mptrs) {
 }
 
 std::vector<dialler::message_ptr> write_query_t::to_message() const {
-  // return {pack_to_message(queries::QUERY_KIND::WRITE, msg_id, query.data)};
   using namespace dialler;
   auto barray = query.data;
   auto total_size = barray.size() + sizeof(msg_id);
@@ -286,8 +285,56 @@ std::vector<dialler::message_ptr> write_query_t::to_message() const {
   return result;
 }
 
-command_status_query_t::command_status_query_t(
-    const command_status_event_t &e_) {
+resend_query_t::resend_query_t(const std::vector<dialler::message_ptr> &mptrs) {
+  ENSURE(std::all_of(mptrs.cbegin(), mptrs.cend(), [](auto mptr) {
+    return mptr->get_header()->kind == (message::kind_t)QUERY_KIND::RESEND;
+  }));
+
+  if (mptrs.size() == size_t(1)) {
+    msgpack::unpacker pac = get_unpacker(mptrs.front());
+    msgpack::object_handle oh;
+
+    pac.next(oh);
+    msg_id = oh.get().as<uint64_t>();
+
+    pac.next(oh);
+    kind = (resend_query_kind)oh.get().as<uint8_t>();
+
+    pac.next(oh);
+    auto data = oh.get().as<std::vector<uint8_t>>();
+    query.data = data;
+  } else {
+    msgpack::unpacker pac = get_unpacker(mptrs.back());
+    msgpack::object_handle oh;
+
+    pac.next(oh);
+    msg_id = oh.get().as<uint64_t>();
+
+    pac.next(oh);
+    kind = (resend_query_kind)oh.get().as<uint8_t>();
+
+    query.data = messages_to_byte_array(mptrs);
+  }
+}
+
+std::vector<dialler::message_ptr> resend_query_t::to_message() const {
+  using namespace dialler;
+  auto barray = query.data;
+  auto total_size = barray.size() + sizeof(msg_id);
+  std::vector<dialler::message_ptr> result;
+  if (total_size < dialler::message::MAX_BUFFER_SIZE * 0.75) {
+    result.resize(1);
+    result[0] = pack_to_message(QUERY_KIND::RESEND, msg_id, (uint8_t)kind, query.data);
+  } else {
+    byte_array_to_msg(result, (message::kind_t)QUERY_KIND::RESEND, barray);
+    auto m = pack_to_message(QUERY_KIND::RESEND, msg_id, (uint8_t)kind);
+    m->get_header()->is_end_block = 1;
+    result.push_back(m);
+  }
+  return result;
+}
+
+command_status_query_t::command_status_query_t(const command_status_event_t &e_) {
   e = e_;
 }
 

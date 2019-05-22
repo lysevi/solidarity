@@ -1,3 +1,4 @@
+#pragma once
 #include <solidarity/abstract_cluster.h>
 #include <solidarity/dialler/message.h>
 #include <solidarity/error_codes.h>
@@ -16,6 +17,7 @@ enum class QUERY_KIND : dialler::message::kind_t {
   COMMAND,
   READ,
   WRITE,
+  RESEND,
   COMMAND_STATUS,
   RAFT_STATE_UPDATE
 };
@@ -73,6 +75,22 @@ struct command_t {
   EXPORT std::vector<dialler::message_ptr> to_message() const;
 };
 
+enum resend_query_kind : uint8_t { WRITE };
+
+struct resend_query_t {
+  uint64_t msg_id;
+  resend_query_kind kind;
+  solidarity::command query;
+  EXPORT
+  resend_query_t(uint64_t id, resend_query_kind kind_, const solidarity::command &q) {
+    msg_id = id;
+    query = q;
+    kind = kind_;
+  }
+  EXPORT resend_query_t(const std::vector<dialler::message_ptr> &msg);
+  EXPORT std::vector<dialler::message_ptr> to_message() const;
+};
+
 namespace clients {
 struct client_connect_t {
   uint16_t protocol_version;
@@ -109,7 +127,7 @@ struct write_query_t {
 
 struct command_status_query_t {
   command_status_event_t e;
-  EXPORT command_status_query_t(const command_status_event_t&e_);
+  EXPORT command_status_query_t(const command_status_event_t &e_);
   EXPORT command_status_query_t(const dialler::message_ptr &msg);
   EXPORT dialler::message_ptr to_message() const;
 };

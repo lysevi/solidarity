@@ -77,9 +77,10 @@ void listener::on_new_message(dialler::listener_client_ptr i,
     _parent->on_new_command(d);
     break;
   }
-  case QUERY_KIND::WRITE: {
-    queries::clients::write_query_t wq(d);
-    _parent->on_write_resend(_parent->addr_by_id(i->get_id()), wq.msg_id, wq.query);
+  case QUERY_KIND::RESEND: {
+    queries::resend_query_t rsq(d);
+    _parent->on_query_resend(
+        _parent->addr_by_id(i->get_id()), rsq.msg_id, rsq.kind, rsq.query);
     break;
   }
   case QUERY_KIND::STATUS: {
@@ -93,9 +94,10 @@ void listener::on_new_message(dialler::listener_client_ptr i,
     if (_parent->_on_smue_handler != nullptr) {
       _parent->_on_smue_handler(smuq.e);
     }
+    break;
   }
   default:
-    break;
+    NOT_IMPLEMENTED;
   }
 } // namespace solidarity::impl
 
@@ -372,9 +374,9 @@ void mesh_connection::on_new_command(const std::vector<dialler::message_ptr> &m)
 }
 
 void mesh_connection::send_to(const solidarity::node_name &target,
+                              queries::resend_query_kind kind,
                               const solidarity::command &cmd,
                               std::function<void(ERROR_CODE)> callback) {
-  // TODO need an unit test
   std::lock_guard l(_locker);
   if (auto it = _accepted_out_connections.find(target);
       it != _accepted_out_connections.end()) {
@@ -384,21 +386,27 @@ void mesh_connection::send_to(const solidarity::node_name &target,
 
     auto out_con = _diallers[it->second];
     _logger->dbg("send command to ", target);
-    out_con->send_async(queries::clients::write_query_t(id, cmd).to_message());
+    out_con->send_async(queries::resend_query_t(id, kind, cmd).to_message());
   } else {
     callback(ERROR_CODE::CONNECTION_NOT_FOUND);
   }
 }
 
-void mesh_connection::on_write_resend(const node_name &target,
+void mesh_connection::on_query_resend(const node_name &target,
                                       uint64_t mess_id,
+                                      queries::resend_query_kind kind,
                                       solidarity::command &cmd) {
   dialler::message_ptr result;
-  {
+  switch (kind) {
+  case solidarity::queries::WRITE: {
     auto s = _client->add_command(cmd);
     auto m = s == ERROR_CODE::OK ? "" : to_string(s);
     result = queries::status_t(mess_id, s, m).to_message();
+  } break;
+  default:
+    NOT_IMPLEMENTED;
   }
+
   std::lock_guard l(_locker);
   if (auto it = _accepted_out_connections.find(target);
       it != _accepted_out_connections.end()) {

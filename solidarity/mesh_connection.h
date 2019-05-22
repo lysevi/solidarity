@@ -8,6 +8,7 @@
 #include <solidarity/dialler/message.h>
 #include <solidarity/event.h>
 #include <solidarity/protocol_version.h>
+#include <solidarity/queries.h>
 #include <solidarity/raft.h>
 #include <solidarity/utils/logger.h>
 
@@ -88,6 +89,7 @@ public:
   boost::asio::io_context *context() { return &_io_context; }
 
   EXPORT void send_to(const solidarity::node_name &target,
+                      queries::resend_query_kind kind,
                       const solidarity::command &cmd,
                       std::function<void(ERROR_CODE)> callback);
 
@@ -97,6 +99,7 @@ public:
   }
 
   void stop_event_loop();
+
 protected:
   void accept_out_connection(const node_name &name, const std::string &addr);
   void accept_input_connection(const node_name &name, uint64_t id);
@@ -105,8 +108,10 @@ protected:
   void rm_input_connection(uint64_t id, const boost::system::error_code &err);
   void on_new_command(const std::vector<dialler::message_ptr> &m);
 
-  void
-  on_write_resend(const node_name &target, uint64_t mess_id, solidarity::command &cmd);
+  void on_query_resend(const node_name &target,
+                       uint64_t mess_id,
+                       queries::resend_query_kind kind,
+                       solidarity::command &cmd);
   void
   on_write_status(solidarity::node_name &target, uint64_t mess_id, ERROR_CODE status);
   void on_write_status(solidarity::node_name &target, ERROR_CODE status);
