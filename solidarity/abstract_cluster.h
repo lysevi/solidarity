@@ -66,6 +66,12 @@ struct append_entries {
   from_byte_array(const std::vector<uint8_t> &bytes);
 };
 
+enum class RDIRECTION { FORWARDS = 0, BACKWARDS };
+struct log_state_t {
+  logdb::reccord_info prev;
+  RDIRECTION direction = RDIRECTION::FORWARDS;
+};
+
 struct abstract_cluster_client {
   virtual ~abstract_cluster_client() {}
   virtual void recv(const node_name &from, const append_entries &e) = 0;
@@ -73,6 +79,8 @@ struct abstract_cluster_client {
   virtual void new_connection_with(const node_name &addr) = 0;
   virtual void heartbeat() = 0;
   virtual ERROR_CODE add_command(const command &cmd) = 0;
+  virtual std::unordered_map<node_name, log_state_t> journal_state() const = 0;
+  virtual std::string leader() const= 0;
 };
 
 class abstract_cluster {

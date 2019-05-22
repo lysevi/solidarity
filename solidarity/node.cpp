@@ -303,6 +303,15 @@ node::node(utils::logging::abstract_logger_ptr logger,
     this->notify_command_status(e.crc, e.status);
   });
 
+  _cluster_con->set_cluster_state_handler([this](const cluster_state_event_t &e) {
+    client_event_t ev;
+    ev.kind = client_event_t::event_kind::CLUSTER_STATUS;
+    ev.cluster_ev = e;
+    for (auto &v : _on_update_handlers) {
+      v.second(ev);
+    }
+  });
+
   _raft->set_cluster(_cluster_con.get());
 
   dialler::listener::params_t lst_params;
@@ -624,4 +633,36 @@ std::shared_ptr<async_result_t> node::add_command_to_cluster(const command &cmd)
   };
   _cluster_con->send_to(leader, queries::resend_query_kind::WRITE, cmd, callback);
   return result;
+}
+
+void node::query_cluster_status() {
+  if (_stoped) {
+    return;
+  }
+
+  if (is_leader()) {
+    cluster_state_event_t cse;
+
+    auto jstate = _raft->journal_state();
+    {
+      std::lock_guard l(_state_locker);
+      cse.leader = _leader.name();
+    }
+    for (auto &&kv : std::move(jstate)) {
+      cse.state.insert(std::pair(kv.first.name(), kv.second));
+    }
+
+    client_event_t ev;
+    ev.kind = client_event_t::event_kind::CLUSTER_STATUS;
+    ev.cluster_ev = cse;
+    for (auto &v : _on_update_handlers) {
+      v.second(ev);
+    }
+  } else {
+    auto leader = _raft->get_leader();
+    _cluster_con->send_to(leader,
+                          queries::resend_query_kind::STATUS,
+                          solidarity::command(),
+                          [this](ERROR_CODE) {});
+  }
 }

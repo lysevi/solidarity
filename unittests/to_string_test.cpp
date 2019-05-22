@@ -37,6 +37,10 @@ TEST_CASE("to_string.client_event_t") {
     cse.status = solidarity::command_status::WAS_APPLIED;
     cev.cmd_ev = cse;
 
+    solidarity::cluster_state_event_t clse;
+    clse.leader = "leader";
+    cev.cluster_ev = clse;
+
     solidarity::network_state_event_t nse;
     cev.net_ev = nse;
 

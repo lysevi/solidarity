@@ -330,3 +330,37 @@ TEST_CASE("serialisation.raft_state_updated_t", "[network]") {
   EXPECT_EQ(qc_u.new_state, k);
   EXPECT_EQ(qc_u.old_state, solidarity::NODE_KIND::FOLLOWER);
 }
+
+TEST_CASE("serialisation.cluster_status_t", "[network]") {
+  std::unordered_map<solidarity::node_name, solidarity::log_state_t> s;
+  s[solidarity::node_name("node1")].prev.kind = solidarity::logdb::LOG_ENTRY_KIND::APPEND;
+  s[solidarity::node_name("node1")].prev.lsn = solidarity::index_t(1);
+  s[solidarity::node_name("node1")].prev.term = solidarity::term_t(11);
+  s[solidarity::node_name("node1")].direction = solidarity::RDIRECTION::BACKWARDS;
+
+  s[solidarity::node_name("node2")].prev.kind
+      = solidarity::logdb::LOG_ENTRY_KIND::SNAPSHOT;
+  s[solidarity::node_name("node2")].prev.lsn = solidarity::index_t(2);
+  s[solidarity::node_name("node2")].prev.term = solidarity::term_t(22);
+  s[solidarity::node_name("node2")].direction = solidarity::RDIRECTION::FORWARDS;
+
+  solidarity::queries::cluster_status_t qc("leader_name", s);
+  auto msg = qc.to_message();
+  for (auto &v : msg) {
+    EXPECT_EQ(v->get_header()->kind,
+              (solidarity::dialler::message::kind_t)
+                  solidarity::queries::QUERY_KIND::CLUSTER_STATUS);
+  }
+
+  solidarity::queries::cluster_status_t qc_u(msg);
+  EXPECT_EQ(qc_u.leader, qc.leader);
+  EXPECT_EQ(qc_u.state.size(), qc.state.size());
+  for (auto &kv : qc_u.state) {
+    auto it = qc.state.find(kv.first);
+    EXPECT_TRUE(it != qc.state.end());
+
+    EXPECT_EQ(kv.second.direction, it->second.direction);
+    EXPECT_EQ(kv.second.prev, it->second.prev);
+    EXPECT_EQ(kv.second.prev.kind, it->second.prev.kind);
+  }
+}

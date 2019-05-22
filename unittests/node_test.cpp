@@ -296,6 +296,33 @@ TEST_CASE("node", "[network]") {
     kv.second->rm_event_handler(client_handler_id);
   }
 
+  // cluster state
+  for (auto &kv : nodes) {
+    auto tnode = nodes[kv.first];
+    std::atomic_bool cluster_status_recv_flag = false;
+    uint64_t node_handler_id = tnode->add_event_handler(
+        [&cluster_status_recv_flag, cluster_size](const solidarity::client_event_t &ev) {
+          if (ev.kind == solidarity::client_event_t::event_kind::CLUSTER_STATUS) {
+            std::cerr << solidarity::to_string(ev) << std::endl;
+            cluster_status_recv_flag = true;
+            auto cst = ev.cluster_ev.value();
+            EXPECT_FALSE(cst.leader.empty());
+            EXPECT_EQ(cst.state.size(), cluster_size);
+            for (auto &kv : cst.state) {
+              EXPECT_FALSE(kv.first.empty());
+            }
+          }
+        });
+
+    tnode->query_cluster_status();
+
+    while (!cluster_status_recv_flag) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    tnode->rm_event_handler(node_handler_id);
+  }
+
   for (auto &kv : nodes) {
     std::cerr << "stop node " << kv.first << std::endl;
     auto client = clients[kv.first];

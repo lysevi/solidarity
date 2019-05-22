@@ -96,6 +96,20 @@ void listener::on_new_message(dialler::listener_client_ptr i,
     }
     break;
   }
+  case queries::QUERY_KIND::CLUSTER_STATUS: {
+    queries::cluster_status_t cstat(d);
+    if (_parent->_on_cluster_state_handler != nullptr) {
+      cluster_state_event_t cse;
+      cse.leader = cstat.leader;
+
+      for (auto &&kv : std::move(cstat.state)) {
+        cse.state.insert(std::pair(kv.first.name(), kv.second));
+      }
+
+      _parent->_on_cluster_state_handler(cse);
+    }
+    break;
+  }
   default:
     NOT_IMPLEMENTED;
   }
@@ -396,12 +410,17 @@ void mesh_connection::on_query_resend(const node_name &target,
                                       uint64_t mess_id,
                                       queries::resend_query_kind kind,
                                       solidarity::command &cmd) {
-  dialler::message_ptr result;
+  std::vector<dialler::message_ptr> result;
   switch (kind) {
-  case solidarity::queries::WRITE: {
+  case solidarity::queries::resend_query_kind::WRITE: {
     auto s = _client->add_command(cmd);
     auto m = s == ERROR_CODE::OK ? "" : to_string(s);
-    result = queries::status_t(mess_id, s, m).to_message();
+    result.push_back(queries::status_t(mess_id, s, m).to_message());
+  } break;
+  case solidarity::queries::resend_query_kind::STATUS: {
+    auto s = _client->journal_state();
+    auto l = _client->leader();
+    result = queries::cluster_status_t(l, s).to_message();
   } break;
   default:
     NOT_IMPLEMENTED;

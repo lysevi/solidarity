@@ -5,6 +5,7 @@
 #include <solidarity/event.h>
 #include <solidarity/exports.h>
 #include <solidarity/node_kind.h>
+#include <solidarity/raft.h>
 #include <vector>
 
 namespace solidarity::queries {
@@ -19,7 +20,8 @@ enum class QUERY_KIND : dialler::message::kind_t {
   WRITE,
   RESEND,
   COMMAND_STATUS,
-  RAFT_STATE_UPDATE
+  RAFT_STATE_UPDATE,
+  CLUSTER_STATUS,
 };
 
 struct query_connect_t {
@@ -75,7 +77,7 @@ struct command_t {
   EXPORT std::vector<dialler::message_ptr> to_message() const;
 };
 
-enum resend_query_kind : uint8_t { WRITE };
+enum resend_query_kind : uint8_t { WRITE, STATUS };
 
 struct resend_query_t {
   uint64_t msg_id;
@@ -88,6 +90,20 @@ struct resend_query_t {
     kind = kind_;
   }
   EXPORT resend_query_t(const std::vector<dialler::message_ptr> &msg);
+  EXPORT std::vector<dialler::message_ptr> to_message() const;
+};
+
+struct cluster_status_t {
+  std::string leader;
+  std::unordered_map<node_name, log_state_t> state;
+
+  EXPORT cluster_status_t(const std::string &leader_,
+                          std::unordered_map<node_name, log_state_t> state_) {
+    leader = leader_;
+    state = state_;
+  }
+
+  EXPORT cluster_status_t(const std::vector<dialler::message_ptr> &mptr);
   EXPORT std::vector<dialler::message_ptr> to_message() const;
 };
 

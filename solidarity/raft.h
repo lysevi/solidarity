@@ -8,20 +8,15 @@
 #include <solidarity/raft_state.h>
 #include <solidarity/utils/logger.h>
 
+#include <atomic>
 #include <memory>
 #include <random>
 #include <shared_mutex>
 #include <unordered_map>
-#include <atomic>
 
 namespace solidarity {
 
 class raft : public abstract_cluster_client {
-  enum class RDIRECTION { FORWARDS = 0, BACKWARDS };
-  struct log_state_t {
-    logdb::reccord_info prev;
-    RDIRECTION direction = RDIRECTION::FORWARDS;
-  };
 
 public:
   EXPORT raft(const raft_settings_t &ns,
@@ -51,15 +46,17 @@ public:
   EXPORT void new_connection_with(const solidarity::node_name &addr) override;
   [[nodiscard]] EXPORT ERROR_CODE add_command(const command &cmd) override;
 
-  node_name get_leader() const {
-    return state().leader;
-  }
-  node_name self_addr() const {
-    return _self_addr;
-  }
+  node_name get_leader() const { return state().leader; }
+  node_name self_addr() const { return _self_addr; }
 
-  raft_settings_t settings() const {
-    return _settings;
+  raft_settings_t settings() const { return _settings; }
+
+  std::string leader() const override { return get_leader().name(); }
+
+  std::unordered_map<node_name, log_state_t> journal_state() const override {
+    std::lock_guard l(_locker);
+    std::unordered_map<node_name, log_state_t> result = _logs_state;
+    return result;
   }
 
 protected:

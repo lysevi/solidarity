@@ -98,6 +98,10 @@ public:
     _on_smue_handler = h;
   }
 
+  void set_cluster_state_handler(const std::function<void(const cluster_state_event_t &)> h) {
+    _on_cluster_state_handler = h;
+  }
+
   void stop_event_loop();
 
 protected:
@@ -148,5 +152,6 @@ private:
   std::unordered_map<solidarity::node_name, message_id_to_callback> _messages;
 
   std::function<void(const command_status_event_t &)> _on_smue_handler;
+  std::function<void(const cluster_state_event_t &)> _on_cluster_state_handler;
 };
 } // namespace solidarity
