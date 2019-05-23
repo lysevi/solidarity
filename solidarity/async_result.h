@@ -6,6 +6,8 @@
 
 #include <condition_variable>
 #include <mutex>
+#include <shared_mutex>
+#include <unordered_map>
 
 namespace solidarity {
 
@@ -60,5 +62,28 @@ private:
   std::string err;
   solidarity::ERROR_CODE _ec = solidarity::ERROR_CODE::UNDEFINED;
   bool answer_received;
+};
+
+class async_result_handler {
+public:
+  std::shared_ptr<async_result_t> make_waiter();
+  std::shared_ptr<async_result_t> get_waiter(uint64_t id) const;
+  void erase_waiter(uint64_t id);
+
+  void clear(ERROR_CODE ec) {
+    std::lock_guard l(_locker);
+    for (auto &kv : _async_results) {
+      kv.second->set_result({}, ec, "");
+    }
+    _async_results.clear();
+    _next_query_id.store(0);
+  }
+
+  uint64_t get_next_id() { return _next_query_id.fetch_add(1); }
+
+private:
+  mutable std::shared_mutex _locker;
+  std::atomic_uint64_t _next_query_id = 0;
+  std::unordered_map<uint64_t, std::shared_ptr<async_result_t>> _async_results;
 };
 } // namespace solidarity
