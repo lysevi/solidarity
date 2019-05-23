@@ -94,11 +94,14 @@ struct resend_query_t {
 };
 
 struct cluster_status_t {
+  uint64_t msg_id;
   std::string leader;
   std::unordered_map<node_name, log_state_t> state;
 
-  EXPORT cluster_status_t(const std::string &leader_,
+  EXPORT cluster_status_t(uint64_t msg_id_,
+                          const std::string &leader_,
                           std::unordered_map<node_name, log_state_t> state_) {
+    msg_id = msg_id_;
     leader = leader_;
     state = state_;
   }

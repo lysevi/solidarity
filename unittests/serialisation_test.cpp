@@ -344,7 +344,7 @@ TEST_CASE("serialisation.cluster_status_t", "[network]") {
   s[solidarity::node_name("node2")].prev.term = solidarity::term_t(22);
   s[solidarity::node_name("node2")].direction = solidarity::RDIRECTION::FORWARDS;
 
-  solidarity::queries::cluster_status_t qc("leader_name", s);
+  solidarity::queries::cluster_status_t qc(uint64_t(888), "leader_name", s);
   auto msg = qc.to_message();
   for (auto &v : msg) {
     EXPECT_EQ(v->get_header()->kind,
@@ -353,6 +353,7 @@ TEST_CASE("serialisation.cluster_status_t", "[network]") {
   }
 
   solidarity::queries::cluster_status_t qc_u(msg);
+  EXPECT_EQ(qc_u.msg_id, qc.msg_id);
   EXPECT_EQ(qc_u.leader, qc.leader);
   EXPECT_EQ(qc_u.state.size(), qc.state.size());
   for (auto &kv : qc_u.state) {

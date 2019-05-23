@@ -420,7 +420,7 @@ void mesh_connection::on_query_resend(const node_name &target,
   case solidarity::queries::resend_query_kind::STATUS: {
     auto s = _client->journal_state();
     auto l = _client->leader();
-    result = queries::cluster_status_t(l, s).to_message();
+    result = queries::cluster_status_t(mess_id, l, s).to_message();
   } break;
   default:
     NOT_IMPLEMENTED;

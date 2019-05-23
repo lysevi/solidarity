@@ -339,6 +339,8 @@ cluster_status_t::cluster_status_t(const std::vector<dialler::message_ptr> &mptr
   msgpack::object_handle oh;
 
   pac.next(oh);
+  msg_id = oh.get().as<uint64_t>();
+  pac.next(oh);
   leader = oh.get().as<std::string>();
   pac.next(oh);
   size_t s = oh.get().as<size_t>();
@@ -363,6 +365,7 @@ std::vector<dialler::message_ptr> cluster_status_t::to_message() const {
   msgpack::sbuffer buffer;
   msgpack::packer<msgpack::sbuffer> pk(&buffer);
 
+  pk.pack(msg_id);
   pk.pack(leader);
   pk.pack(state.size());
   for (auto &kv : state) {
