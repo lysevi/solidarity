@@ -2,12 +2,14 @@
 
 #include <solidarity/client_exception.h>
 #include <solidarity/error_codes.h>
+#include <solidarity/event.h>
 #include <solidarity/utils/utils.h>
 
 #include <condition_variable>
 #include <mutex>
 #include <shared_mutex>
 #include <unordered_map>
+#include <variant>
 
 namespace solidarity {
 
@@ -30,17 +32,33 @@ public:
       }
     }
   }
-  [[nodiscard]] std::vector<uint8_t> result() {
+  template <class T>
+  [[nodiscard]] T await_result() {
     wait();
     if (err.empty()) {
-      return answer;
+      return std::get<T>(answer);
     }
     throw solidarity::exception(err);
   }
 
-  void set_result(const std::vector<uint8_t> &r,
-                  solidarity::ERROR_CODE ec,
-                  const std::string &err_) {
+  [[nodiscard]] std::vector<uint8_t> result() {
+    return await_result<std::vector<uint8_t>>();
+  }
+
+  [[nodiscard]] cluster_state_event_t cluster_state() {
+    return await_result<cluster_state_event_t>();
+  }
+
+  [[nodiscard]] cluster_state_event_t result_cluster_state() {
+    wait();
+    if (err.empty()) {
+      return std::get<cluster_state_event_t>(answer);
+    }
+    throw solidarity::exception(err);
+  }
+
+  template <class T>
+  void set_result(T &&r, solidarity::ERROR_CODE ec, const std::string &err_) {
     std::lock_guard l(_mutex);
     answer = r;
     _ec = ec;
@@ -58,7 +76,7 @@ private:
   uint64_t _id;
   std::condition_variable _condition;
   std::mutex _mutex;
-  std::vector<uint8_t> answer;
+  std::variant<std::vector<uint8_t>, cluster_state_event_t> answer;
   std::string err;
   solidarity::ERROR_CODE _ec = solidarity::ERROR_CODE::UNDEFINED;
   bool answer_received;
@@ -73,7 +91,7 @@ public:
   void clear(ERROR_CODE ec) {
     std::lock_guard l(_locker);
     for (auto &kv : _async_results) {
-      kv.second->set_result({}, ec, "");
+      kv.second->set_result(std::vector<uint8_t>(), ec, "");
     }
     _async_results.clear();
     _next_query_id.store(0);

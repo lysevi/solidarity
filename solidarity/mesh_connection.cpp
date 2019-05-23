@@ -98,16 +98,17 @@ void listener::on_new_message(dialler::listener_client_ptr i,
   }
   case queries::QUERY_KIND::CLUSTER_STATUS: {
     queries::cluster_status_t cstat(d);
-    if (_parent->_on_cluster_state_handler != nullptr) {
-      cluster_state_event_t cse;
-      cse.leader = cstat.leader;
+    auto r = _parent->_ash.get_waiter(cstat.msg_id);
 
-      for (auto &&kv : std::move(cstat.state)) {
-        cse.state.insert(std::pair(kv.first.name(), kv.second));
-      }
+    cluster_state_event_t cse;
+    cse.leader = cstat.leader;
 
-      _parent->_on_cluster_state_handler(cse);
+    for (auto &&kv : std::move(cstat.state)) {
+      cse.state.insert(std::pair(kv.first.name(), kv.second));
     }
+
+    r->set_result(cse, ERROR_CODE::OK, "");
+    _parent->_ash.erase_waiter(cstat.msg_id);
     break;
   }
   default:
@@ -131,8 +132,6 @@ mesh_connection::mesh_connection(node_name self_addr,
                                  const mesh_connection::params_t &params)
     : _stoped(true)
     , _io_context((int)params.thread_count) {
-
-  _message_id.store(0);
 
   if (params.thread_count == 0) {
     THROW_EXCEPTION("threads count is zero!");
@@ -387,23 +386,27 @@ void mesh_connection::on_new_command(const std::vector<dialler::message_ptr> &m)
   _client->recv(cmd_q.from, cmd_q.cmd);
 }
 
-void mesh_connection::send_to(const solidarity::node_name &target,
-                              queries::resend_query_kind kind,
-                              const solidarity::command &cmd,
-                              std::function<void(ERROR_CODE)> callback) {
+std::shared_ptr<async_result_t>
+mesh_connection::send_to(const solidarity::node_name &target,
+                         queries::resend_query_kind kind,
+                         const solidarity::command &cmd,
+                         std::function<void(ERROR_CODE)> callback) {
   std::lock_guard l(_locker);
+  auto res = _ash.make_waiter();
   if (auto it = _accepted_out_connections.find(target);
       it != _accepted_out_connections.end()) {
-    auto id = _message_id.fetch_add(1);
-
-    _messages[target][id] = callback;
+    _messages[target][res->id()] = callback;
 
     auto out_con = _diallers[it->second];
     _logger->dbg("send command to ", target);
-    out_con->send_async(queries::resend_query_t(id, kind, cmd).to_message());
+    out_con->send_async(queries::resend_query_t(res->id(), kind, cmd).to_message());
   } else {
     callback(ERROR_CODE::CONNECTION_NOT_FOUND);
+    res->set_result(cluster_state_event_t{},
+                    ERROR_CODE::CONNECTION_NOT_FOUND,
+                    "connection not found");
   }
+  return res;
 }
 
 void mesh_connection::on_query_resend(const node_name &target,

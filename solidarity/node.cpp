@@ -303,15 +303,7 @@ node::node(utils::logging::abstract_logger_ptr logger,
     this->notify_command_status(e.crc, e.status);
   });
 
-  _cluster_con->set_cluster_state_handler([this](const cluster_state_event_t &e) {
-    client_event_t ev;
-    ev.kind = client_event_t::event_kind::CLUSTER_STATUS;
-    ev.cluster_ev = e;
-    for (auto &v : _on_update_handlers) {
-      v.second(ev);
-    }
-  });
-
+  
   _raft->set_cluster(_cluster_con.get());
 
   dialler::listener::params_t lst_params;
@@ -617,27 +609,29 @@ std::shared_ptr<async_result_t> node::add_command_to_cluster(const command &cmd)
   auto result = std::make_shared<async_result_t>(uint64_t(0));
   auto st = add_command(cmd);
   if (st == ERROR_CODE::OK) {
-    result->set_result({}, st, "");
+    result->set_result(std::vector<uint8_t>{}, st, "");
     return result;
   }
   auto rft_st = _raft->state();
   auto leader = rft_st.leader;
   if (leader.is_empty() || rft_st.node_kind == NODE_KIND::CANDIDATE
       || rft_st.node_kind == NODE_KIND::ELECTION) {
-    result->set_result({}, solidarity::ERROR_CODE::UNDER_ELECTION, "");
+    result->set_result(
+        std::vector<uint8_t>{}, solidarity::ERROR_CODE::UNDER_ELECTION, "");
     return result;
   }
 
   auto callback = [result](ERROR_CODE s) {
-    result->set_result({}, s, s == ERROR_CODE::OK ? "" : to_string(s));
+    result->set_result(
+        std::vector<uint8_t>{}, s, s == ERROR_CODE::OK ? "" : to_string(s));
   };
   _cluster_con->send_to(leader, queries::resend_query_kind::WRITE, cmd, callback);
   return result;
 }
 
-void node::query_cluster_status() {
+cluster_state_event_t node::cluster_status() {
   if (_stoped) {
-    return;
+    return cluster_state_event_t();
   }
 
   if (is_leader()) {
@@ -651,18 +645,13 @@ void node::query_cluster_status() {
     for (auto &&kv : std::move(jstate)) {
       cse.state.insert(std::pair(kv.first.name(), kv.second));
     }
-
-    client_event_t ev;
-    ev.kind = client_event_t::event_kind::CLUSTER_STATUS;
-    ev.cluster_ev = cse;
-    for (auto &v : _on_update_handlers) {
-      v.second(ev);
-    }
+    return cse;
   } else {
     auto leader = _raft->get_leader();
-    _cluster_con->send_to(leader,
-                          queries::resend_query_kind::STATUS,
-                          solidarity::command(),
-                          [](ERROR_CODE) {});
+    auto ar = _cluster_con->send_to(leader,
+                                    queries::resend_query_kind::STATUS,
+                                    solidarity::command(),
+                                    [](ERROR_CODE) {});
+    return ar->cluster_state();
   }
 }

@@ -35,19 +35,19 @@ struct raft_state_event_t {
   NODE_KIND new_state;
 };
 
+//TODO move to dedicated header.
 struct cluster_state_event_t {
   std::string leader;
   std::unordered_map<std::string, log_state_t> state;
 };
 
 struct client_event_t {
-  enum class event_kind { UNDEFINED, RAFT, NETWORK, COMMAND_STATUS, CLUSTER_STATUS, LAST };
+  enum class event_kind { UNDEFINED, RAFT, NETWORK, COMMAND_STATUS, LAST };
 
   event_kind kind = event_kind::UNDEFINED;
   std::optional<raft_state_event_t> raft_ev;
   std::optional<network_state_event_t> net_ev;
   std::optional<command_status_event_t> cmd_ev;
-  std::optional<cluster_state_event_t> cluster_ev;
 };
 
 [[nodiscard]] EXPORT std::string to_string(const client_event_t &cev);

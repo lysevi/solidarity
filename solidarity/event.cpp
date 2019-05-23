@@ -42,33 +42,6 @@ std::string solidarity::to_string(const client_event_t &cev) {
     ss << "COMMAND_STATUS, crc=" << cmd_ev.crc << " status=" << to_string(cmd_ev.status);
     break;
   }
-  case client_event_t::event_kind::CLUSTER_STATUS: {
-    auto cls_ev = cev.cluster_ev.value();
-    ss << "CLUSTER_STATUS, leader=" << cls_ev.leader;
-    for (auto &kv : cls_ev.state) {
-      ss << " " << kv.first << " => { direction";
-      switch (kv.second.direction) {
-      case RDIRECTION::BACKWARDS:
-        ss << "RDIRECTION::BACKWARDS, ";
-        break;
-      case RDIRECTION::FORWARDS:
-        ss << "RDIRECTION::FORWARDS, ";
-        break;
-      }
-
-      switch (kv.second.prev.kind) {
-      case logdb::LOG_ENTRY_KIND::APPEND:
-        ss << "LOG_ENTRY_KIND::APPEND, ";
-        break;
-      case logdb::LOG_ENTRY_KIND::SNAPSHOT:
-        ss << "LOG_ENTRY_KIND::SNAPSHOT, ";
-        break;
-      }
-      ss << "lsn:" << kv.second.prev.lsn << ", "
-         << " term: " << kv.second.prev.term << "}";
-    }
-    break;
-  }
   default:
     NOT_IMPLEMENTED;
   }
