@@ -13,6 +13,8 @@
 #include <solidarity/raft.h>
 #include <solidarity/utils/logger.h>
 
+#include <unordered_set>
+
 namespace solidarity {
 class mesh_connection;
 
@@ -115,7 +117,7 @@ protected:
                        queries::resend_query_kind kind,
                        solidarity::command &cmd);
   void
-  on_write_status(solidarity::node_name &target, uint64_t mess_id, ERROR_CODE status);
+  on_write_status(uint64_t mess_id, ERROR_CODE status);
   void on_write_status(solidarity::node_name &target, ERROR_CODE status);
 
 private:
@@ -142,11 +144,6 @@ private:
   std::unordered_map<uint64_t, node_name> _accepted_input_connections;
 
   std::shared_ptr<abstract_cluster_client> _client;
-
-  // TODO dedicated type
-  using message_id_to_callback
-      = std::unordered_map<uint64_t, std::function<void(ERROR_CODE)>>;
-  std::unordered_map<solidarity::node_name, message_id_to_callback> _messages;
 
   std::function<void(const command_status_event_t &)> _on_smue_handler;
 

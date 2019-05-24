@@ -85,8 +85,7 @@ void listener::on_new_message(dialler::listener_client_ptr i,
   }
   case QUERY_KIND::STATUS: {
     queries::status_t sq(d.front());
-    auto name = _parent->addr_by_id(i->get_id());
-    _parent->on_write_status(name, sq.id, sq.status);
+    _parent->on_write_status(sq.id, sq.status);
     break;
   }
   case queries::QUERY_KIND::COMMAND_STATUS: {
@@ -191,7 +190,6 @@ void mesh_connection::start() {
     _diallers.insert(std::make_pair(cnaddr, d));
     d->start_async_connection();
   }
-  _messages.clear();
 }
 
 void mesh_connection::stop() {
@@ -212,7 +210,7 @@ void mesh_connection::stop() {
     _listener_consumer = nullptr;
   }
   _client = nullptr;
-
+  _ash.clear(ERROR_CODE::NETWORK_ERROR);
   _logger->info("stopped.");
 }
 
@@ -393,15 +391,15 @@ mesh_connection::send_to(const solidarity::node_name &target,
                          std::function<void(ERROR_CODE)> callback) {
   std::lock_guard l(_locker);
   auto res = _ash.make_waiter();
+  res->set_callback(callback);
+
   if (auto it = _accepted_out_connections.find(target);
       it != _accepted_out_connections.end()) {
-    _messages[target][res->id()] = callback;
 
     auto out_con = _diallers[it->second];
     _logger->dbg("send command to ", target);
     out_con->send_async(queries::resend_query_t(res->id(), kind, cmd).to_message());
   } else {
-    callback(ERROR_CODE::CONNECTION_NOT_FOUND);
     res->set_result(cluster_state_event_t{},
                     ERROR_CODE::CONNECTION_NOT_FOUND,
                     "connection not found");
@@ -438,25 +436,20 @@ void mesh_connection::on_query_resend(const node_name &target,
   }
 }
 
-void mesh_connection::on_write_status(solidarity::node_name &target,
-                                      uint64_t mess_id,
+void mesh_connection::on_write_status(uint64_t mess_id,
                                       ERROR_CODE status) {
   std::lock_guard l(_locker);
-
-  if (auto mess_it = _messages.find(target); mess_it != _messages.end()) {
-    auto pos = mess_it->second.find(mess_id);
-    if (pos != mess_it->second.end()) {
-      pos->second(status);
-      mess_it->second.erase(pos);
-    }
-  }
+  auto w = _ash.get_waiter(mess_id);
+  _ash.erase_waiter(mess_id);
+  w->set_result(cluster_state_event_t(), status, "");
 }
+
 void mesh_connection::on_write_status(solidarity::node_name &target, ERROR_CODE status) {
   std::lock_guard l(_locker);
-  if (auto mess_it = _messages.find(target); mess_it != _messages.end()) {
-    for (auto &kv : mess_it->second) {
-      kv.second(status);
-    }
-    mess_it->second.clear();
+
+  auto results = _ash.get_waiter(target.name());
+  for (auto &w : results) {
+    w->set_result(cluster_state_event_t(), status, "");
   }
+  _ash.erase_waiter(target.name());
 }
