@@ -72,7 +72,7 @@ public:
   void erase_if(std::function<bool(const std::shared_ptr<solidarity::raft>)> pred);
 
   void wait_leader_eletion(size_t max_leaders = 1);
-  bool is_leader_eletion_complete(size_t max_leaders = 1);
+  bool is_leader_election_complete(size_t max_leaders = 1);
 
 protected:
   void stop_workers();

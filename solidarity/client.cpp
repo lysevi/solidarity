@@ -18,19 +18,10 @@ void solidarity::inner::client_update_async_result(client &c,
                                                    const std::vector<uint8_t> &cmd,
                                                    ERROR_CODE ec,
                                                    const std::string &err) {
-  c._locker.lock();
-  if (auto it = c._async_results.find(id); it == c._async_results.end()) {
-    c._locker.unlock();
-    if (id != queries::UNDEFINED_QUERY_ID) {
-      THROW_EXCEPTION("async result for id:", id, " not found!");
-    }
-  } else {
-    auto ares = it->second;
-    c._async_results.erase(it);
-    c._locker.unlock();
-    ENSURE(id == ares->id());
-    ares->set_result(cmd, ec, err);
-  }
+  auto ares = c._arh.get_waiter(id);
+  c._arh.erase_waiter(id);
+  ENSURE(id == ares->id());
+  ares->set_result(cmd, ec, err);
 }
 
 void solidarity::inner::client_notify_update(client &c, const client_event_t &ev) {
@@ -122,7 +113,6 @@ client::client(const params_t &p)
     throw solidarity::exception("threads count can't be zero");
   }
   _connected = false;
-  _next_query_id.store(0);
 }
 
 client::~client() {
@@ -183,17 +173,10 @@ void client::connect() {
   _dialler->add_consumer(c);
   _dialler->start_async_connection();
 
-  auto w = make_waiter();
+  auto w = _arh.make_waiter();
   ENSURE(w->id() == 0);
   UNUSED(w->result());
   _connected = true;
-}
-
-std::shared_ptr<async_result_t> client::make_waiter() {
-  std::lock_guard l(_locker);
-  auto waiter = std::make_shared<async_result_t>(_next_query_id.fetch_add(1));
-  _async_results[waiter->id()] = waiter;
-  return waiter;
 }
 
 ERROR_CODE client::send_weak(const solidarity::command &cmd) {
@@ -201,7 +184,7 @@ ERROR_CODE client::send_weak(const solidarity::command &cmd) {
     return ERROR_CODE::NETWORK_ERROR;
   }
 
-  auto waiter = make_waiter();
+  auto waiter = _arh.make_waiter();
   queries::clients::write_query_t rq(waiter->id(), cmd);
   auto messages = rq.to_message();
   _dialler->send_async(messages);
@@ -213,8 +196,7 @@ ERROR_CODE client::send_weak(const solidarity::command &cmd) {
 solidarity::send_result client::send_strong(const solidarity::command &cmd) {
   auto crc = cmd.crc();
   solidarity::send_result result;
-  
-  
+
   struct waiter_t {
     std::mutex locker;
     std::condition_variable cond;
@@ -224,25 +206,24 @@ solidarity::send_result client::send_strong(const solidarity::command &cmd) {
 
   auto w = std::make_shared<waiter_t>();
 
-  auto uh_id = add_event_handler(
-      [w, crc](const client_event_t &cev) {
-        if (cev.kind == client_event_t::event_kind::COMMAND_STATUS) {
-          auto cmd_status = cev.cmd_ev.value();
-          if (cmd_status.crc == crc) {
-            if (cmd_status.status == command_status::WAS_APPLIED
-                || cmd_status.status == command_status::CAN_NOT_BE_APPLY
-                || cmd_status.status == command_status::APPLY_ERROR
-                || cmd_status.status == command_status::ERASED_FROM_JOURNAL) {
-              {
-                std::lock_guard l(w->locker);
-                w->status = cmd_status.status;
-                w->is_end.store(true);
-                w->cond.notify_all();
-              }
-            }
+  auto uh_id = add_event_handler([w, crc](const client_event_t &cev) {
+    if (cev.kind == client_event_t::event_kind::COMMAND_STATUS) {
+      auto cmd_status = cev.cmd_ev.value();
+      if (cmd_status.crc == crc) {
+        if (cmd_status.status == command_status::WAS_APPLIED
+            || cmd_status.status == command_status::CAN_NOT_BE_APPLY
+            || cmd_status.status == command_status::APPLY_ERROR
+            || cmd_status.status == command_status::ERASED_FROM_JOURNAL) {
+          {
+            std::lock_guard l(w->locker);
+            w->status = cmd_status.status;
+            w->is_end.store(true);
+            w->cond.notify_all();
           }
         }
-      });
+      }
+    }
+  });
 
   result.ecode = send_weak(cmd);
   if (result.ecode != ERROR_CODE::OK) {
@@ -268,7 +249,7 @@ solidarity::command client::read(const solidarity::command &cmd) {
     THROW_EXCEPTION("connection error.");
   }
 
-  auto waiter = make_waiter();
+  auto waiter = _arh.make_waiter();
   queries::clients::read_query_t rq(waiter->id(), cmd);
 
   _dialler->send_async(rq.to_message());
@@ -279,7 +260,7 @@ solidarity::command client::read(const solidarity::command &cmd) {
 
 uint64_t client::add_event_handler(const std::function<void(const client_event_t &)> &f) {
   std::lock_guard l(_locker);
-  auto id = _next_query_id.fetch_add(1);
+  auto id = _arh.get_next_id();
   _on_update_handlers[id] = f;
   return id;
 }
@@ -295,11 +276,7 @@ void client::notify_on_update(const client_event_t &ev) {
   std::unordered_map<uint64_t, std::function<void(const client_event_t &)>> copied;
   if (ev.kind == client_event_t::event_kind::NETWORK) {
     std::lock_guard l(_locker);
-    for (auto &kv : _async_results) {
-      kv.second->set_result({}, ev.net_ev.value().ecode, "");
-    }
-    _async_results.clear();
-    _next_query_id.store(0);
+    _arh.clear(ev.net_ev.value().ecode);
   }
   {
     std::lock_guard l(_locker);

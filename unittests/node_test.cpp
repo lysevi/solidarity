@@ -296,6 +296,17 @@ TEST_CASE("node", "[network]") {
     kv.second->rm_event_handler(client_handler_id);
   }
 
+  // cluster state
+  for (auto &kv : nodes) {
+    auto tnode = nodes[kv.first];
+    auto cst = tnode->cluster_status();
+    EXPECT_FALSE(cst.leader.empty());
+    EXPECT_EQ(cst.state.size(), cluster_size);
+    for (auto &skv : cst.state) {
+      EXPECT_FALSE(skv.first.empty());
+    }
+  }
+
   for (auto &kv : nodes) {
     std::cerr << "stop node " << kv.first << std::endl;
     auto client = clients[kv.first];

@@ -55,7 +55,6 @@ public:
     std::lock_guard l(_locker);
     _can_apply = f;
   }
-
 private:
   std::shared_mutex _locker;
   solidarity::command last_cmd;

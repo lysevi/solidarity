@@ -85,8 +85,7 @@ void listener::on_new_message(dialler::listener_client_ptr i,
   }
   case QUERY_KIND::STATUS: {
     queries::status_t sq(d.front());
-    auto name = _parent->addr_by_id(i->get_id());
-    _parent->on_write_status(name, sq.id, sq.status);
+    _parent->on_write_status(sq.id, sq.status);
     break;
   }
   case queries::QUERY_KIND::COMMAND_STATUS: {
@@ -94,6 +93,21 @@ void listener::on_new_message(dialler::listener_client_ptr i,
     if (_parent->_on_smue_handler != nullptr) {
       _parent->_on_smue_handler(smuq.e);
     }
+    break;
+  }
+  case queries::QUERY_KIND::CLUSTER_STATUS: {
+    queries::cluster_status_t cstat(d);
+    auto r = _parent->_ash.get_waiter(cstat.msg_id);
+
+    cluster_state_event_t cse;
+    cse.leader = cstat.leader;
+
+    for (auto &&kv : std::move(cstat.state)) {
+      cse.state.insert(std::pair(kv.first.name(), kv.second));
+    }
+
+    r->set_result(cse, ERROR_CODE::OK, "");
+    _parent->_ash.erase_waiter(cstat.msg_id);
     break;
   }
   default:
@@ -117,8 +131,6 @@ mesh_connection::mesh_connection(node_name self_addr,
                                  const mesh_connection::params_t &params)
     : _stoped(true)
     , _io_context((int)params.thread_count) {
-
-  _message_id.store(0);
 
   if (params.thread_count == 0) {
     THROW_EXCEPTION("threads count is zero!");
@@ -178,7 +190,6 @@ void mesh_connection::start() {
     _diallers.insert(std::make_pair(cnaddr, d));
     d->start_async_connection();
   }
-  _messages.clear();
 }
 
 void mesh_connection::stop() {
@@ -199,7 +210,7 @@ void mesh_connection::stop() {
     _listener_consumer = nullptr;
   }
   _client = nullptr;
-
+  _ash.clear(ERROR_CODE::NETWORK_ERROR);
   _logger->info("stopped.");
 }
 
@@ -373,35 +384,44 @@ void mesh_connection::on_new_command(const std::vector<dialler::message_ptr> &m)
   _client->recv(cmd_q.from, cmd_q.cmd);
 }
 
-void mesh_connection::send_to(const solidarity::node_name &target,
-                              queries::resend_query_kind kind,
-                              const solidarity::command &cmd,
-                              std::function<void(ERROR_CODE)> callback) {
+std::shared_ptr<async_result_t>
+mesh_connection::send_to(const solidarity::node_name &target,
+                         queries::resend_query_kind kind,
+                         const solidarity::command &cmd,
+                         std::function<void(ERROR_CODE)> callback) {
   std::lock_guard l(_locker);
+  auto res = _ash.make_waiter();
+  res->set_callback(callback);
+
   if (auto it = _accepted_out_connections.find(target);
       it != _accepted_out_connections.end()) {
-    auto id = _message_id.fetch_add(1);
-
-    _messages[target][id] = callback;
 
     auto out_con = _diallers[it->second];
     _logger->dbg("send command to ", target);
-    out_con->send_async(queries::resend_query_t(id, kind, cmd).to_message());
+    out_con->send_async(queries::resend_query_t(res->id(), kind, cmd).to_message());
   } else {
-    callback(ERROR_CODE::CONNECTION_NOT_FOUND);
+    res->set_result(cluster_state_event_t{},
+                    ERROR_CODE::CONNECTION_NOT_FOUND,
+                    "connection not found");
   }
+  return res;
 }
 
 void mesh_connection::on_query_resend(const node_name &target,
                                       uint64_t mess_id,
                                       queries::resend_query_kind kind,
                                       solidarity::command &cmd) {
-  dialler::message_ptr result;
+  std::vector<dialler::message_ptr> result;
   switch (kind) {
-  case solidarity::queries::WRITE: {
+  case solidarity::queries::resend_query_kind::WRITE: {
     auto s = _client->add_command(cmd);
     auto m = s == ERROR_CODE::OK ? "" : to_string(s);
-    result = queries::status_t(mess_id, s, m).to_message();
+    result.push_back(queries::status_t(mess_id, s, m).to_message());
+  } break;
+  case solidarity::queries::resend_query_kind::STATUS: {
+    auto s = _client->journal_state();
+    auto l = _client->leader();
+    result = queries::cluster_status_t(mess_id, l, s).to_message();
   } break;
   default:
     NOT_IMPLEMENTED;
@@ -416,25 +436,20 @@ void mesh_connection::on_query_resend(const node_name &target,
   }
 }
 
-void mesh_connection::on_write_status(solidarity::node_name &target,
-                                      uint64_t mess_id,
+void mesh_connection::on_write_status(uint64_t mess_id,
                                       ERROR_CODE status) {
   std::lock_guard l(_locker);
-
-  if (auto mess_it = _messages.find(target); mess_it != _messages.end()) {
-    auto pos = mess_it->second.find(mess_id);
-    if (pos != mess_it->second.end()) {
-      pos->second(status);
-      mess_it->second.erase(pos);
-    }
-  }
+  auto w = _ash.get_waiter(mess_id);
+  _ash.erase_waiter(mess_id);
+  w->set_result(cluster_state_event_t(), status, "");
 }
+
 void mesh_connection::on_write_status(solidarity::node_name &target, ERROR_CODE status) {
   std::lock_guard l(_locker);
-  if (auto mess_it = _messages.find(target); mess_it != _messages.end()) {
-    for (auto &kv : mess_it->second) {
-      kv.second(status);
-    }
-    mess_it->second.clear();
+
+  auto results = _ash.get_waiter(target.name());
+  for (auto &w : results) {
+    w->set_result(cluster_state_event_t(), status, "");
   }
+  _ash.erase_waiter(target.name());
 }
