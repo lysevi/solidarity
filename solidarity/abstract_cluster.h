@@ -2,40 +2,13 @@
 
 #include <solidarity/error_codes.h>
 #include <solidarity/journal.h>
-#include <solidarity/utils/property.h>
 
 #include <memory>
 #include <string_view>
 
 namespace solidarity {
 
-class node_name {
-  PROPERTY(std::string, name)
-
-public:
-  node_name() = default;
-  node_name(const node_name &) = default;
-  node_name(node_name &&) = default;
-  node_name(const std::string_view &sv)
-      : _name(sv) {}
-
-  node_name &operator=(const node_name &) = default;
-  [[nodiscard]] bool is_empty() const { return name().empty(); }
-  void clear() { _name = ""; }
-  [[nodiscard]] bool operator!=(const node_name &other) const {
-    return _name != other._name;
-  }
-  [[nodiscard]] bool operator==(const node_name &other) const {
-    return _name == other._name;
-  }
-  [[nodiscard]] bool operator<(const node_name &other) const {
-    return _name < other._name;
-  }
-};
-
-[[nodiscard]] inline std::string to_string(const node_name &s) {
-  return std::string("node:://") + s.name();
-}
+using node_name = std::string;
 
 enum class ENTRIES_KIND : uint8_t {
   HEARTBEAT = 0,
@@ -80,7 +53,7 @@ struct abstract_cluster_client {
   virtual void heartbeat() = 0;
   virtual ERROR_CODE add_command(const command &cmd) = 0;
   virtual std::unordered_map<node_name, log_state_t> journal_state() const = 0;
-  virtual std::string leader() const= 0;
+  virtual std::string leader() const = 0;
 };
 
 class abstract_cluster {
@@ -94,17 +67,8 @@ public:
   virtual size_t size() = 0;
   virtual std::vector<node_name> all_nodes() const = 0;
 };
-
 } // namespace solidarity
-
 namespace std {
-template <>
-struct hash<solidarity::node_name> {
-  std::size_t operator()(const solidarity::node_name &k) const {
-    return std::hash<string>()(k.name());
-  }
-};
-
 EXPORT std::string to_string(const solidarity::append_entries &e);
 EXPORT std::string to_string(const solidarity::ENTRIES_KIND k);
 } // namespace std

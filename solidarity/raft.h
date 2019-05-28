@@ -51,7 +51,7 @@ public:
 
   raft_settings_t settings() const { return _settings; }
 
-  std::string leader() const override { return get_leader().name(); }
+  std::string leader() const override { return get_leader(); }
 
   std::unordered_map<node_name, log_state_t> journal_state() const override {
     std::lock_guard l(_locker);

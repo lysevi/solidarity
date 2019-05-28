@@ -10,7 +10,7 @@ void check_append_entries(const solidarity::append_entries &ae,
   EXPECT_EQ(ae.term, res.term);
   EXPECT_EQ(ae.kind, res.kind);
   EXPECT_EQ(ae.starttime, res.starttime);
-  EXPECT_EQ(ae.leader.name(), res.leader.name());
+  EXPECT_EQ(ae.leader, res.leader);
 
   EXPECT_EQ(ae.current, res.current);
   EXPECT_EQ(ae.current.kind, res.current.kind);
@@ -37,7 +37,7 @@ TEST_CASE("serialisation.append_entries", "[network]") {
   SECTION("kind=ANSWER_FAILED") { kind = solidarity::ENTRIES_KIND::ANSWER_FAILED; }
   SECTION("kind=HELLO") { kind = solidarity::ENTRIES_KIND::HELLO; }
 
-  SECTION("leader=LEADER") { leader.set_name("LEADER"); }
+  SECTION("leader=LEADER") { leader="LEADER"; }
   SECTION("leader.is_empty()") { leader = solidarity::node_name(); }
 
   SECTION("cmd.is_empty()") { ae.cmd.data.clear(); }
@@ -146,7 +146,7 @@ TEST_CASE("serialisation.command", "[network]") {
   solidarity::logdb::LOG_ENTRY_KIND lk = solidarity::logdb::LOG_ENTRY_KIND::APPEND;
 
   kind = solidarity::ENTRIES_KIND::HEARTBEAT;
-  leader.set_name("LEADER");
+  leader="LEADER";
   SECTION("small cmd") {
     ae.cmd.resize(100);
     std::iota(ae.cmd.data.begin(), ae.cmd.data.end(), uint8_t(0));

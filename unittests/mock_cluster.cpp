@@ -21,7 +21,7 @@ void worker_t::stop() {
 }
 
 void worker_t::add_task(const message_t &mt) {
-  ENSURE(!self_addr.is_empty());
+  ENSURE(!self_addr.empty());
   ENSURE(mt.from != self_addr);
   {
     std::lock_guard l(_tasks_locker);
@@ -108,7 +108,7 @@ void mock_cluster::send_all(const solidarity::node_name &from,
   std::unordered_map<solidarity::node_name, std::shared_ptr<worker_t>> cp;
   {
     std::shared_lock lg(_cluster_locker);
-    ENSURE(!from.is_empty());
+    ENSURE(!from.empty());
     cp.reserve(_cluster.size());
     for (const auto &kv : _workers) {
       if (kv.first != from) {
@@ -212,7 +212,7 @@ void mock_cluster::erase_if(
       cp_cluster.insert(kv);
     }
   }
-  if (!target.is_empty()) {
+  if (!target.empty()) {
     for (auto &kv : cp_cluster) {
       kv.second->lost_connection_with(target);
     }

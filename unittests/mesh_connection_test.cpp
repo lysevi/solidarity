@@ -130,8 +130,7 @@ TEST_CASE("mesh_connection", "[network]") {
         solidarity::utils::logging::logger_manager::instance()->get_shared_logger(),
         log_prefix);
 
-    auto addr = solidarity::node_name().set_name(
-        solidarity::utils::strings::to_string("node_", p));
+    auto addr = solidarity::utils::strings::to_string("node_", p);
     auto clnt = std::make_shared<mock_cluster_client>();
     auto c = std::make_shared<solidarity::mesh_connection>(addr, clnt, logger, params);
     connections.push_back(c);

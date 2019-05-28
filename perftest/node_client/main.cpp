@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
         }
         if ((nkind == solidarity::NODE_KIND::LEADER
              || nkind == solidarity::NODE_KIND::FOLLOWER)
-            && state.leader.name() != leader_name.name()) {
+            && state.leader != leader_name) {
           election_complete = false;
           break;
         }

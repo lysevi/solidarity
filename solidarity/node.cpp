@@ -277,7 +277,7 @@ node::node(utils::logging::abstract_logger_ptr logger,
   auto jrn = solidarity::logdb::memory_journal::make_new();
   auto jrn_wrap = std::make_shared<journal_wrapper>(jrn, this);
 
-  auto addr = solidarity::node_name().set_name(_params.name);
+  auto addr = _params.name;
   auto s = _params.raft_settings.set_name(_params.name);
   _raft
       = std::make_shared<solidarity::raft>(s, nullptr, jrn_wrap, _state_machine, _logger);
@@ -303,7 +303,6 @@ node::node(utils::logging::abstract_logger_ptr logger,
     this->notify_command_status(e.crc, e.status);
   });
 
-  
   _raft->set_cluster(_cluster_con.get());
 
   dialler::listener::params_t lst_params;
@@ -542,7 +541,7 @@ void node::send_to_leader(uint64_t client_id,
   }
 
   auto leader = _raft->state().leader;
-  if (leader.is_empty()) {
+  if (leader.empty()) {
     queries::status_t s(message_id, solidarity::ERROR_CODE::UNDER_ELECTION, _params.name);
     auto answer = s.to_message();
     _listener->send_to(client_id, answer);
@@ -614,7 +613,7 @@ std::shared_ptr<async_result_t> node::add_command_to_cluster(const command &cmd)
   }
   auto rft_st = _raft->state();
   auto leader = rft_st.leader;
-  if (leader.is_empty() || rft_st.node_kind == NODE_KIND::CANDIDATE
+  if (leader.empty() || rft_st.node_kind == NODE_KIND::CANDIDATE
       || rft_st.node_kind == NODE_KIND::ELECTION) {
     result->set_result(
         std::vector<uint8_t>{}, solidarity::ERROR_CODE::UNDER_ELECTION, "");
@@ -640,10 +639,10 @@ cluster_state_event_t node::cluster_status() {
     auto jstate = _raft->journal_state();
     {
       std::lock_guard l(_state_locker);
-      cse.leader = _leader.name();
+      cse.leader = _leader;
     }
     for (auto &&kv : std::move(jstate)) {
-      cse.state.insert(std::pair(kv.first.name(), kv.second));
+      cse.state.insert(std::pair(kv.first, kv.second));
     }
     return cse;
   } else {

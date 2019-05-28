@@ -28,7 +28,7 @@ std::string to_string(const solidarity::append_entries &e) {
                                                e.cmd.size(),
                                                " kind:",
                                                e.kind,
-                                               " L:",
+                                               " L:", 
                                                e.leader,
                                                " term:",
                                                e.term,
@@ -67,7 +67,7 @@ std::vector<uint8_t> append_entries::to_byte_array() const {
   pk.pack(uint8_t(kind));
   pk.pack(term);
   pk.pack(starttime);
-  pk.pack(leader.name());
+  pk.pack(leader);
   pk.pack(cmd.data);
 
   pack_record_info(pk, current);
@@ -94,8 +94,7 @@ append_entries append_entries::from_byte_array(const std::vector<uint8_t> &bytes
   pac.next(oh);
   result.starttime = oh.get().as<uint64_t>();
   pac.next(oh);
-  auto leader = oh.get().as<std::string>();
-  result.leader.set_name(leader);
+  result.leader = oh.get().as<std::string>();
   pac.next(oh);
   result.cmd.data = oh.get().as<std::vector<uint8_t>>();
 

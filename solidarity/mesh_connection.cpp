@@ -13,7 +13,7 @@ out_connection::out_connection(const std::shared_ptr<mesh_connection> parent,
 
 void out_connection::on_connect() {
   _parent->_logger->info("connect to ", _target_addr);
-  queries::query_connect_t qc(protocol_version, _parent->_self_addr.name());
+  queries::query_connect_t qc(protocol_version, _parent->_self_addr);
   this->_connection->send_async(qc.to_message());
 }
 
@@ -65,8 +65,8 @@ void listener::on_new_message(dialler::listener_client_ptr i,
                  .to_message();
       cancel = true;
     } else {
-      dout = query_connect_t(protocol_version, _parent->_self_addr.name()).to_message();
-      auto addr = solidarity::node_name().set_name(qc.node_id);
+      dout = query_connect_t(protocol_version, _parent->_self_addr).to_message();
+      auto addr = qc.node_id;
       _parent->accept_input_connection(addr, i->get_id());
       _parent->_logger->info("accept connection from ", addr);
     }
@@ -103,7 +103,7 @@ void listener::on_new_message(dialler::listener_client_ptr i,
     cse.leader = cstat.leader;
 
     for (auto &&kv : std::move(cstat.state)) {
-      cse.state.insert(std::pair(kv.first.name(), kv.second));
+      cse.state.insert(std::pair(kv.first, kv.second));
     }
 
     r->set_result(cse, ERROR_CODE::OK, "");
@@ -356,7 +356,7 @@ void mesh_connection::rm_out_connection(const std::string &addr,
       }
     }
   }
-  if (!name.is_empty()) {
+  if (!name.empty()) {
     {
       _client->lost_connection_with(name);
     }
@@ -447,9 +447,9 @@ void mesh_connection::on_write_status(uint64_t mess_id,
 void mesh_connection::on_write_status(solidarity::node_name &target, ERROR_CODE status) {
   std::lock_guard l(_locker);
 
-  auto results = _ash.get_waiter(target.name());
+  auto results = _ash.get_waiter(target);
   for (auto &w : results) {
     w->set_result(cluster_state_event_t(), status, "");
   }
-  _ash.erase_waiter(target.name());
+  _ash.erase_waiter(target);
 }

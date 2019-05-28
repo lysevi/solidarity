@@ -10,7 +10,7 @@ using namespace solidarity::utils::logging;
 std::string solidarity::to_string(const raft_state_t &s) {
   std::stringstream ss;
   ss << "{ K:" << to_string(s.node_kind) << ", N:" << s.term
-     << ", L:" << to_string(s.leader);
+     << ", L:" << s.leader;
   if (s.node_kind == NODE_KIND::CANDIDATE) {
     ss << ", E:" << s.election_round;
   }
@@ -52,7 +52,7 @@ changed_state_t raft_state_t::on_vote(const raft_state_t &self,
   if (e.leader != result.leader) {
     switch (result.node_kind) {
     case NODE_KIND::ELECTION: {
-      if (result.leader.is_empty()) {
+      if (result.leader.empty()) {
         // result.last_heartbeat_time = clock_t::now();
         result.leader = e.leader;
         result.term = e.term;

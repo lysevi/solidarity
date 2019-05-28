@@ -27,7 +27,7 @@ TEST_CASE("raft.add_nodes", "[raft]") {
                                            solidarity::logdb::memory_journal::make_new(),
                                            c_0_consumer.get());
 
-  cluster->add_new(solidarity::node_name().set_name("_0"), c_0);
+  cluster->add_new("_0", c_0);
   EXPECT_EQ(c_0->term(), solidarity::UNDEFINED_TERM);
   EXPECT_EQ(c_0->kind(), solidarity::NODE_KIND::FOLLOWER);
 
@@ -46,9 +46,9 @@ TEST_CASE("raft.add_nodes", "[raft]") {
                                            cluster.get(),
                                            solidarity::logdb::memory_journal::make_new(),
                                            c_1_consumer.get());
-  cluster->add_new(solidarity::node_name().set_name(settings_1.name()), c_1);
+  cluster->add_new(settings_1.name(), c_1);
 
-  while (c_1->get_leader().name() != c_0->self_addr().name()) {
+  while (c_1->get_leader() != c_0->self_addr()) {
     cluster->heartbeat();
     cluster->print_cluster();
   }
@@ -67,10 +67,10 @@ TEST_CASE("raft.add_nodes", "[raft]") {
                                            solidarity::logdb::memory_journal::make_new(),
                                            c_2_consumer.get());
 
-  cluster->add_new(solidarity::node_name().set_name(settings_2.name()), c_2);
+  cluster->add_new(settings_2.name(), c_2);
 
-  while (c_1->get_leader().name() != c_0->self_addr().name()
-         || c_2->get_leader().name() != c_0->self_addr().name()) {
+  while (c_1->get_leader() != c_0->self_addr()
+         || c_2->get_leader() != c_0->self_addr()) {
     cluster->heartbeat();
     cluster->print_cluster();
   }
@@ -79,7 +79,7 @@ TEST_CASE("raft.add_nodes", "[raft]") {
   EXPECT_EQ(c_1->kind(), solidarity::NODE_KIND::FOLLOWER);
   EXPECT_EQ(c_0->term(), c_1->term());
   EXPECT_EQ(c_2->term(), c_1->term());
-  EXPECT_EQ(c_1->get_leader().name(), c_0->get_leader().name());
+  EXPECT_EQ(c_1->get_leader(), c_0->get_leader());
   cluster = nullptr;
 }
 
@@ -121,7 +121,7 @@ TEST_CASE("raft", "[raft]") {
     consumers.push_back(c);
     auto cons = std::make_shared<solidarity::raft>(
         sett, cluster.get(), solidarity::logdb::memory_journal::make_new(), c.get());
-    cluster->add_new(solidarity::node_name().set_name(sett.name()), cons);
+    cluster->add_new(sett.name(), cons);
   }
   solidarity::node_name last_leader;
   solidarity::command cmd(1);
@@ -153,7 +153,7 @@ TEST_CASE("raft", "[raft]") {
             [cur_leader](const std::shared_ptr<solidarity::raft> &v) {
               return v->get_leader() == cur_leader;
             });
-        if (last_leader.is_empty() && followers.size() == cluster->size()) {
+        if (last_leader.empty() && followers.size() == cluster->size()) {
           last_leader = cur_leader;
           break;
         }
@@ -239,7 +239,7 @@ TEST_CASE("raft.replication", "[raft]") {
     consumers.push_back(state_machine);
     auto cons = std::make_shared<raft>(
         sett, cluster.get(), memory_journal::make_new(), state_machine.get());
-    cluster->add_new(node_name().set_name(sett.name()), cons);
+    cluster->add_new(sett.name(), cons);
   }
   solidarity::command cmd(1);
   cmd.data[0] = 0;
@@ -275,7 +275,7 @@ TEST_CASE("raft.replication", "[raft]") {
     consumers.push_back(state_machine);
     auto cons = std::make_shared<raft>(
         sett, cluster.get(), memory_journal::make_new(), state_machine.get());
-    cluster->add_new(node_name().set_name(sett.name()), cons);
+    cluster->add_new(sett.name(), cons);
     cluster->wait_leader_eletion();
   }
 
@@ -318,7 +318,7 @@ TEST_CASE("raft.log_compaction", "[raft]") {
     consumers.push_back(c);
     auto cons = std::make_shared<solidarity::raft>(
         sett, cluster.get(), solidarity::logdb::memory_journal::make_new(), c.get());
-    cluster->add_new(solidarity::node_name().set_name(sett.name()), cons);
+    cluster->add_new(sett.name(), cons);
   }
 
   cluster->wait_leader_eletion();
@@ -419,7 +419,7 @@ TEST_CASE("raft.apply_journal_on_start", "[raft]") {
   auto state_machine = std::make_shared<mock_state_machine>();
   consumers.push_back(state_machine);
   auto cons = std::make_shared<raft>(sett, cluster.get(), jrn, state_machine.get());
-  cluster->add_new(node_name().set_name(sett.name()), cons);
+  cluster->add_new(sett.name(), cons);
 
   EXPECT_EQ(state_machine->get_last_cmd().data, cmd.data);
 }
@@ -530,8 +530,8 @@ TEST_CASE("raft.rollback", "[raft]") {
   auto leaders = cluster->by_filter(is_leader_pred);
   auto followers = cluster->by_filter(is_follower_pred);
 
-  EXPECT_EQ(leaders.front()->self_addr().name(), n2->self_addr().name());
-  EXPECT_EQ(followers.front()->self_addr().name(), n1->self_addr().name());
+  EXPECT_EQ(leaders.front()->self_addr(), n2->self_addr());
+  EXPECT_EQ(followers.front()->self_addr(), n1->self_addr());
 
   while (true) {
     EXPECT_FALSE(consumers.empty());
@@ -585,7 +585,7 @@ TEST_CASE("raft.can_apply", "[raft]") {
     consumers.push_back(state_machine);
     auto cons = std::make_shared<raft>(
         sett, cluster.get(), memory_journal::make_new(), state_machine.get());
-    cluster->add_new(node_name().set_name(sett.name()), cons);
+    cluster->add_new(sett.name(), cons);
   }
   solidarity::command cmd(1);
   cmd.data[0] = 0;

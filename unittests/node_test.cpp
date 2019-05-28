@@ -124,7 +124,7 @@ TEST_CASE("node", "[network]") {
         }
         if ((nkind == solidarity::NODE_KIND::LEADER
              || nkind == solidarity::NODE_KIND::FOLLOWER)
-            && state.leader.name() != leader_name.name()) {
+            && state.leader != leader_name) {
           election_complete = false;
           break;
         }
@@ -135,7 +135,7 @@ TEST_CASE("node", "[network]") {
     }
   }
 
-  auto leader_name = leaders.begin()->name();
+  auto leader_name = *leaders.begin();
   std::cerr << "send over leader " << leader_name << std::endl;
   tst_logger->info("send over leader ", leader_name);
 
