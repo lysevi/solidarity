@@ -1,5 +1,6 @@
 #pragma once
 
+#include <solidarity/async_result.h>
 #include <solidarity/client_exception.h>
 #include <solidarity/command.h>
 #include <solidarity/error_codes.h>
@@ -51,7 +52,7 @@ public:
 
     size_t threads_count = 1;
     std::string host;
-    unsigned short port=0;
+    unsigned short port = 0;
     std::string name;
   };
   client(const client &) = delete;
@@ -84,7 +85,6 @@ public:
   friend void inner::client_notify_update(client &c, const client_event_t &ev);
 
 private:
-  std::shared_ptr<async_result_t> make_waiter();
   void notify_on_update(const client_event_t &);
 
 private:
@@ -96,11 +96,9 @@ private:
   std::atomic_size_t _threads_at_work;
   boost::asio::io_context _io_context;
 
-  std::atomic_uint64_t _next_query_id;
-  std::unordered_map<uint64_t, std::shared_ptr<async_result_t>> _async_results;
-
   std::unordered_map<uint64_t, std::function<void(const client_event_t &)>>
       _on_update_handlers;
+  async_result_handler _arh;
 
 protected:
   bool _connected;

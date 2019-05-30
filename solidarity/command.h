@@ -34,9 +34,9 @@ struct command {
     if constexpr (std::is_pod<T>::value) {
       cmd.data.resize(sizeof(pod));
       std::memcpy(cmd.data.data(), &pod, sizeof(pod));
-    } 
+    }
 
-	static_assert(std::is_pod<T>::value, "!is_pod");
+    static_assert(std::is_pod<T>::value, "!is_pod");
     return cmd;
   }
 

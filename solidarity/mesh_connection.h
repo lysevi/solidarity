@@ -2,14 +2,18 @@
 
 #include <boost/asio.hpp>
 #include <solidarity/abstract_cluster.h>
+#include <solidarity/async_result.h>
 #include <solidarity/config.h>
 #include <solidarity/dialler/dialler.h>
 #include <solidarity/dialler/listener.h>
 #include <solidarity/dialler/message.h>
 #include <solidarity/event.h>
 #include <solidarity/protocol_version.h>
+#include <solidarity/queries.h>
 #include <solidarity/raft.h>
 #include <solidarity/utils/logger.h>
+
+#include <unordered_set>
 
 namespace solidarity {
 class mesh_connection;
@@ -87,9 +91,11 @@ public:
 
   boost::asio::io_context *context() { return &_io_context; }
 
-  EXPORT void send_to(const solidarity::node_name &target,
-                      const solidarity::command &cmd,
-                      std::function<void(ERROR_CODE)> callback);
+  EXPORT std::shared_ptr<async_result_t>
+  send_to(const solidarity::node_name &target,
+          queries::resend_query_kind kind,
+          const solidarity::command &cmd,
+          std::function<void(ERROR_CODE)> callback);
 
   void set_state_machine_event_handler(
       const std::function<void(const command_status_event_t &)> h) {
@@ -97,6 +103,7 @@ public:
   }
 
   void stop_event_loop();
+
 protected:
   void accept_out_connection(const node_name &name, const std::string &addr);
   void accept_input_connection(const node_name &name, uint64_t id);
@@ -105,10 +112,11 @@ protected:
   void rm_input_connection(uint64_t id, const boost::system::error_code &err);
   void on_new_command(const std::vector<dialler::message_ptr> &m);
 
-  void
-  on_write_resend(const node_name &target, uint64_t mess_id, solidarity::command &cmd);
-  void
-  on_write_status(solidarity::node_name &target, uint64_t mess_id, ERROR_CODE status);
+  void on_query_resend(const node_name &target,
+                       uint64_t mess_id,
+                       queries::resend_query_kind kind,
+                       solidarity::command &cmd);
+  void on_write_status(uint64_t mess_id, ERROR_CODE status);
   void on_write_status(solidarity::node_name &target, ERROR_CODE status);
 
 private:
@@ -136,12 +144,8 @@ private:
 
   std::shared_ptr<abstract_cluster_client> _client;
 
-  std::atomic_size_t _message_id;
-  // TODO dedicated type
-  using message_id_to_callback
-      = std::unordered_map<uint64_t, std::function<void(ERROR_CODE)>>;
-  std::unordered_map<solidarity::node_name, message_id_to_callback> _messages;
-
   std::function<void(const command_status_event_t &)> _on_smue_handler;
+
+  async_result_handler _ash;
 };
 } // namespace solidarity

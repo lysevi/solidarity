@@ -1,12 +1,12 @@
 #include <catch.hpp>
+#include <numeric>
 #include <solidarity/utils/crc.h>
 #include <solidarity/utils/strings.h>
 #include <solidarity/utils/utils.h>
-#include <numeric>
 
 #ifdef ENABLE_BENCHMARKS
 TEST_CASE("utils::strings", "[bench]") {
-  const size_t data_size = 1024*1024;
+  const size_t data_size = 1024 * 1024;
   std::vector<int> data(data_size);
   std::iota(data.begin(), data.end(), 0);
 

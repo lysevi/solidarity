@@ -13,7 +13,7 @@ namespace solidarity::special {
 class lockservice : public abstract_state_machine {
 public:
   struct lock_action {
-    bool state=false;
+    bool state = false;
     std::string target;
     std::string owner;
 
@@ -33,6 +33,7 @@ public:
   EXPORT bool can_apply(const command &) override;
 
   std::unordered_map<std::string, lock_action> get_locks() const { return _locks; }
+
 private:
   std::unordered_map<std::string, lock_action> _locks;
   std::mutex _locker;
@@ -40,10 +41,11 @@ private:
 
 class lockservice_client {
 public:
-  EXPORT lockservice_client(const std::string&owner, const std::shared_ptr<client> &c);
+  EXPORT lockservice_client(const std::string &owner, const std::shared_ptr<client> &c);
   EXPORT bool try_lock(const std::string &target);
   EXPORT void lock(const std::string &target);
   EXPORT void unlock(const std::string &target);
+
 private:
   std::shared_ptr<client> _client;
   std::string _owner;

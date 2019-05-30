@@ -124,7 +124,7 @@ TEST_CASE("node", "[network]") {
         }
         if ((nkind == solidarity::NODE_KIND::LEADER
              || nkind == solidarity::NODE_KIND::FOLLOWER)
-            && state.leader.name() != leader_name.name()) {
+            && state.leader != leader_name) {
           election_complete = false;
           break;
         }
@@ -135,7 +135,7 @@ TEST_CASE("node", "[network]") {
     }
   }
 
-  auto leader_name = leaders.begin()->name();
+  auto leader_name = *leaders.begin();
   std::cerr << "send over leader " << leader_name << std::endl;
   tst_logger->info("send over leader ", leader_name);
 
@@ -294,6 +294,17 @@ TEST_CASE("node", "[network]") {
 
     tnode->rm_event_handler(node_handler_id);
     kv.second->rm_event_handler(client_handler_id);
+  }
+
+  // cluster state
+  for (auto &kv : nodes) {
+    auto tnode = nodes[kv.first];
+    auto cst = tnode->cluster_status();
+    EXPECT_FALSE(cst.leader.empty());
+    EXPECT_EQ(cst.state.size(), cluster_size);
+    for (auto &skv : cst.state) {
+      EXPECT_FALSE(skv.first.empty());
+    }
   }
 
   for (auto &kv : nodes) {

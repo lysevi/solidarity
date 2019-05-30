@@ -62,6 +62,7 @@ public:
 
 private:
   void con_handler(const boost::system::error_code &err);
+
 protected:
   std::shared_ptr<async_io> _async_io = nullptr;
   boost::asio::io_context *_context = nullptr;

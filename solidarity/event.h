@@ -3,6 +3,7 @@
 #include <solidarity/error_codes.h>
 #include <solidarity/exports.h>
 #include <solidarity/node_kind.h>
+#include <solidarity/raft.h>
 
 #include <optional>
 
@@ -32,6 +33,12 @@ struct network_state_event_t {
 struct raft_state_event_t {
   NODE_KIND old_state;
   NODE_KIND new_state;
+};
+
+// TODO move to dedicated header.
+struct cluster_state_event_t {
+  std::string leader;
+  std::unordered_map<std::string, log_state_t> state;
 };
 
 struct client_event_t {

@@ -2,7 +2,7 @@
 
 #include <array>
 
-namespace solidarity::utils{
+namespace solidarity::utils {
 
 constexpr std::array<unsigned long, 256> get_crc_table() {
   std::array<unsigned long, 256> crc_table = {(unsigned long)0};
@@ -26,4 +26,4 @@ unsigned int crc(It begin, It end) {
   }
   return crc ^ 0xFFFFFFFFUL;
 }
-}
+} // namespace solidarity::utils

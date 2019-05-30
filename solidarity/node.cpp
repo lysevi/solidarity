@@ -89,7 +89,8 @@ public:
     auto res = _parent->add_command(wq.query);
 
     if (res == ERROR_CODE::NOT_A_LEADER) {
-      _parent->send_to_leader(i->get_id(), wq.msg_id, wq.query);
+      _parent->send_to_leader(
+          i->get_id(), queries::resend_query_kind::WRITE, wq.msg_id, wq.query);
     } else {
       queries::status_t st(wq.msg_id, res, std::string());
       i->send_data(st.to_message());
@@ -276,7 +277,7 @@ node::node(utils::logging::abstract_logger_ptr logger,
   auto jrn = solidarity::logdb::memory_journal::make_new();
   auto jrn_wrap = std::make_shared<journal_wrapper>(jrn, this);
 
-  auto addr = solidarity::node_name().set_name(_params.name);
+  auto addr = _params.name;
   auto s = _params.raft_settings.set_name(_params.name);
   _raft
       = std::make_shared<solidarity::raft>(s, nullptr, jrn_wrap, _state_machine, _logger);
@@ -359,7 +360,7 @@ void node::stop() {
     if (_cluster_con != nullptr) {
       _cluster_con->stop_event_loop();
     }
-    
+
     _timer = nullptr;
   }
 
@@ -531,13 +532,16 @@ void node::heartbeat_timer() {
   }
 }
 
-void node::send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd) {
+void node::send_to_leader(uint64_t client_id,
+                          queries::resend_query_kind kind,
+                          uint64_t message_id,
+                          command &cmd) {
   if (_stoped) {
     return;
   }
 
   auto leader = _raft->state().leader;
-  if (leader.is_empty()) {
+  if (leader.empty()) {
     queries::status_t s(message_id, solidarity::ERROR_CODE::UNDER_ELECTION, _params.name);
     auto answer = s.to_message();
     _listener->send_to(client_id, answer);
@@ -547,7 +551,7 @@ void node::send_to_leader(uint64_t client_id, uint64_t message_id, command &cmd)
       std::lock_guard l(_locker);
       _message_resend[client_id].push_back(std::pair(message_id, cmd));
     }
-    _cluster_con->send_to(leader, cmd, [client_id, message_id, this](ERROR_CODE s) {
+    _cluster_con->send_to(leader, kind, cmd, [client_id, message_id, this](ERROR_CODE s) {
       this->on_message_sended_status(client_id, message_id, s);
     });
   }
@@ -604,20 +608,49 @@ std::shared_ptr<async_result_t> node::add_command_to_cluster(const command &cmd)
   auto result = std::make_shared<async_result_t>(uint64_t(0));
   auto st = add_command(cmd);
   if (st == ERROR_CODE::OK) {
-    result->set_result({}, st, "");
+    result->set_result(std::vector<uint8_t>{}, st, "");
     return result;
   }
   auto rft_st = _raft->state();
   auto leader = rft_st.leader;
-  if (leader.is_empty() || rft_st.node_kind == NODE_KIND::CANDIDATE
+  if (leader.empty() || rft_st.node_kind == NODE_KIND::CANDIDATE
       || rft_st.node_kind == NODE_KIND::ELECTION) {
-    result->set_result({}, solidarity::ERROR_CODE::UNDER_ELECTION, "");
+    result->set_result(
+        std::vector<uint8_t>{}, solidarity::ERROR_CODE::UNDER_ELECTION, "");
     return result;
   }
 
   auto callback = [result](ERROR_CODE s) {
-    result->set_result({}, s, s == ERROR_CODE::OK ? "" : to_string(s));
+    result->set_result(
+        std::vector<uint8_t>{}, s, s == ERROR_CODE::OK ? "" : to_string(s));
   };
-  _cluster_con->send_to(leader, cmd, callback);
+  _cluster_con->send_to(leader, queries::resend_query_kind::WRITE, cmd, callback);
   return result;
+}
+
+cluster_state_event_t node::cluster_status() {
+  if (_stoped) {
+    return cluster_state_event_t();
+  }
+
+  if (is_leader()) {
+    cluster_state_event_t cse;
+
+    auto jstate = _raft->journal_state();
+    {
+      std::lock_guard l(_state_locker);
+      cse.leader = _leader;
+    }
+    for (auto &&kv : std::move(jstate)) {
+      cse.state.insert(std::pair(kv.first, kv.second));
+    }
+    return cse;
+  } else {
+    auto leader = _raft->get_leader();
+    auto ar = _cluster_con->send_to(leader,
+                                    queries::resend_query_kind::STATUS,
+                                    solidarity::command(),
+                                    [](ERROR_CODE) {});
+    return ar->cluster_state();
+  }
 }

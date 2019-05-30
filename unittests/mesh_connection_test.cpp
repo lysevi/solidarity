@@ -47,6 +47,14 @@ struct mock_cluster_client : solidarity::abstract_cluster_client {
     return res;
   }
 
+  std::string leader() const override { return "mock"; }
+
+  std::unordered_map<solidarity::node_name, solidarity::log_state_t>
+  journal_state() const override {
+    std::unordered_map<solidarity::node_name, solidarity::log_state_t> result;
+    return result;
+  }
+
 private:
   std::vector<std::uint8_t> data;
   mutable std::mutex locker;
@@ -122,8 +130,7 @@ TEST_CASE("mesh_connection", "[network]") {
         solidarity::utils::logging::logger_manager::instance()->get_shared_logger(),
         log_prefix);
 
-    auto addr = solidarity::node_name().set_name(
-        solidarity::utils::strings::to_string("node_", p));
+    auto addr = solidarity::utils::strings::to_string("node_", p);
     auto clnt = std::make_shared<mock_cluster_client>();
     auto c = std::make_shared<solidarity::mesh_connection>(addr, clnt, logger, params);
     connections.push_back(c);
@@ -190,8 +197,7 @@ TEST_CASE("mesh_connection", "[network]") {
       auto target_clnt = dynamic_cast<mock_cluster_client *>(clients[node].get());
       while (true) {
         auto data = target_clnt->get_data();
-        if (data.size() == ae.cmd.size()
-            && data[0] == ae.cmd.data[0]) {
+        if (data.size() == ae.cmd.size() && data[0] == ae.cmd.data[0]) {
           break;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(100));

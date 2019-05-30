@@ -21,7 +21,7 @@ void worker_t::stop() {
 }
 
 void worker_t::add_task(const message_t &mt) {
-  ENSURE(!self_addr.is_empty());
+  ENSURE(!self_addr.empty());
   ENSURE(mt.from != self_addr);
   {
     std::lock_guard l(_tasks_locker);
@@ -108,7 +108,7 @@ void mock_cluster::send_all(const solidarity::node_name &from,
   std::unordered_map<solidarity::node_name, std::shared_ptr<worker_t>> cp;
   {
     std::shared_lock lg(_cluster_locker);
-    ENSURE(!from.is_empty());
+    ENSURE(!from.empty());
     cp.reserve(_cluster.size());
     for (const auto &kv : _workers) {
       if (kv.first != from) {
@@ -212,7 +212,7 @@ void mock_cluster::erase_if(
       cp_cluster.insert(kv);
     }
   }
-  if (!target.is_empty()) {
+  if (!target.empty()) {
     for (auto &kv : cp_cluster) {
       kv.second->lost_connection_with(target);
     }
@@ -237,7 +237,7 @@ std::vector<solidarity::node_name> mock_cluster::all_nodes() const {
 
 void mock_cluster::wait_leader_eletion(size_t max_leaders) {
   while (true) {
-    if (is_leader_eletion_complete(max_leaders)) {
+    if (is_leader_election_complete(max_leaders)) {
       break;
     }
     heartbeat();
@@ -245,12 +245,13 @@ void mock_cluster::wait_leader_eletion(size_t max_leaders) {
   }
 }
 
-bool mock_cluster::is_leader_eletion_complete(size_t max_leaders) {
+bool mock_cluster::is_leader_election_complete(size_t max_leaders) {
   const auto leaders = by_filter(is_leader_pred);
   if (leaders.size() > max_leaders) {
     solidarity::utils::logging::logger_fatal("raft error!!!");
     print_cluster();
-    throw std::logic_error("raft error");
+    // throw std::logic_error("raft error");
+    return false;
   }
   if (leaders.size() == 1) {
     auto cur_leader = leaders.front()->self_addr();

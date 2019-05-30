@@ -36,7 +36,7 @@ raft::raft(const raft_settings_t &ns,
 
   _settings.dump_to_log(_logger.get());
 
-  _self_addr.set_name(_settings.name());
+  _self_addr = _settings.name();
 
   _state.start_time = high_resolution_clock_t::now().time_since_epoch().count();
   update_next_heartbeat_interval();
@@ -158,7 +158,7 @@ void raft::on_heartbeat(const node_name &from, const append_entries &e) {
   const auto ns = raft_state_t::on_append_entries(_state, from, _jrn.get(), e);
   _state = ns;
   _node_kind = _state.node_kind;
-  if (old_s.leader.is_empty() || old_s.leader != _state.leader
+  if (old_s.leader.empty() || old_s.leader != _state.leader
       || old_s.node_kind != _state.node_kind) {
     _logger->info("on_heartbeat. change leader from: ",
                   old_s,
@@ -190,7 +190,7 @@ void raft::on_vote(const node_name &from, const append_entries &e) {
       std::stringstream ss;
       auto sz = ns.votes_to_me.size();
       for (auto &&v : ns.votes_to_me) {
-        ss << v.name() << ", ";
+        ss << v << ", ";
       }
       _logger->info("quorum. i'am new leader with ", sz, " voices - ", ss.str());
       _state.votes_to_me.clear();
@@ -241,7 +241,7 @@ void raft::recv(const node_name &from, const append_entries &e) {
   /// if leader receive message from follower with other leader,
   /// but with new election term.
   if (e.kind != ENTRIES_KIND::VOTE && _self_addr == _state.leader && e.term > _state.term
-      && !e.leader.is_empty()) {
+      && !e.leader.empty()) {
     _logger->info("change state to follower");
     _state.leader.clear();
     _state.change_state(NODE_KIND::FOLLOWER, e.term, e.leader);

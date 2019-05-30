@@ -7,9 +7,9 @@
 #include <solidarity/raft_settings.h>
 
 #include <chrono>
+#include <cmath>
 #include <string>
 #include <unordered_set>
-#include <cmath>
 namespace solidarity {
 
 struct changed_state_t;

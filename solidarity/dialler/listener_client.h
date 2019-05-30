@@ -12,7 +12,7 @@ class listener;
 class listener_client final : public std::enable_shared_from_this<listener_client>,
                               public initialized_resource {
 public:
-  listener_client(uint64_t id_, async_io_ptr async_io, listener* s);
+  listener_client(uint64_t id_, async_io_ptr async_io, listener *s);
   ~listener_client();
   EXPORT void start();
   EXPORT void close();
@@ -25,7 +25,7 @@ public:
 private:
   uint64_t id;
   async_io_ptr _async_connection = nullptr;
-  listener* _listener = nullptr;
+  listener *_listener = nullptr;
 };
 using listener_client_ptr = std::shared_ptr<listener_client>;
 } // namespace solidarity::dialler

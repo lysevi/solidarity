@@ -144,9 +144,8 @@ bool lockservice_client::try_lock(const std::string &target) {
   la.target = target;
   la.state = true;
 
-
   auto la_cmd = la.to_cmd();
-  
+
   auto sst = _client->send_strong(la_cmd);
 
   if (sst.ecode != ERROR_CODE::OK) {
