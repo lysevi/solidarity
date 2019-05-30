@@ -5,8 +5,8 @@
 
 #include <fstream>
 #include <memory>
-#include <utility>
 #include <mutex>
+#include <utility>
 
 namespace solidarity::utils::logging {
 

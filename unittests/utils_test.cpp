@@ -1,7 +1,7 @@
+#include <solidarity/utils/crc.h>
 #include <solidarity/utils/property.h>
 #include <solidarity/utils/strings.h>
 #include <solidarity/utils/utils.h>
-#include <solidarity/utils/crc.h>
 
 #include "helpers.h"
 #include <array>
@@ -61,7 +61,6 @@ TEST_CASE("utils.property") {
   EXPECT_EQ(p.ivalue(), 3);
   EXPECT_EQ(p.svalue(), "string");
 }
-
 
 void f_throw() {
   throw solidarity::utils::exceptions::exception_t("error");

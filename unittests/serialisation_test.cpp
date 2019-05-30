@@ -37,7 +37,7 @@ TEST_CASE("serialisation.append_entries", "[network]") {
   SECTION("kind=ANSWER_FAILED") { kind = solidarity::ENTRIES_KIND::ANSWER_FAILED; }
   SECTION("kind=HELLO") { kind = solidarity::ENTRIES_KIND::HELLO; }
 
-  SECTION("leader=LEADER") { leader="LEADER"; }
+  SECTION("leader=LEADER") { leader = "LEADER"; }
   SECTION("leader.is_empty()") { leader = solidarity::node_name(); }
 
   SECTION("cmd.is_empty()") { ae.cmd.data.clear(); }
@@ -146,7 +146,7 @@ TEST_CASE("serialisation.command", "[network]") {
   solidarity::logdb::LOG_ENTRY_KIND lk = solidarity::logdb::LOG_ENTRY_KIND::APPEND;
 
   kind = solidarity::ENTRIES_KIND::HEARTBEAT;
-  leader="LEADER";
+  leader = "LEADER";
   SECTION("small cmd") {
     ae.cmd.resize(100);
     std::iota(ae.cmd.data.begin(), ae.cmd.data.end(), uint8_t(0));
@@ -337,7 +337,7 @@ TEST_CASE("serialisation.cluster_status_t", "[network]") {
 
   SECTION("cluster_size=10") { cluster_size = 10; }
   SECTION("cluster_size=100") { cluster_size = 100; }
-  
+
   for (int i = 0; i < cluster_size; ++i) {
 
     solidarity::node_name n1(solidarity::utils::strings::to_string("node1", i));
@@ -354,7 +354,7 @@ TEST_CASE("serialisation.cluster_status_t", "[network]") {
   }
   solidarity::queries::cluster_status_t qc(uint64_t(888), "leader_name", s);
   auto msg = qc.to_message();
-  
+
   for (auto &v : msg) {
     EXPECT_EQ(v->get_header()->kind,
               (solidarity::dialler::message::kind_t)

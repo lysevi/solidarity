@@ -436,8 +436,7 @@ void mesh_connection::on_query_resend(const node_name &target,
   }
 }
 
-void mesh_connection::on_write_status(uint64_t mess_id,
-                                      ERROR_CODE status) {
+void mesh_connection::on_write_status(uint64_t mess_id, ERROR_CODE status) {
   std::lock_guard l(_locker);
   auto w = _ash.get_waiter(mess_id);
   _ash.erase_waiter(mess_id);

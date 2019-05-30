@@ -35,7 +35,7 @@ struct raft_state_event_t {
   NODE_KIND new_state;
 };
 
-//TODO move to dedicated header.
+// TODO move to dedicated header.
 struct cluster_state_event_t {
   std::string leader;
   std::unordered_map<std::string, log_state_t> state;

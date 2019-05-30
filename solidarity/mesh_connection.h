@@ -116,8 +116,7 @@ protected:
                        uint64_t mess_id,
                        queries::resend_query_kind kind,
                        solidarity::command &cmd);
-  void
-  on_write_status(uint64_t mess_id, ERROR_CODE status);
+  void on_write_status(uint64_t mess_id, ERROR_CODE status);
   void on_write_status(solidarity::node_name &target, ERROR_CODE status);
 
 private:

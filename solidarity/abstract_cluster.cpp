@@ -28,7 +28,7 @@ std::string to_string(const solidarity::append_entries &e) {
                                                e.cmd.size(),
                                                " kind:",
                                                e.kind,
-                                               " L:", 
+                                               " L:",
                                                e.leader,
                                                " term:",
                                                e.term,

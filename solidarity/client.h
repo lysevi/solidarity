@@ -1,12 +1,12 @@
 #pragma once
 
+#include <solidarity/async_result.h>
 #include <solidarity/client_exception.h>
 #include <solidarity/command.h>
 #include <solidarity/error_codes.h>
 #include <solidarity/event.h>
 #include <solidarity/exports.h>
 #include <solidarity/node_kind.h>
-#include <solidarity/async_result.h>
 
 #include <atomic>
 #include <mutex>
@@ -52,7 +52,7 @@ public:
 
     size_t threads_count = 1;
     std::string host;
-    unsigned short port=0;
+    unsigned short port = 0;
     std::string name;
   };
   client(const client &) = delete;

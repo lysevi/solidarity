@@ -69,8 +69,7 @@ TEST_CASE("raft.add_nodes", "[raft]") {
 
   cluster->add_new(settings_2.name(), c_2);
 
-  while (c_1->get_leader() != c_0->self_addr()
-         || c_2->get_leader() != c_0->self_addr()) {
+  while (c_1->get_leader() != c_0->self_addr() || c_2->get_leader() != c_0->self_addr()) {
     cluster->heartbeat();
     cluster->print_cluster();
   }

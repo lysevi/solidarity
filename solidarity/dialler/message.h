@@ -3,9 +3,9 @@
 #include <array>
 #include <cassert>
 #include <cstdint>
+#include <cstring>
 #include <memory>
 #include <vector>
-#include <cstring>
 
 #include <solidarity/exports.h>
 
@@ -50,7 +50,10 @@ public:
     *_size = *other._size;
   }
 
-  message(size_t sz):_data() { init_for_size(sz); }
+  message(size_t sz)
+      : _data() {
+    init_for_size(sz);
+  }
 
   message(size_t sz, const kind_t &kind_)
       : _data() {

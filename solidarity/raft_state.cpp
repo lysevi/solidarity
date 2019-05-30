@@ -9,8 +9,7 @@ using namespace solidarity::utils::logging;
 
 std::string solidarity::to_string(const raft_state_t &s) {
   std::stringstream ss;
-  ss << "{ K:" << to_string(s.node_kind) << ", N:" << s.term
-     << ", L:" << s.leader;
+  ss << "{ K:" << to_string(s.node_kind) << ", N:" << s.term << ", L:" << s.leader;
   if (s.node_kind == NODE_KIND::CANDIDATE) {
     ss << ", E:" << s.election_round;
   }

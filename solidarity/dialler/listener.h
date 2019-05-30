@@ -6,9 +6,9 @@
 #include <solidarity/exports.h>
 
 #include <atomic>
+#include <list>
 #include <mutex>
 #include <unordered_map>
-#include <list>
 
 namespace solidarity::dialler {
 class listener;

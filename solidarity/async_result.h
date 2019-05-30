@@ -99,7 +99,7 @@ public:
   std::shared_ptr<async_result_t> get_waiter(uint64_t id) const;
   std::vector<std::shared_ptr<async_result_t>> get_waiter(const std::string &owner) const;
 
-  void erase_waiter(const std::string&owner);
+  void erase_waiter(const std::string &owner);
   void erase_waiter(uint64_t id);
 
   void clear(ERROR_CODE ec) {
@@ -113,7 +113,6 @@ public:
 
   uint64_t get_next_id() { return _next_query_id.fetch_add(1); }
 
-  
 private:
   mutable std::shared_mutex _locker;
   std::atomic_uint64_t _next_query_id = 0;

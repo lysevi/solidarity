@@ -250,7 +250,7 @@ bool mock_cluster::is_leader_election_complete(size_t max_leaders) {
   if (leaders.size() > max_leaders) {
     solidarity::utils::logging::logger_fatal("raft error!!!");
     print_cluster();
-    //throw std::logic_error("raft error");
+    // throw std::logic_error("raft error");
     return false;
   }
   if (leaders.size() == 1) {
