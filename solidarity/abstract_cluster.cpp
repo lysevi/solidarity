@@ -68,6 +68,7 @@ std::vector<uint8_t> append_entries::to_byte_array() const {
   pk.pack(term);
   pk.pack(starttime);
   pk.pack(leader);
+  pk.pack(asm_num);
   pk.pack(cmd.data);
 
   pack_record_info(pk, current);
@@ -95,6 +96,8 @@ append_entries append_entries::from_byte_array(const std::vector<uint8_t> &bytes
   result.starttime = oh.get().as<uint64_t>();
   pac.next(oh);
   result.leader = oh.get().as<std::string>();
+  pac.next(oh);
+  result.asm_num = oh.get().as<uint32_t>();
   pac.next(oh);
   result.cmd.data = oh.get().as<std::vector<uint8_t>>();
 

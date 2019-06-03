@@ -29,6 +29,8 @@ struct append_entries {
   node_name leader;
   /// cmd
   command cmd;
+  /// abstract state machine id
+  uint32_t asm_num = 0;
 
   logdb::reccord_info current;
   logdb::reccord_info prev;
