@@ -44,7 +44,7 @@ public:
   EXPORT void recv(const node_name &from, const append_entries &e) override;
   EXPORT void lost_connection_with(const node_name &addr) override;
   EXPORT void new_connection_with(const solidarity::node_name &addr) override;
-  [[nodiscard]] EXPORT ERROR_CODE add_command(const command &cmd) override;
+  [[nodiscard]] EXPORT ERROR_CODE add_command(const command_t &cmd) override;
 
   node_name get_leader() const { return state().leader; }
   node_name self_addr() const { return _self_addr; }
@@ -78,7 +78,7 @@ protected:
   void commit_reccord(const logdb::reccord_info &target);
   void replicate_log(const std::vector<solidarity::node_name> &all);
 
-  [[nodiscard]] ERROR_CODE add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k);
+  [[nodiscard]] ERROR_CODE add_command_impl(const command_t &cmd, logdb::LOG_ENTRY_KIND k);
   void add_reccord(const logdb::log_entry &le);
 
 private:

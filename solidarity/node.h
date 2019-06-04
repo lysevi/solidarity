@@ -56,8 +56,8 @@ public:
   EXPORT raft_state_t state() const;
   EXPORT node_name self_name() const;
 
-  EXPORT ERROR_CODE add_command(const command &cmd);
-  EXPORT std::shared_ptr<async_result_t> add_command_to_cluster(const command &cmd);
+  EXPORT ERROR_CODE add_command(const command_t &cmd);
+  EXPORT std::shared_ptr<async_result_t> add_command_to_cluster(const command_t &cmd);
 
   void add_client(uint64_t id);
 
@@ -69,7 +69,7 @@ public:
   EXPORT void send_to_leader(uint64_t client_id,
                              queries::resend_query_kind kind,
                              uint64_t message_id,
-                             command &cmd);
+                             command_t &cmd);
 
   EXPORT uint64_t add_event_handler(const std::function<void(const client_event_t &)> &);
   EXPORT void rm_event_handler(uint64_t);
@@ -97,7 +97,7 @@ private:
 
   uint32_t _timer_period;
   std::unique_ptr<boost::asio::deadline_timer> _timer;
-  std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, solidarity::command>>>
+  std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, solidarity::command_t>>>
       _message_resend;
 
   std::atomic_uint64_t _next_id = {0};

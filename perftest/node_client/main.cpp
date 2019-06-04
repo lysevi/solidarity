@@ -15,25 +15,25 @@ public:
   dummy_fsm()
       : counter(0) {}
 
-  void apply_cmd(const solidarity::command &cmd) override {
+  void apply_cmd(const solidarity::command_t &cmd) override {
     counter = cmd.to_value<uint64_t>();
   }
 
   void reset() override { counter = 0; }
 
-  solidarity::command snapshot() override {
-    return solidarity::command::from_value<uint64_t>(counter);
+  solidarity::command_t snapshot() override {
+    return solidarity::command_t::from_value<uint64_t>(counter);
   }
 
-  void install_snapshot(const solidarity::command &cmd) override {
+  void install_snapshot(const solidarity::command_t &cmd) override {
     counter = cmd.to_value<uint64_t>();
   }
 
-  solidarity::command read(const solidarity::command & /*cmd*/) override {
+  solidarity::command_t read(const solidarity::command_t & /*cmd*/) override {
     return snapshot();
   }
 
-  bool can_apply(const solidarity::command &) override { return true; }
+  bool can_apply(const solidarity::command_t &) override { return true; }
 
   uint64_t counter;
 };
@@ -187,7 +187,7 @@ int main(int argc, char **argv) {
 
   std::vector<double> etimes(writes_count);
   for (size_t i = 0; i < writes_count; ++i) {
-    auto cmd = solidarity::command::from_value(v);
+    auto cmd = solidarity::command_t::from_value(v);
 
     auto c = clients[i % node_count];
 

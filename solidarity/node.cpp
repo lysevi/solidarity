@@ -77,7 +77,7 @@ public:
   void read_handler(listener_client_ptr i, std::vector<message_ptr> &d) {
     clients::read_query_t rq(d);
     _logger->dbg("client:", _client_name, " read query #", rq.msg_id);
-    command result = _parent->state_machine()->read(rq.query);
+    command_t result = _parent->state_machine()->read(rq.query);
     clients::read_query_t answer(rq.msg_id, result);
     auto ames = answer.to_message();
     i->send_data(ames);
@@ -121,7 +121,7 @@ public:
     _parent = parent;
   }
 
-  void apply_cmd(const command &cmd) override {
+  void apply_cmd(const command_t &cmd) override {
     try {
       _target->apply_cmd(cmd);
       if (_parent->is_leader()) {
@@ -139,16 +139,16 @@ public:
     _target->reset();
   }
 
-  command snapshot() override { return _target->snapshot(); }
+  command_t snapshot() override { return _target->snapshot(); }
 
-  void install_snapshot(const solidarity::command &cmd) override {
+  void install_snapshot(const solidarity::command_t &cmd) override {
     //_parent->notify_state_machine_update();
     _target->install_snapshot(cmd);
   }
 
-  command read(const command &cmd) override { return _target->read(cmd); }
+  command_t read(const command_t &cmd) override { return _target->read(cmd); }
 
-  bool can_apply(const command &cmd) override {
+  bool can_apply(const command_t &cmd) override {
     bool res = _target->can_apply(cmd);
     if (res) {
       _parent->notify_command_status(cmd.crc(), command_status::CAN_BE_APPLY);
@@ -535,7 +535,7 @@ void node::heartbeat_timer() {
 void node::send_to_leader(uint64_t client_id,
                           queries::resend_query_kind kind,
                           uint64_t message_id,
-                          command &cmd) {
+                          command_t &cmd) {
   if (_stoped) {
     return;
   }
@@ -584,7 +584,7 @@ void node::on_message_sended_status(uint64_t client,
   }
 }
 
-ERROR_CODE node::add_command(const command &cmd) {
+ERROR_CODE node::add_command(const command_t &cmd) {
   if (_stoped) {
     return ERROR_CODE::NETWORK_ERROR;
   }
@@ -600,7 +600,7 @@ ERROR_CODE node::add_command(const command &cmd) {
   }
 }
 
-std::shared_ptr<async_result_t> node::add_command_to_cluster(const command &cmd) {
+std::shared_ptr<async_result_t> node::add_command_to_cluster(const command_t &cmd) {
   if (_stoped) {
     return nullptr;
   }
@@ -649,7 +649,7 @@ cluster_state_event_t node::cluster_status() {
     auto leader = _raft->get_leader();
     auto ar = _cluster_con->send_to(leader,
                                     queries::resend_query_kind::STATUS,
-                                    solidarity::command(),
+                                    solidarity::command_t(),
                                     [](ERROR_CODE) {});
     return ar->cluster_state();
   }

@@ -599,7 +599,7 @@ void raft::replicate_log(const std::vector<solidarity::node_name> &all) {
   }
 }
 
-ERROR_CODE raft::add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k) {
+ERROR_CODE raft::add_command_impl(const command_t &cmd, logdb::LOG_ENTRY_KIND k) {
   ENSURE(!cmd.is_empty());
   if (k != logdb::LOG_ENTRY_KIND::SNAPSHOT && !_state_machine->can_apply(cmd)) {
     return ERROR_CODE::STATE_MACHINE_CAN_T_APPLY_CMD;
@@ -622,7 +622,7 @@ ERROR_CODE raft::add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k) {
   return ERROR_CODE::OK;
 }
 
-ERROR_CODE raft::add_command(const command &cmd) {
+ERROR_CODE raft::add_command(const command_t &cmd) {
   // TODO global lock for this method. a while cmd not in state_machine;
   std::lock_guard lg(_locker);
 

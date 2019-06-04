@@ -143,7 +143,7 @@ message_ptr status_t::to_message() const {
       queries::QUERY_KIND::STATUS, id, msg, static_cast<uint16_t>(status));
 }
 
-command_t::command_t(const std::vector<message_ptr> &mptrs) {
+add_command_t::add_command_t(const std::vector<message_ptr> &mptrs) {
   ENSURE(std::all_of(mptrs.cbegin(), mptrs.cend(), [](auto mptr) {
     return mptr->get_header()->kind == (message::kind_t)QUERY_KIND::COMMAND;
   }));
@@ -166,7 +166,7 @@ command_t::command_t(const std::vector<message_ptr> &mptrs) {
   }
 }
 
-std::vector<message_ptr> command_t::to_message() const {
+std::vector<message_ptr> add_command_t::to_message() const {
   using namespace dialler;
   auto barray = cmd.to_byte_array();
   auto total_size = barray.size() + from.size();

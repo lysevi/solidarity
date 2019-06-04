@@ -233,7 +233,7 @@ TEST_CASE("node", "[network]") {
                    [](auto &v) -> uint8_t { return uint8_t(v + 1); });
 
     send_ecode = solidarity::ERROR_CODE::UNDEFINED;
-    solidarity::command cmd;
+    solidarity::command_t cmd;
     auto tnode = nodes[kv.first];
     std::atomic_bool writed_to_node_sm = false;
     uint64_t node_handler_id = tnode->add_event_handler(

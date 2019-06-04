@@ -1,12 +1,21 @@
 #include <array>
 #include <msgpack.hpp>
 
+#ifdef CLANG_CPP
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wno-implicit-int-conversion"
+#endif
 #include <boost/crc.hpp>
+
+#ifdef CLANG_CPP
+#pragma clang diagnostic pop
+#endif
+
 #include <solidarity/command.h>
 
 using namespace solidarity;
 
-uint32_t command::crc() const {
+uint32_t command_t::crc() const {
   if (data.empty()) {
     return uint32_t();
   } else {
@@ -17,7 +26,7 @@ uint32_t command::crc() const {
   }
 }
 
-std::vector<uint8_t> command::to_byte_array() const {
+std::vector<uint8_t> command_t::to_byte_array() const {
   msgpack::sbuffer buffer;
   msgpack::packer<msgpack::sbuffer> pk(&buffer);
   pk.pack(data);
@@ -29,8 +38,8 @@ std::vector<uint8_t> command::to_byte_array() const {
   return result;
 }
 
-command command::from_byte_array(const std::vector<uint8_t> &bytes) {
-  command result;
+command_t command_t::from_byte_array(const std::vector<uint8_t> &bytes) {
+  command_t result;
   msgpack::unpacker pac;
   pac.reserve_buffer(bytes.size());
   memcpy(pac.buffer(), bytes.data(), bytes.size());

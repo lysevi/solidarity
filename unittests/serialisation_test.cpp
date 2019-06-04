@@ -1,4 +1,4 @@
-#include <solidarity/abstract_cluster.h>
+#include <solidarity/append_entries.h>
 #include <solidarity/queries.h>
 
 #include "helpers.h"
@@ -176,10 +176,10 @@ TEST_CASE("serialisation.command", "[network]") {
   ae.commited.lsn = 11;
   ae.commited.term = 22;
 
-  solidarity::queries::command_t cmd(solidarity::node_name("from node name"), ae);
+  solidarity::queries::add_command_t cmd(solidarity::node_name("from node name"), ae);
 
   auto msg = cmd.to_message();
-  solidarity::queries::command_t cmd_u(msg);
+  solidarity::queries::add_command_t cmd_u(msg);
   EXPECT_EQ(cmd.from, cmd_u.from);
   EXPECT_EQ(
       msg.front()->get_header()->kind,
@@ -199,7 +199,7 @@ TEST_CASE("serialisation.client_connect_t", "[network]") {
 }
 
 TEST_CASE("serialisation.read_query_t", "[network]") {
-  solidarity::command cmd;
+  solidarity::command_t cmd;
   cmd.data = std::vector<uint8_t>{0, 1, 2, 3};
 
   SECTION("small cmd") {
@@ -232,7 +232,7 @@ TEST_CASE("serialisation.read_query_t", "[network]") {
 }
 
 TEST_CASE("serialisation.write_query_t", "[network]") {
-  solidarity::command cmd;
+  solidarity::command_t cmd;
   cmd.data = std::vector<uint8_t>{0, 1, 2, 3};
 
   SECTION("small cmd") {
@@ -265,7 +265,7 @@ TEST_CASE("serialisation.write_query_t", "[network]") {
 }
 
 TEST_CASE("serialisation.resend_query_t", "[network]") {
-  solidarity::command cmd;
+  solidarity::command_t cmd;
   cmd.data = std::vector<uint8_t>{0, 1, 2, 3};
 
   SECTION("small cmd") {
