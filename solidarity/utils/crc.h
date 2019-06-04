@@ -19,8 +19,9 @@ constexpr std::array<unsigned long, 256> get_crc_table() {
 
 class crc32 {
 public:
+  crc32()
+      : crc_table(get_crc_table()) {}
   void calculate(uint8_t t) {
-    constexpr auto crc_table = get_crc_table();
     crc = crc_table[(crc ^ t) & 0xFF] ^ (crc >> 8);
   }
   template <class T>
@@ -41,6 +42,7 @@ public:
 
 private:
   unsigned long crc = 0xFFFFFFFFUL;
+  const std::array<unsigned long, 256> crc_table;
 };
 
 } // namespace solidarity::utils
