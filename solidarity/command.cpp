@@ -3,7 +3,7 @@
 
 #ifdef CLANG_CPP
 #pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wno-implicit-int-conversion"
+#pragma clang diagnostic ignored "-Wimplicit-int-conversion"
 #endif
 #include <boost/crc.hpp>
 
