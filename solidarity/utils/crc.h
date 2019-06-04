@@ -24,9 +24,9 @@ public:
     crc = crc_table[(crc ^ t) & 0xFF] ^ (crc >> 8);
   }
   template <class T>
-  void calculate(T *ptr, size_t size) {
-    uint8_t *begin = (uint8_t *)ptr;
-    uint8_t *end = begin + size;
+  void calculate(const T *ptr, size_t size) {
+    const uint8_t *begin = reinterpret_cast<const uint8_t *>(ptr);
+    const uint8_t *end = begin + size;
     calculate(begin, end);
   }
 
