@@ -17,13 +17,30 @@ constexpr std::array<unsigned long, 256> get_crc_table() {
   return crc_table;
 }
 
-template <typename It>
-unsigned int crc(It begin, It end, unsigned long initial_value = 0xFFFFFFFFUL) {
-  constexpr auto crc_table = get_crc_table();
-  unsigned long crc = initial_value;
-  for (auto it = begin; it != end; ++it) {
-    crc = crc_table[(crc ^ *it) & 0xFF] ^ (crc >> 8);
+class crc32 {
+public:
+  void calculate(uint8_t t) {
+    constexpr auto crc_table = get_crc_table();
+    crc = crc_table[(crc ^ t) & 0xFF] ^ (crc >> 8);
   }
-  return crc ^ 0xFFFFFFFFUL;
-}
+  template <class T>
+  void calculate(T *ptr, size_t size) {
+    uint8_t *begin = (uint8_t *)ptr;
+    uint8_t *end = begin + size;
+    calculate(begin, end);
+  }
+
+  template <typename It>
+  void calculate(It begin, It end) {
+    for (auto it = begin; it != end; ++it) {
+      calculate(*it);
+    }
+  }
+
+  unsigned long checksum() const { return crc ^ 0xFFFFFFFFUL; }
+
+private:
+  unsigned long crc = 0xFFFFFFFFUL;
+};
+
 } // namespace solidarity::utils

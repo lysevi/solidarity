@@ -1,17 +1,8 @@
 #include <array>
 #include <msgpack.hpp>
 
-#ifdef CLANG_CPP
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wimplicit-int-conversion"
-#endif
-#include <boost/crc.hpp>
-
-#ifdef CLANG_CPP
-#pragma clang diagnostic pop
-#endif
-
 #include <solidarity/command.h>
+#include <solidarity/utils/crc.h>
 
 using namespace solidarity;
 
@@ -19,9 +10,9 @@ uint32_t command_t::crc() const {
   if (data.empty()) {
     return uint32_t();
   } else {
-    boost::crc_32_type result;
-    result.process_bytes(data.data(), data.size());
-    result.process_bytes(&asm_num, sizeof(asm_num));
+    utils::crc32 result;
+    result.calculate(data.begin(), data.end());
+    result.calculate(&asm_num, sizeof(asm_num));
     return result.checksum();
   }
 }
