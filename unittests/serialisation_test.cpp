@@ -18,7 +18,7 @@ void check_append_entries(const solidarity::append_entries &ae,
   EXPECT_EQ(ae.prev.kind, res.prev.kind);
   EXPECT_EQ(ae.commited, res.commited);
   EXPECT_EQ(ae.commited.kind, res.commited.kind);
-  EXPECT_EQ(ae.asm_num, res.asm_num);
+  EXPECT_EQ(ae.cmd.asm_num, res.cmd.asm_num);
 
   auto is_eq = std::equal(ae.cmd.data.begin(), ae.cmd.data.end(), res.cmd.data.begin());
   EXPECT_TRUE(is_eq);
@@ -162,7 +162,7 @@ TEST_CASE("serialisation.command", "[network]") {
   ae.kind = kind;
   ae.starttime = 351;
   ae.leader = leader;
-  ae.asm_num = uint32_t(787);
+  ae.cmd.asm_num = uint32_t(787);
 
   ae.current.kind = lk;
   ae.current.lsn = 77;

@@ -20,9 +20,22 @@ struct command {
       : data(o) {}
   command(const size_t sz)
       : data(sz) {}
+
+  command(uint32_t asm_number, const std::initializer_list<std::uint8_t> &il)
+      : data(il)
+      , asm_num(asm_number) {}
+  command(uint32_t asm_number, const std::vector<std::uint8_t> &o)
+      : data(o)
+      , asm_num(asm_number) {}
+  command(uint32_t asm_number, const size_t sz)
+      : data(sz)
+      , asm_num(asm_number) {}
+
   command &operator=(const command &) = default;
 
   std::vector<std::uint8_t> data;
+  /// abstract state machine id
+  uint32_t asm_num = 0;
 
   bool is_empty() const { return data.empty(); }
   size_t size() const { return data.size(); }
@@ -57,6 +70,8 @@ struct command {
   auto cend() const -> decltype(this->data.cend()) { return data.cend(); }
 
   EXPORT uint32_t crc() const;
+  [[nodiscard]] EXPORT std::vector<uint8_t> to_byte_array() const;
+  [[nodiscard]] EXPORT static command from_byte_array(const std::vector<uint8_t> &bytes);
 };
 
 } // namespace solidarity

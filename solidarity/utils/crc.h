@@ -18,9 +18,9 @@ constexpr std::array<unsigned long, 256> get_crc_table() {
 }
 
 template <typename It>
-unsigned int crc(It begin, It end) {
+unsigned int crc(It begin, It end, unsigned long initial_value = 0xFFFFFFFFUL) {
   constexpr auto crc_table = get_crc_table();
-  unsigned long crc = 0xFFFFFFFFUL;
+  unsigned long crc = initial_value;
   for (auto it = begin; it != end; ++it) {
     crc = crc_table[(crc ^ *it) & 0xFF] ^ (crc >> 8);
   }
