@@ -77,7 +77,7 @@ public:
   void read_handler(listener_client_ptr i, std::vector<message_ptr> &d) {
     clients::read_query_t rq(d);
     _logger->dbg("client:", _client_name, " read query #", rq.msg_id);
-    command_t result = _parent->state_machine()->read(rq.query);
+    command_t result = _parent->state_machine(rq.query.asm_num)->read(rq.query);
     clients::read_query_t answer(rq.msg_id, result);
     auto ames = answer.to_message();
     i->send_data(ames);
@@ -267,10 +267,27 @@ public:
 
 node::node(utils::logging::abstract_logger_ptr logger,
            const params_t &p,
-           abstract_state_machine *state_machine)
-    : _stoped(false) {
+           abstract_state_machine *state_machine) {
+  std::unordered_map<uint32_t, abstract_state_machine *> sms
+      = {{uint32_t(0), state_machine}};
+  init(logger, p, sms);
+}
+
+node::node(utils::logging::abstract_logger_ptr logger,
+           const params_t &p,
+           std::unordered_map<uint32_t, abstract_state_machine *> state_machines) {
+  init(logger, p, state_machines);
+}
+
+void node::init(utils::logging::abstract_logger_ptr logger,
+                const params_t &p,
+                std::unordered_map<uint32_t, abstract_state_machine *> state_machines) {
+  _stoped = false;
   _params = p;
-  _state_machine = new consumer_wrapper(this, state_machine);
+
+  for (auto &kv : state_machines) {
+    _state_machine.insert({kv.first, new consumer_wrapper(this, kv.second)});
+  }
 
   _logger = logger;
 
@@ -324,9 +341,12 @@ node::~node() {
     stop();
   }
   _raft = nullptr;
-  if (_state_machine != nullptr) {
-    delete _state_machine;
-    _state_machine = nullptr;
+  if (!_state_machine.empty()) {
+    for (auto &&kv : std::move(_state_machine)) {
+      delete kv.second;
+    }
+
+    _state_machine.clear();
   }
   _logger = nullptr;
   _clients.clear();
@@ -480,8 +500,8 @@ void node::notify_raft_state_update(NODE_KIND old_state, NODE_KIND new_state) {
   }
 }
 
-abstract_state_machine *node::state_machine() {
-  return dynamic_cast<consumer_wrapper *>(_state_machine)->_target;
+abstract_state_machine *node::state_machine(uint32_t asm_number) {
+  return dynamic_cast<consumer_wrapper *>(_state_machine[asm_number])->_target;
 }
 
 std::shared_ptr<raft> node::get_raft() {

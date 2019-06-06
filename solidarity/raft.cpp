@@ -18,11 +18,30 @@ raft::raft(const raft_settings_t &ns,
            const logdb::journal_ptr &jrn,
            abstract_state_machine *state_machine,
            utils::logging::abstract_logger_ptr logger)
-    : _state_machine(state_machine)
-    , _rnd_eng(make_seeded_engine())
-    , _settings(ns)
-    , _cluster(cluster)
-    , _jrn(jrn) {
+    : _rnd_eng(make_seeded_engine()) {
+  std::unordered_map<uint32_t, abstract_state_machine *> sms
+      = {{uint32_t(0), state_machine}};
+  init(ns, cluster, jrn, sms, logger);
+}
+
+raft::raft(const raft_settings_t &ns,
+           abstract_cluster *cluster,
+           const logdb::journal_ptr &jrn,
+           std::unordered_map<uint32_t, abstract_state_machine *> state_machines,
+           utils::logging::abstract_logger_ptr logger)
+    : _rnd_eng(make_seeded_engine()) {
+  init(ns, cluster, jrn, state_machines, logger);
+}
+
+void raft::init(const raft_settings_t &ns,
+                abstract_cluster *cluster,
+                const logdb::journal_ptr &jrn,
+                std::unordered_map<uint32_t, abstract_state_machine *> state_machines,
+                utils::logging::abstract_logger_ptr logger) {
+  _settings = ns;
+  _cluster = cluster;
+  _jrn = jrn;
+
   if (logger != nullptr) {
     _logger = std::make_shared<utils::logging::prefix_logger>(logger, "[raft] ");
   } else {
@@ -31,8 +50,8 @@ raft::raft(const raft_settings_t &ns,
     _logger = std::make_shared<utils::logging::prefix_logger>(
         utils::logging::logger_manager::instance()->get_shared_logger(), log_prefix);
   }
-
-  ENSURE(_state_machine != nullptr);
+  _state_machine = state_machines;
+  ENSURE(!_state_machine.empty());
 
   _settings.dump_to_log(_logger.get());
 
@@ -318,7 +337,9 @@ void raft::on_append_entries(const node_name &from, const append_entries &e) {
         return;
       }
     }
-    _state_machine->reset();
+    for (auto &kv : _state_machine) {
+      kv.second->reset();
+    }
   }
 
   // TODO add check prev,cur,commited
@@ -337,7 +358,7 @@ void raft::on_append_entries(const node_name &from, const append_entries &e) {
       } else {
         if (e.cmd.is_empty() && e.current.kind == logdb::LOG_ENTRY_KIND::SNAPSHOT) {
           _logger->info("create snapshot");
-          le.cmd = _state_machine->snapshot();
+          le.cmd = _state_machine[e.cmd.asm_num]->snapshot();
           le.kind = logdb::LOG_ENTRY_KIND::SNAPSHOT;
         }
       }
@@ -445,7 +466,7 @@ void raft::commit_reccord(const logdb::reccord_info &target) {
       auto le = _jrn->get(commited.lsn);
 
       if (info.kind == logdb::LOG_ENTRY_KIND::APPEND) {
-        ENSURE(_state_machine != nullptr);
+        ENSURE(!_state_machine.empty());
         add_reccord(le);
       } else {
         auto erase_point = _jrn->info(i - 1);
@@ -601,7 +622,8 @@ void raft::replicate_log(const std::vector<solidarity::node_name> &all) {
 
 ERROR_CODE raft::add_command_impl(const command_t &cmd, logdb::LOG_ENTRY_KIND k) {
   ENSURE(!cmd.is_empty());
-  if (k != logdb::LOG_ENTRY_KIND::SNAPSHOT && !_state_machine->can_apply(cmd)) {
+  if (k != logdb::LOG_ENTRY_KIND::SNAPSHOT
+      && !_state_machine[cmd.asm_num]->can_apply(cmd)) {
     return ERROR_CODE::STATE_MACHINE_CAN_T_APPLY_CMD;
   }
   logdb::log_entry le;
@@ -633,8 +655,8 @@ ERROR_CODE raft::add_command(const command_t &cmd) {
 
   if (_jrn->size() >= _settings.max_log_size()) {
     _logger->info("create snapshot");
-    auto res
-        = add_command_impl(_state_machine->snapshot(), logdb::LOG_ENTRY_KIND::SNAPSHOT);
+    auto res = add_command_impl(_state_machine[cmd.asm_num]->snapshot(),
+                                logdb::LOG_ENTRY_KIND::SNAPSHOT);
     if (res != ERROR_CODE::OK) {
       THROW_EXCEPTION("snapshot save error: ", res);
     }
@@ -646,11 +668,11 @@ ERROR_CODE raft::add_command(const command_t &cmd) {
 void raft::add_reccord(const logdb::log_entry &le) {
   switch (le.kind) {
   case logdb::LOG_ENTRY_KIND::APPEND: {
-    _state_machine->apply_cmd(le.cmd);
+    _state_machine[le.cmd.asm_num]->apply_cmd(le.cmd);
     break;
   }
   case logdb::LOG_ENTRY_KIND::SNAPSHOT: {
-    _state_machine->install_snapshot(le.cmd);
+    _state_machine[le.cmd.asm_num]->install_snapshot(le.cmd);
     break;
   }
   }

@@ -44,10 +44,13 @@ public:
   EXPORT node(utils::logging::abstract_logger_ptr logger,
               const params_t &p,
               abstract_state_machine *state_machine);
+  EXPORT node(utils::logging::abstract_logger_ptr logger,
+              const params_t &p,
+              std::unordered_map<uint32_t, abstract_state_machine *> state_machines);
   EXPORT ~node();
 
   params_t params() const { return _params; }
-  EXPORT abstract_state_machine *state_machine();
+  EXPORT abstract_state_machine *state_machine(uint32_t asm_number);
   EXPORT std::shared_ptr<raft> get_raft();
 
   EXPORT void start();
@@ -79,6 +82,9 @@ public:
 private:
   void heartbeat_timer();
   void on_message_sended_status(uint64_t client, uint64_t message, ERROR_CODE status);
+  void init(utils::logging::abstract_logger_ptr logger,
+            const params_t &p,
+            std::unordered_map<uint32_t, abstract_state_machine *> state_machines);
 
 private:
   mutable std::shared_mutex _locker;
@@ -86,7 +92,7 @@ private:
   params_t _params;
   std::shared_ptr<raft> _raft;
   std::shared_ptr<mesh_connection> _cluster_con;
-  abstract_state_machine *_state_machine;
+  std::unordered_map<uint32_t, abstract_state_machine *> _state_machine;
 
   utils::logging::abstract_logger_ptr _logger;
 
