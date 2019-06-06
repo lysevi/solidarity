@@ -6,7 +6,7 @@
 using namespace solidarity;
 using namespace solidarity::special;
 
-lockservice::lock_action lockservice::lock_action::from_cmd(const command &cmd) {
+lockservice::lock_action lockservice::lock_action::from_cmd(const command_t &cmd) {
   lockservice::lock_action res;
   msgpack::unpacker pac;
   pac.reserve_buffer(cmd.size());
@@ -23,7 +23,7 @@ lockservice::lock_action lockservice::lock_action::from_cmd(const command &cmd) 
   return res;
 }
 
-command lockservice::lock_action::to_cmd() const {
+command_t lockservice::lock_action::to_cmd() const {
   msgpack::sbuffer buffer;
   msgpack::packer<msgpack::sbuffer> pk(&buffer);
   pk.pack(target);
@@ -31,14 +31,14 @@ command lockservice::lock_action::to_cmd() const {
   pk.pack(state);
 
   auto needed_size = buffer.size();
-  command res(needed_size);
+  command_t res(needed_size);
   memcpy(res.data.data(), buffer.data(), buffer.size());
   return res;
 }
 
 lockservice::lockservice() {}
 
-void lockservice::apply_cmd(const command &cmd) {
+void lockservice::apply_cmd(const command_t &cmd) {
   std::lock_guard l(_locker);
   auto a = lock_action::from_cmd(cmd);
   if (auto it = _locks.find(a.target); it != _locks.end()) {
@@ -62,7 +62,7 @@ void lockservice::reset() {
   }
 };
 
-command lockservice::snapshot() {
+command_t lockservice::snapshot() {
   std::lock_guard l(_locker);
   msgpack::sbuffer buffer;
   msgpack::packer<msgpack::sbuffer> pk(&buffer);
@@ -74,12 +74,12 @@ command lockservice::snapshot() {
   }
 
   auto needed_size = buffer.size();
-  command res(needed_size);
+  command_t res(needed_size);
   memcpy(res.data.data(), buffer.data(), buffer.size());
   return res;
 }
 
-void lockservice::install_snapshot(const command &cmd) {
+void lockservice::install_snapshot(const command_t &cmd) {
   std::lock_guard l(_locker);
   lockservice::lock_action res;
   msgpack::unpacker pac;
@@ -102,7 +102,7 @@ void lockservice::install_snapshot(const command &cmd) {
   }
 }
 
-command lockservice::read(const command &cmd) {
+command_t lockservice::read(const command_t &cmd) {
   std::lock_guard l(_locker);
   auto a = lock_action::from_cmd(cmd);
   if (auto it = _locks.find(a.target); it != _locks.end()) {
@@ -112,11 +112,11 @@ command lockservice::read(const command &cmd) {
     la.state = it->second.state;
     return la.to_cmd();
   } else {
-    return command(0);
+    return command_t(0);
   }
 }
 
-bool lockservice::can_apply(const command &cmd) {
+bool lockservice::can_apply(const command_t &cmd) {
   std::lock_guard l(_locker);
   auto a = lock_action::from_cmd(cmd);
   if (auto it = _locks.find(a.target); it != _locks.end()) {

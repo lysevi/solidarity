@@ -65,9 +65,9 @@ public:
   EXPORT void connect();
   EXPORT void disconnect();
 
-  [[nodiscard]] EXPORT ERROR_CODE send_weak(const solidarity::command &cmd);
-  [[nodiscard]] EXPORT send_result send_strong(const solidarity::command &cmd);
-  EXPORT solidarity::command read(const solidarity::command &cmd);
+  [[nodiscard]] EXPORT ERROR_CODE send_weak(const solidarity::command_t &cmd);
+  [[nodiscard]] EXPORT send_result send_strong(const solidarity::command_t &cmd);
+  EXPORT solidarity::command_t read(const solidarity::command_t &cmd);
 
   params_t params() const { return _params; }
   bool is_connected() const { return _connected; }

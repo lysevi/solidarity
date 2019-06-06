@@ -6,11 +6,26 @@
 #include <solidarity/utils/strings.h>
 
 #include "mock_state_machine.h"
+#include "test_description_t.h"
 
 #include <catch.hpp>
 #include <condition_variable>
 #include <iostream>
 #include <numeric>
+
+class node_test_description_t : public test_description_t {
+public:
+  node_test_description_t()
+      : test_description_t() {}
+
+  std::unordered_map<uint32_t, std::shared_ptr<solidarity::abstract_state_machine>>
+  get_state_machines() override {
+    std::unordered_map<uint32_t, std::shared_ptr<solidarity::abstract_state_machine>>
+        result;
+    result[uint32_t(0)] = std::make_shared<mock_state_machine>();
+    return result;
+  }
+};
 
 TEST_CASE("node", "[network]") {
   size_t cluster_size = 0;
@@ -36,110 +51,16 @@ TEST_CASE("node", "[network]") {
     SECTION("large data.x3.75") { cmd_size = large_cmd_size; }
     cluster_size = 5;
   }
+  node_test_description_t td;
+  td.init(cluster_size);
 
-  std::vector<unsigned short> ports(cluster_size);
-  std::iota(ports.begin(), ports.end(), (unsigned short)(8000));
-
-  std::unordered_map<std::string, std::shared_ptr<solidarity::node>> nodes;
-  std::unordered_map<std::string, std::shared_ptr<mock_state_machine>> consumers;
-  std::unordered_map<std::string, std::shared_ptr<solidarity::client>> clients;
-
-  std::cerr << "start nodes" << std::endl;
-  unsigned short client_port = 10000;
-  for (auto p : ports) {
-    std::vector<unsigned short> out_ports;
-    out_ports.reserve(ports.size() - 1);
-    std::copy_if(ports.begin(),
-                 ports.end(),
-                 std::back_inserter(out_ports),
-                 [p](const auto v) { return v != p; });
-
-    EXPECT_EQ(out_ports.size(), ports.size() - 1);
-
-    std::vector<std::string> out_addrs;
-    out_addrs.reserve(out_ports.size());
-    std::transform(out_ports.begin(),
-                   out_ports.end(),
-                   std::back_inserter(out_addrs),
-                   [](const auto prt) {
-                     return solidarity::utils::strings::to_string("localhost:", prt);
-                   });
-
-    solidarity::node::params_t params;
-    params.port = p;
-    params.client_port = client_port++;
-    params.thread_count = 1;
-    params.cluster = out_addrs;
-    params.name = solidarity::utils::strings::to_string("node_", p);
-    std::cerr << params.name << " starting..." << std::endl;
-    auto log_prefix = solidarity::utils::strings::to_string(params.name, "> ");
-    auto node_logger = std::make_shared<solidarity::utils::logging::prefix_logger>(
-        solidarity::utils::logging::logger_manager::instance()->get_shared_logger(),
-        log_prefix);
-
-    auto state_machine = std::make_shared<mock_state_machine>();
-    auto n = std::make_shared<solidarity::node>(node_logger, params, state_machine.get());
-
-    n->start();
-
-    solidarity::client::params_t cpar(
-        solidarity::utils::strings::to_string("client_", params.name));
-    cpar.threads_count = 1;
-    cpar.host = "localhost";
-    cpar.port = params.client_port;
-
-    auto c = std::make_shared<solidarity::client>(cpar);
-    c->connect();
-
-    while (!c->is_connected()) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-
-    EXPECT_EQ(n->connections_count(), size_t(1));
-
-    consumers[params.name] = state_machine;
-    nodes[params.name] = n;
-    clients[params.name] = c;
-  }
-
-  std::cerr << "wait election" << std::endl;
-  std::unordered_set<solidarity::node_name> leaders;
-  while (true) {
-    leaders.clear();
-    for (auto &kv : nodes) {
-      if (kv.second->state().node_kind == solidarity::NODE_KIND::LEADER) {
-        leaders.insert(kv.second->self_name());
-      }
-    }
-    if (leaders.size() == 1) {
-      auto leader_name = *leaders.begin();
-      bool election_complete = true;
-      for (auto &kv : nodes) {
-        auto state = kv.second->state();
-        auto nkind = state.node_kind;
-        if (nkind != solidarity::NODE_KIND::LEADER
-            && nkind != solidarity::NODE_KIND::FOLLOWER) {
-          election_complete = false;
-          break;
-        }
-        if ((nkind == solidarity::NODE_KIND::LEADER
-             || nkind == solidarity::NODE_KIND::FOLLOWER)
-            && state.leader != leader_name) {
-          election_complete = false;
-          break;
-        }
-      }
-      if (election_complete) {
-        break;
-      }
-    }
-  }
+  std::unordered_set<solidarity::node_name> leaders = td.wait_election();
 
   auto leader_name = *leaders.begin();
   std::cerr << "send over leader " << leader_name << std::endl;
   tst_logger->info("send over leader ", leader_name);
 
-  auto leader_client = clients[leader_name];
+  auto leader_client = td.clients[leader_name];
   std::vector<uint8_t> first_cmd(cmd_size);
   std::iota(first_cmd.begin(), first_cmd.end(), uint8_t(0));
 
@@ -171,7 +92,7 @@ TEST_CASE("node", "[network]") {
   std::cerr << "resend test" << std::endl;
   tst_logger->info("resend test");
 
-  for (auto &kv : clients) {
+  for (auto &kv : td.clients) {
     bool is_a_leader = leader_name == kv.first;
     auto suffix = is_a_leader ? " is a leader" : "";
     std::cerr << "resend over " << kv.first << suffix << std::endl;
@@ -233,8 +154,8 @@ TEST_CASE("node", "[network]") {
                    [](auto &v) -> uint8_t { return uint8_t(v + 1); });
 
     send_ecode = solidarity::ERROR_CODE::UNDEFINED;
-    solidarity::command cmd;
-    auto tnode = nodes[kv.first];
+    solidarity::command_t cmd;
+    auto tnode = td.nodes[kv.first];
     std::atomic_bool writed_to_node_sm = false;
     uint64_t node_handler_id = tnode->add_event_handler(
         [&writed_to_node_sm](const solidarity::client_event_t &ev) {
@@ -297,8 +218,8 @@ TEST_CASE("node", "[network]") {
   }
 
   // cluster state
-  for (auto &kv : nodes) {
-    auto tnode = nodes[kv.first];
+  for (auto &kv : td.nodes) {
+    auto tnode = td.nodes[kv.first];
     auto cst = tnode->cluster_status();
     EXPECT_FALSE(cst.leader.empty());
     EXPECT_EQ(cst.state.size(), cluster_size);
@@ -307,9 +228,9 @@ TEST_CASE("node", "[network]") {
     }
   }
 
-  for (auto &kv : nodes) {
+  for (auto &kv : td.nodes) {
     std::cerr << "stop node " << kv.first << std::endl;
-    auto client = clients[kv.first];
+    auto client = td.clients[kv.first];
 
     std::mutex c_locker;
     solidarity::ERROR_CODE c = solidarity::ERROR_CODE::OK;
@@ -335,12 +256,86 @@ TEST_CASE("node", "[network]") {
     client->rm_event_handler(id);
   }
 
-  for (auto &kv : clients) {
+  for (auto &kv : td.clients) {
     while (kv.second->is_connected()) {
       std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
   }
-  nodes.clear();
-  clients.clear();
-  consumers.clear();
+  td.nodes.clear();
+  td.clients.clear();
+  td.consumers.clear();
+}
+
+class node_msm_test_description_t : public test_description_t {
+public:
+  node_msm_test_description_t()
+      : test_description_t() {}
+
+  std::unordered_map<uint32_t, std::shared_ptr<solidarity::abstract_state_machine>>
+  get_state_machines() override {
+    std::unordered_map<uint32_t, std::shared_ptr<solidarity::abstract_state_machine>>
+        result;
+    result[uint32_t(0)] = std::make_shared<mock_state_machine>();
+    result[uint32_t(1)] = std::make_shared<mock_state_machine>();
+    return result;
+  }
+};
+
+TEST_CASE("node.multi_asm", "[network]") {
+  size_t cluster_size = 3;
+  auto tst_log_prefix = solidarity::utils::strings::to_string("test?> ");
+  auto tst_logger = std::make_shared<solidarity::utils::logging::prefix_logger>(
+      solidarity::utils::logging::logger_manager::instance()->get_shared_logger(),
+      tst_log_prefix);
+
+  node_msm_test_description_t td;
+  td.init(cluster_size);
+
+  std::unordered_set<solidarity::node_name> leaders = td.wait_election();
+
+  size_t i = 0;
+  tst_logger->info("send to 0");
+  for (auto &kv : td.clients) {
+    auto cmd = solidarity::command_t::from_value(i);
+    cmd.asm_num = 0;
+    solidarity::send_result sres;
+    do {
+      sres = kv.second->send_strong(cmd);
+    } while (!sres.is_ok());
+
+    auto asm_ptr
+        = std::dynamic_pointer_cast<mock_state_machine>(td.consumers[kv.first][0]);
+    while (!asm_ptr->get_last_cmd().is_empty()
+           && asm_ptr->get_last_cmd().to_value<size_t>() != i) {
+    }
+
+    auto other_asm__ptr
+        = std::dynamic_pointer_cast<mock_state_machine>(td.consumers[kv.first][1]);
+    EXPECT_TRUE(other_asm__ptr->get_last_cmd().is_empty());
+    i++;
+  }
+
+  tst_logger->info("send to 1");
+  for (auto &kv : td.clients) {
+    auto cmd = solidarity::command_t::from_value(i);
+    cmd.asm_num = 1;
+    solidarity::send_result sres;
+    do {
+      sres = kv.second->send_strong(cmd);
+    } while (!sres.is_ok());
+
+    auto asm_ptr
+        = std::dynamic_pointer_cast<mock_state_machine>(td.consumers[kv.first][1]);
+    while (!asm_ptr->get_last_cmd().is_empty()
+           && asm_ptr->get_last_cmd().to_value<size_t>() != i) {
+    }
+
+    auto other_asm__ptr
+        = std::dynamic_pointer_cast<mock_state_machine>(td.consumers[kv.first][0]);
+    EXPECT_TRUE(other_asm__ptr->get_last_cmd().to_value<size_t>() != i);
+  }
+
+  td.nodes.clear();
+  td.clients.clear();
+  td.consumers.clear();
 }

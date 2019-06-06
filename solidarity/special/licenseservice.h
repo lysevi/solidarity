@@ -18,23 +18,23 @@ public:
     std::string owner;
     bool state;
 
-    EXPORT static lock_action from_cmd(const command &cmd);
-    EXPORT command to_cmd() const;
+    EXPORT static lock_action from_cmd(const command_t &cmd);
+    EXPORT command_t to_cmd() const;
   };
   struct lock_state {
     std::unordered_set<std::string> owners;
   };
   EXPORT licenseservice(const std::unordered_map<std::string, size_t> &_lics);
 
-  EXPORT void apply_cmd(const command &cmd) override;
+  EXPORT void apply_cmd(const command_t &cmd) override;
 
   EXPORT void reset() override;
-  EXPORT command snapshot() override;
-  EXPORT void install_snapshot(const command &cmd) override;
+  EXPORT command_t snapshot() override;
+  EXPORT void install_snapshot(const command_t &cmd) override;
 
-  EXPORT command read(const command &cmd) override;
+  EXPORT command_t read(const command_t &cmd) override;
 
-  EXPORT bool can_apply(const command &) override;
+  EXPORT bool can_apply(const command_t &) override;
 
   std::unordered_map<std::string, lock_state> get_locks() const { return _locks; }
 

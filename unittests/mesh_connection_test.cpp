@@ -37,7 +37,7 @@ struct mock_cluster_client : solidarity::abstract_cluster_client {
     return connected.size();
   }
 
-  solidarity::ERROR_CODE add_command(const solidarity::command &) override {
+  solidarity::ERROR_CODE add_command(const solidarity::command_t &) override {
     return solidarity::ERROR_CODE::OK;
   }
 

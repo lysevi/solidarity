@@ -143,7 +143,7 @@ message_ptr status_t::to_message() const {
       queries::QUERY_KIND::STATUS, id, msg, static_cast<uint16_t>(status));
 }
 
-command_t::command_t(const std::vector<message_ptr> &mptrs) {
+add_command_t::add_command_t(const std::vector<message_ptr> &mptrs) {
   ENSURE(std::all_of(mptrs.cbegin(), mptrs.cend(), [](auto mptr) {
     return mptr->get_header()->kind == (message::kind_t)QUERY_KIND::COMMAND;
   }));
@@ -166,7 +166,7 @@ command_t::command_t(const std::vector<message_ptr> &mptrs) {
   }
 }
 
-std::vector<message_ptr> command_t::to_message() const {
+std::vector<message_ptr> add_command_t::to_message() const {
   using namespace dialler;
   auto barray = cmd.to_byte_array();
   auto total_size = barray.size() + from.size();
@@ -252,7 +252,7 @@ write_query_t::write_query_t(const std::vector<dialler::message_ptr> &mptrs) {
     msg_id = oh.get().as<uint64_t>();
     pac.next(oh);
     auto data = oh.get().as<std::vector<uint8_t>>();
-    query.data = data;
+    query = command_t::from_byte_array(data);
   } else {
     msgpack::unpacker pac = get_unpacker(mptrs.back());
     msgpack::object_handle oh;
@@ -260,18 +260,19 @@ write_query_t::write_query_t(const std::vector<dialler::message_ptr> &mptrs) {
     pac.next(oh);
     msg_id = oh.get().as<uint64_t>();
 
-    query.data = messages_to_byte_array(mptrs);
+    auto d = messages_to_byte_array(mptrs);
+    query = command_t::from_byte_array(d);
   }
 }
 
 std::vector<dialler::message_ptr> write_query_t::to_message() const {
   using namespace dialler;
-  auto barray = query.data;
+  auto barray = query.to_byte_array();
   auto total_size = barray.size() + sizeof(msg_id);
   std::vector<dialler::message_ptr> result;
   if (total_size < dialler::message::MAX_BUFFER_SIZE * 0.75) {
     result.resize(1);
-    result[0] = pack_to_message(QUERY_KIND::WRITE, msg_id, query.data);
+    result[0] = pack_to_message(QUERY_KIND::WRITE, msg_id, query.to_byte_array());
   } else {
     byte_array_to_msg(result, (message::kind_t)QUERY_KIND::WRITE, barray);
     auto m = pack_to_message(QUERY_KIND::WRITE, msg_id);
@@ -298,7 +299,7 @@ resend_query_t::resend_query_t(const std::vector<dialler::message_ptr> &mptrs) {
 
     pac.next(oh);
     auto data = oh.get().as<std::vector<uint8_t>>();
-    query.data = data;
+    query = command_t::from_byte_array(data);
   } else {
     msgpack::unpacker pac = get_unpacker(mptrs.back());
     msgpack::object_handle oh;
@@ -309,18 +310,19 @@ resend_query_t::resend_query_t(const std::vector<dialler::message_ptr> &mptrs) {
     pac.next(oh);
     kind = (resend_query_kind)oh.get().as<uint8_t>();
 
-    query.data = messages_to_byte_array(mptrs);
+    auto data = messages_to_byte_array(mptrs);
+    query = command_t::from_byte_array(data);
   }
 }
 
 std::vector<dialler::message_ptr> resend_query_t::to_message() const {
   using namespace dialler;
-  auto barray = query.data;
+  auto barray = query.to_byte_array();
   auto total_size = barray.size() + sizeof(msg_id);
   std::vector<dialler::message_ptr> result;
   if (total_size < dialler::message::MAX_BUFFER_SIZE * 0.75) {
     result.resize(1);
-    result[0] = pack_to_message(QUERY_KIND::RESEND, msg_id, (uint8_t)kind, query.data);
+    result[0] = pack_to_message(QUERY_KIND::RESEND, msg_id, (uint8_t)kind, barray);
   } else {
     byte_array_to_msg(result, (message::kind_t)QUERY_KIND::RESEND, barray);
     auto m = pack_to_message(QUERY_KIND::RESEND, msg_id, (uint8_t)kind);

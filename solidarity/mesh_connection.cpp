@@ -234,7 +234,7 @@ void mesh_connection::send_to(const node_name &from,
                               const node_name &to,
                               const append_entries &m) {
   _logger->dbg("send to ", to);
-  queries::command_t cmd(from, m);
+  queries::add_command_t cmd(from, m);
   auto messages = cmd.to_message();
   send_to(to, messages);
 }
@@ -379,7 +379,7 @@ void mesh_connection::rm_input_connection(const uint64_t id,
 }
 
 void mesh_connection::on_new_command(const std::vector<dialler::message_ptr> &m) {
-  queries::command_t cmd_q(m);
+  queries::add_command_t cmd_q(m);
   _logger->dbg("on_new_command: from=", cmd_q.from);
   _client->recv(cmd_q.from, cmd_q.cmd);
 }
@@ -387,7 +387,7 @@ void mesh_connection::on_new_command(const std::vector<dialler::message_ptr> &m)
 std::shared_ptr<async_result_t>
 mesh_connection::send_to(const solidarity::node_name &target,
                          queries::resend_query_kind kind,
-                         const solidarity::command &cmd,
+                         const solidarity::command_t &cmd,
                          std::function<void(ERROR_CODE)> callback) {
   std::lock_guard l(_locker);
   auto res = _ash.make_waiter();
@@ -410,7 +410,7 @@ mesh_connection::send_to(const solidarity::node_name &target,
 void mesh_connection::on_query_resend(const node_name &target,
                                       uint64_t mess_id,
                                       queries::resend_query_kind kind,
-                                      solidarity::command &cmd) {
+                                      solidarity::command_t &cmd) {
   std::vector<dialler::message_ptr> result;
   switch (kind) {
   case solidarity::queries::resend_query_kind::WRITE: {

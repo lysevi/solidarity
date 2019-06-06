@@ -1,6 +1,6 @@
 #include <catch.hpp>
 #include <numeric>
-#include <solidarity/abstract_cluster.h>
+#include <solidarity/append_entries.h>
 #include <solidarity/queries.h>
 #include <solidarity/utils/utils.h>
 
@@ -51,11 +51,11 @@ TEST_CASE("serialisation", "[bench]") {
     ae.cmd.resize(1000);
     std::iota(ae.cmd.begin(), ae.cmd.end(), uint8_t(0));
 
-    command_t cmd(solidarity::node_name("long cluster node name"), ae);
+    add_command_t cmd(solidarity::node_name("long cluster node name"), ae);
     BENCHMARK("command_t::to_message") { UNUSED(cmd.to_message()); }
 
     auto cmd_msg = cmd.to_message();
-    BENCHMARK("command_t:unpack") { command_t unpacked(cmd_msg); }
+    BENCHMARK("command_t:unpack") { add_command_t unpacked(cmd_msg); }
   }
   {
     clients::client_connect_t client_con("client name", 777);
@@ -67,7 +67,7 @@ TEST_CASE("serialisation", "[bench]") {
     }
   }
   {
-    solidarity::command read_q_cmd;
+    solidarity::command_t read_q_cmd;
     read_q_cmd.resize(10);
     std::iota(read_q_cmd.begin(), read_q_cmd.end(), uint8_t(0));
     clients::read_query_t read_q(777, read_q_cmd);
@@ -77,7 +77,7 @@ TEST_CASE("serialisation", "[bench]") {
     BENCHMARK("read_query_t:unpack") { clients::read_query_t unpacked(read_q_msg); }
   }
   {
-    solidarity::command w_q_cmd;
+    solidarity::command_t w_q_cmd;
     w_q_cmd.resize(10);
     std::iota(w_q_cmd.begin(), w_q_cmd.end(), uint8_t(0));
     clients::write_query_t write_q(777, w_q_cmd);
