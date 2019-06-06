@@ -260,6 +260,7 @@ void raft::recv(const node_name &from, const append_entries &e) {
 
   if (e.kind != ENTRIES_KIND::VOTE && _self_addr == _state.leader
       && e.leader != _self_addr) {
+    // TODO refact.
     /// if leader receive message from follower with other leader,
     /// but with new election term.
     if (e.term > _state.term) {
@@ -272,6 +273,7 @@ void raft::recv(const node_name &from, const append_entries &e) {
       _state.votes_to_me.clear();
     } else {
       if (e.term == _state.term) { /// if two leaders in the same term
+        _logger->info("change state to candidate");
         _state.leader.clear();
         _state.change_state(NODE_KIND::CANDIDATE, _state.term + 1, _self_addr);
         _logs_state.clear();
@@ -280,6 +282,7 @@ void raft::recv(const node_name &from, const append_entries &e) {
         auto ae = make_append_entries();
         ae.kind = ENTRIES_KIND::VOTE;
         _cluster->send_all(_self_addr, ae);
+        return;
       }
     }
   }
