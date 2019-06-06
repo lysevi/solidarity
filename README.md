@@ -1,4 +1,4 @@
-<p align="center"><img src="artwork/logo.small.png"></p>
+<p align="left"><img src="artwork/logo.small.png"></p>
 <b>
 <table>
     <tr>
