@@ -39,6 +39,7 @@
 </b>
 
 # SOLIDarity 
+C++ implementation of raft consensus.
 
 ## Dependencies
 ---
