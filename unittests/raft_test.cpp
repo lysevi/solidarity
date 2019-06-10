@@ -134,18 +134,7 @@ TEST_CASE("raft", "[raft]") {
     std::vector<std::shared_ptr<solidarity::raft>> leaders;
     while (true) {
       leaders = cluster->by_filter(is_leader_pred);
-      if (leaders.size() > 1) {
-        std::unordered_set<solidarity::term_t> terms;
-        for (auto &c : leaders) {
-          terms.insert(c->state().term);
-        }
-        if (terms.size() == 1) {
-          solidarity::utils::logging::logger_fatal("raft error!!!");
-          cluster->print_cluster();
-          EXPECT_FALSE(true);
-          return;
-        }
-      }
+
       if (leaders.size() == 1) {
         auto cur_leader = leaders.front()->self_addr();
         auto followers = cluster->by_filter(

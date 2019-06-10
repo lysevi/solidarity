@@ -257,17 +257,34 @@ void raft::recv(const node_name &from, const append_entries &e) {
     // send(from, ENTRIES_KIND::HELLO);
     return;
   }
-  /// if leader receive message from follower with other leader,
-  /// but with new election term.
-  if (e.kind != ENTRIES_KIND::VOTE && _self_addr == _state.leader && e.term > _state.term
-      && !e.leader.empty()) {
-    _logger->info("change state to follower");
-    _state.leader.clear();
-    _state.change_state(NODE_KIND::FOLLOWER, e.term, e.leader);
-    _logger->info("send hello to ", from);
-    send(e.leader, ENTRIES_KIND::HELLO);
-    _logs_state.clear();
-    _state.votes_to_me.clear();
+
+  if (e.kind != ENTRIES_KIND::VOTE && _self_addr == _state.leader
+      && e.leader != _self_addr) {
+    // TODO refact.
+    /// if leader receive message from follower with other leader,
+    /// but with new election term.
+    if (e.term > _state.term) {
+      _logger->info("change state to follower");
+      _state.leader.clear();
+      _state.change_state(NODE_KIND::FOLLOWER, e.term, e.leader);
+      _logger->info("send hello to ", from);
+      send(e.leader, ENTRIES_KIND::HELLO);
+      _logs_state.clear();
+      _state.votes_to_me.clear();
+    } else {
+      if (e.term == _state.term) { /// if two leaders in the same term
+        _logger->info("change state to candidate");
+        _state.leader.clear();
+        _state.change_state(NODE_KIND::CANDIDATE, _state.term + 1, _self_addr);
+        _logs_state.clear();
+        _logs_state[_self_addr].prev = _jrn->prev_rec();
+        _last_sended.clear();
+        auto ae = make_append_entries();
+        ae.kind = ENTRIES_KIND::VOTE;
+        _cluster->send_all(_self_addr, ae);
+        return;
+      }
+    }
   }
 
   switch (e.kind) {
