@@ -1,4 +1,4 @@
-<p align="center"><img src="artwork/logo.small.png"></p>
+<p align="left"><img src="artwork/logo.small.png"></p>
 <b>
 <table>
     <tr>
@@ -39,13 +39,14 @@
 </b>
 
 # SOLIDarity 
+C++ implementation of raft consensus.
 
 ## Dependencies
 ---
 * Boost 1.69.0 or higher: system, asio, stacktrace, datetime.
-* cmake 3.10 or higher
+* cmake 3.14 or higher
 * conan.io 
-* c++ 17 compiler (MSVC 2017, gcc 7.0)
+* c++ 17 compiler (MSVC 2017, gcc 7.0,gcc 8.0, clang++ 8)
 
 ## Building
 ---

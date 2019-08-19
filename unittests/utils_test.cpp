@@ -9,10 +9,15 @@
 #include <numeric>
 
 TEST_CASE("utils.crc") {
-  std::vector<int> data({1, 2, 3, 4, 5});
-  auto crc1 = solidarity::utils::crc(data.cbegin(), data.cend());
+  std::vector<uint8_t> data({1, 2, 3, 4, 5});
+  solidarity::utils::crc32 c;
+  c.calculate(data.cbegin(), data.cend());
+  auto crc1 = c.checksum();
   data[0]++;
-  auto crc2 = solidarity::utils::crc(data.cbegin(), data.cend());
+
+  solidarity::utils::crc32 c2;
+  c2.calculate(data.cbegin(), data.cend());
+  auto crc2 = c2.checksum();
   EXPECT_NE(crc1, crc2);
 }
 

@@ -94,7 +94,7 @@ public:
   EXPORT std::shared_ptr<async_result_t>
   send_to(const solidarity::node_name &target,
           queries::resend_query_kind kind,
-          const solidarity::command &cmd,
+          const solidarity::command_t &cmd,
           std::function<void(ERROR_CODE)> callback);
 
   void set_state_machine_event_handler(
@@ -115,7 +115,7 @@ protected:
   void on_query_resend(const node_name &target,
                        uint64_t mess_id,
                        queries::resend_query_kind kind,
-                       solidarity::command &cmd);
+                       solidarity::command_t &cmd);
   void on_write_status(uint64_t mess_id, ERROR_CODE status);
   void on_write_status(solidarity::node_name &target, ERROR_CODE status);
 

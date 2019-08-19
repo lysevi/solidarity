@@ -179,7 +179,7 @@ void client::connect() {
   _connected = true;
 }
 
-ERROR_CODE client::send_weak(const solidarity::command &cmd) {
+ERROR_CODE client::send_weak(const solidarity::command_t &cmd) {
   if (!_connected) {
     return ERROR_CODE::NETWORK_ERROR;
   }
@@ -193,7 +193,7 @@ ERROR_CODE client::send_weak(const solidarity::command &cmd) {
   return result;
 }
 
-solidarity::send_result client::send_strong(const solidarity::command &cmd) {
+solidarity::send_result client::send_strong(const solidarity::command_t &cmd) {
   auto crc = cmd.crc();
   solidarity::send_result result;
 
@@ -244,7 +244,7 @@ solidarity::send_result client::send_strong(const solidarity::command &cmd) {
   return result;
 }
 
-solidarity::command client::read(const solidarity::command &cmd) {
+solidarity::command_t client::read(const solidarity::command_t &cmd) {
   if (!_connected) {
     THROW_EXCEPTION("connection error.");
   }
@@ -253,7 +253,7 @@ solidarity::command client::read(const solidarity::command &cmd) {
   queries::clients::read_query_t rq(waiter->id(), cmd);
 
   _dialler->send_async(rq.to_message());
-  solidarity::command c;
+  solidarity::command_t c;
   c.data = waiter->result();
   return c;
 }

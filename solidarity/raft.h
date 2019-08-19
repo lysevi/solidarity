@@ -24,6 +24,12 @@ public:
               const logdb::journal_ptr &jrn,
               abstract_state_machine *state_machine,
               utils::logging::abstract_logger_ptr logger = nullptr);
+  EXPORT raft(const raft_settings_t &ns,
+              abstract_cluster *cluster,
+              const logdb::journal_ptr &jrn,
+              std::unordered_map<uint32_t, abstract_state_machine *> state_machines,
+              utils::logging::abstract_logger_ptr logger = nullptr);
+
   EXPORT ~raft() override;
 
   raft_state_t state() const {
@@ -36,7 +42,6 @@ public:
 
   term_t term() const { return state().term; }
   logdb::journal_ptr journal() const { return _jrn; }
-  abstract_state_machine *state_machine() { return _state_machine; }
 
   EXPORT void set_cluster(abstract_cluster *cluster);
   EXPORT void heartbeat() override;
@@ -44,7 +49,7 @@ public:
   EXPORT void recv(const node_name &from, const append_entries &e) override;
   EXPORT void lost_connection_with(const node_name &addr) override;
   EXPORT void new_connection_with(const solidarity::node_name &addr) override;
-  [[nodiscard]] EXPORT ERROR_CODE add_command(const command &cmd) override;
+  [[nodiscard]] EXPORT ERROR_CODE add_command(const command_t &cmd) override;
 
   node_name get_leader() const { return state().leader; }
   node_name self_addr() const { return _self_addr; }
@@ -60,6 +65,11 @@ public:
   }
 
 protected:
+  void init(const raft_settings_t &ns,
+            abstract_cluster *cluster,
+            const logdb::journal_ptr &jrn,
+            std::unordered_map<uint32_t, abstract_state_machine *> state_machines,
+            utils::logging::abstract_logger_ptr logger = nullptr);
   [[nodiscard]] append_entries make_append_entries(const ENTRIES_KIND kind
                                                    = ENTRIES_KIND::APPEND) const noexcept;
   [[nodiscard]] append_entries make_append_entries(const index_t lsn_to_replicate,
@@ -78,11 +88,12 @@ protected:
   void commit_reccord(const logdb::reccord_info &target);
   void replicate_log(const std::vector<solidarity::node_name> &all);
 
-  [[nodiscard]] ERROR_CODE add_command_impl(const command &cmd, logdb::LOG_ENTRY_KIND k);
+  [[nodiscard]] ERROR_CODE add_command_impl(const command_t &cmd,
+                                            logdb::LOG_ENTRY_KIND k);
   void add_reccord(const logdb::log_entry &le);
 
 private:
-  abstract_state_machine *const _state_machine = nullptr;
+  std::unordered_map<uint32_t, abstract_state_machine *> _state_machine;
   mutable std::recursive_mutex _locker;
   std::mt19937 _rnd_eng;
 

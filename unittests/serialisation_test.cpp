@@ -1,4 +1,4 @@
-#include <solidarity/abstract_cluster.h>
+#include <solidarity/append_entries.h>
 #include <solidarity/queries.h>
 
 #include "helpers.h"
@@ -18,6 +18,7 @@ void check_append_entries(const solidarity::append_entries &ae,
   EXPECT_EQ(ae.prev.kind, res.prev.kind);
   EXPECT_EQ(ae.commited, res.commited);
   EXPECT_EQ(ae.commited.kind, res.commited.kind);
+  EXPECT_EQ(ae.cmd.asm_num, res.cmd.asm_num);
 
   auto is_eq = std::equal(ae.cmd.data.begin(), ae.cmd.data.end(), res.cmd.data.begin());
   EXPECT_TRUE(is_eq);
@@ -161,6 +162,7 @@ TEST_CASE("serialisation.command", "[network]") {
   ae.kind = kind;
   ae.starttime = 351;
   ae.leader = leader;
+  ae.cmd.asm_num = uint32_t(787);
 
   ae.current.kind = lk;
   ae.current.lsn = 77;
@@ -174,10 +176,10 @@ TEST_CASE("serialisation.command", "[network]") {
   ae.commited.lsn = 11;
   ae.commited.term = 22;
 
-  solidarity::queries::command_t cmd(solidarity::node_name("from node name"), ae);
+  solidarity::queries::add_command_t cmd(solidarity::node_name("from node name"), ae);
 
   auto msg = cmd.to_message();
-  solidarity::queries::command_t cmd_u(msg);
+  solidarity::queries::add_command_t cmd_u(msg);
   EXPECT_EQ(cmd.from, cmd_u.from);
   EXPECT_EQ(
       msg.front()->get_header()->kind,
@@ -197,7 +199,7 @@ TEST_CASE("serialisation.client_connect_t", "[network]") {
 }
 
 TEST_CASE("serialisation.read_query_t", "[network]") {
-  solidarity::command cmd;
+  solidarity::command_t cmd;
   cmd.data = std::vector<uint8_t>{0, 1, 2, 3};
 
   SECTION("small cmd") {
@@ -230,7 +232,7 @@ TEST_CASE("serialisation.read_query_t", "[network]") {
 }
 
 TEST_CASE("serialisation.write_query_t", "[network]") {
-  solidarity::command cmd;
+  solidarity::command_t cmd;
   cmd.data = std::vector<uint8_t>{0, 1, 2, 3};
 
   SECTION("small cmd") {
@@ -263,7 +265,7 @@ TEST_CASE("serialisation.write_query_t", "[network]") {
 }
 
 TEST_CASE("serialisation.resend_query_t", "[network]") {
-  solidarity::command cmd;
+  solidarity::command_t cmd;
   cmd.data = std::vector<uint8_t>{0, 1, 2, 3};
 
   SECTION("small cmd") {

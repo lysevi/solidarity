@@ -66,14 +66,14 @@ struct status_t {
   EXPORT dialler::message_ptr to_message() const;
 };
 
-struct command_t {
+struct add_command_t {
   append_entries cmd;
   node_name from;
-  EXPORT command_t(const node_name &from_, append_entries cmd_) {
+  EXPORT add_command_t(const node_name &from_, append_entries cmd_) {
     cmd = cmd_;
     from = from_;
   }
-  EXPORT command_t(const std::vector<dialler::message_ptr> &mptr);
+  EXPORT add_command_t(const std::vector<dialler::message_ptr> &mptr);
   EXPORT std::vector<dialler::message_ptr> to_message() const;
 };
 
@@ -82,9 +82,9 @@ enum resend_query_kind : uint8_t { WRITE, STATUS };
 struct resend_query_t {
   uint64_t msg_id;
   resend_query_kind kind;
-  solidarity::command query;
+  solidarity::command_t query;
   EXPORT
-  resend_query_t(uint64_t id, resend_query_kind kind_, const solidarity::command &q) {
+  resend_query_t(uint64_t id, resend_query_kind kind_, const solidarity::command_t &q) {
     msg_id = id;
     query = q;
     kind = kind_;
@@ -124,8 +124,8 @@ struct client_connect_t {
 
 struct read_query_t {
   uint64_t msg_id;
-  solidarity::command query;
-  EXPORT read_query_t(uint64_t id, const solidarity::command &q) {
+  solidarity::command_t query;
+  EXPORT read_query_t(uint64_t id, const solidarity::command_t &q) {
     msg_id = id;
     query = q;
   }
@@ -135,8 +135,8 @@ struct read_query_t {
 
 struct write_query_t {
   uint64_t msg_id;
-  solidarity::command query;
-  EXPORT write_query_t(uint64_t id, const solidarity::command &q) {
+  solidarity::command_t query;
+  EXPORT write_query_t(uint64_t id, const solidarity::command_t &q) {
     msg_id = id;
     query = q;
   }

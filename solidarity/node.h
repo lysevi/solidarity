@@ -44,10 +44,13 @@ public:
   EXPORT node(utils::logging::abstract_logger_ptr logger,
               const params_t &p,
               abstract_state_machine *state_machine);
+  EXPORT node(utils::logging::abstract_logger_ptr logger,
+              const params_t &p,
+              std::unordered_map<uint32_t, abstract_state_machine *> state_machines);
   EXPORT ~node();
 
   params_t params() const { return _params; }
-  EXPORT abstract_state_machine *state_machine();
+  EXPORT abstract_state_machine *state_machine(uint32_t asm_number);
   EXPORT std::shared_ptr<raft> get_raft();
 
   EXPORT void start();
@@ -56,8 +59,8 @@ public:
   EXPORT raft_state_t state() const;
   EXPORT node_name self_name() const;
 
-  EXPORT ERROR_CODE add_command(const command &cmd);
-  EXPORT std::shared_ptr<async_result_t> add_command_to_cluster(const command &cmd);
+  EXPORT ERROR_CODE add_command(const command_t &cmd);
+  EXPORT std::shared_ptr<async_result_t> add_command_to_cluster(const command_t &cmd);
 
   void add_client(uint64_t id);
 
@@ -69,7 +72,7 @@ public:
   EXPORT void send_to_leader(uint64_t client_id,
                              queries::resend_query_kind kind,
                              uint64_t message_id,
-                             command &cmd);
+                             command_t &cmd);
 
   EXPORT uint64_t add_event_handler(const std::function<void(const client_event_t &)> &);
   EXPORT void rm_event_handler(uint64_t);
@@ -79,6 +82,9 @@ public:
 private:
   void heartbeat_timer();
   void on_message_sended_status(uint64_t client, uint64_t message, ERROR_CODE status);
+  void init(utils::logging::abstract_logger_ptr logger,
+            const params_t &p,
+            std::unordered_map<uint32_t, abstract_state_machine *> state_machines);
 
 private:
   mutable std::shared_mutex _locker;
@@ -86,7 +92,7 @@ private:
   params_t _params;
   std::shared_ptr<raft> _raft;
   std::shared_ptr<mesh_connection> _cluster_con;
-  abstract_state_machine *_state_machine;
+  std::unordered_map<uint32_t, abstract_state_machine *> _state_machine;
 
   utils::logging::abstract_logger_ptr _logger;
 
@@ -97,7 +103,7 @@ private:
 
   uint32_t _timer_period;
   std::unique_ptr<boost::asio::deadline_timer> _timer;
-  std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, solidarity::command>>>
+  std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, solidarity::command_t>>>
       _message_resend;
 
   std::atomic_uint64_t _next_id = {0};

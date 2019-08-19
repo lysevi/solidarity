@@ -6,7 +6,7 @@
 using namespace solidarity;
 using namespace solidarity::special;
 
-licenseservice::lock_action licenseservice::lock_action::from_cmd(const command &cmd) {
+licenseservice::lock_action licenseservice::lock_action::from_cmd(const command_t &cmd) {
   licenseservice::lock_action res;
   msgpack::unpacker pac;
   pac.reserve_buffer(cmd.size());
@@ -23,7 +23,7 @@ licenseservice::lock_action licenseservice::lock_action::from_cmd(const command 
   return res;
 }
 
-command licenseservice::lock_action::to_cmd() const {
+command_t licenseservice::lock_action::to_cmd() const {
   msgpack::sbuffer buffer;
   msgpack::packer<msgpack::sbuffer> pk(&buffer);
   pk.pack(target);
@@ -31,7 +31,7 @@ command licenseservice::lock_action::to_cmd() const {
   pk.pack(state);
 
   auto needed_size = buffer.size();
-  command res(needed_size);
+  command_t res(needed_size);
   memcpy(res.data.data(), buffer.data(), buffer.size());
   return res;
 }
@@ -48,7 +48,7 @@ void licenseservice::reset() {
   }
 };
 
-command licenseservice::snapshot() {
+command_t licenseservice::snapshot() {
   std::lock_guard l(_locker);
   msgpack::sbuffer buffer;
   msgpack::packer<msgpack::sbuffer> pk(&buffer);
@@ -62,12 +62,12 @@ command licenseservice::snapshot() {
   }
 
   auto needed_size = buffer.size();
-  command res(needed_size);
+  command_t res(needed_size);
   memcpy(res.data.data(), buffer.data(), buffer.size());
   return res;
 }
 
-void licenseservice::install_snapshot(const command &cmd) {
+void licenseservice::install_snapshot(const command_t &cmd) {
   std::lock_guard l(_locker);
   licenseservice::lock_action res;
   msgpack::unpacker pac;
@@ -95,7 +95,7 @@ void licenseservice::install_snapshot(const command &cmd) {
   }
 }
 
-command licenseservice::read(const command &cmd) {
+command_t licenseservice::read(const command_t &cmd) {
   std::lock_guard l(_locker);
   auto a = lock_action::from_cmd(cmd);
   if (auto it = _locks.find(a.target); it != _locks.end()) {
@@ -107,15 +107,15 @@ command licenseservice::read(const command &cmd) {
     }
 
     auto needed_size = buffer.size();
-    command res(needed_size);
+    command_t res(needed_size);
     memcpy(res.data.data(), buffer.data(), buffer.size());
     return res;
   } else {
-    return command(0);
+    return command_t(0);
   }
 }
 
-void licenseservice::apply_cmd(const command &cmd) {
+void licenseservice::apply_cmd(const command_t &cmd) {
   std::lock_guard l(_locker);
   auto a = lock_action::from_cmd(cmd);
   if (auto lit = _lics.find(a.target); lit != _lics.end()) {
@@ -130,7 +130,7 @@ void licenseservice::apply_cmd(const command &cmd) {
   }
 };
 
-bool licenseservice::can_apply(const command &cmd) {
+bool licenseservice::can_apply(const command_t &cmd) {
   auto a = lock_action::from_cmd(cmd);
   if (!a.state) {
     return true;

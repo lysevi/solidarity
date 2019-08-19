@@ -30,6 +30,7 @@ add_library(solidarity SHARED ${SRC})
 TARGET_LINK_LIBRARIES(solidarity  ${solidarity_PRIVATE_LIBRARIES})
 target_link_directories(solidarity PUBLIC ${solidarity_LIBRARY_DIR})
 target_include_directories(solidarity PUBLIC ${solidarity_INCLUDE_DIR})
+target_compile_definitions(solidarity PUBLIC  -DCATCH_CONFIG_ENABLE_BENCHMARKING)
 add_library(solidarity::solidarity ALIAS solidarity)
 
 PRECOMPILED_HEADERS(solidarity)

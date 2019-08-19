@@ -123,7 +123,7 @@ TEST_CASE("raft", "[raft]") {
     cluster->add_new(sett.name(), cons);
   }
   solidarity::node_name last_leader;
-  solidarity::command cmd(1);
+  solidarity::command_t cmd(1);
   cmd.data[0] = 0;
 
   auto data_eq = [&cmd](const std::shared_ptr<mock_state_machine> &c) -> bool {
@@ -134,18 +134,7 @@ TEST_CASE("raft", "[raft]") {
     std::vector<std::shared_ptr<solidarity::raft>> leaders;
     while (true) {
       leaders = cluster->by_filter(is_leader_pred);
-      if (leaders.size() > 1) {
-        std::unordered_set<solidarity::term_t> terms;
-        for (auto &c : leaders) {
-          terms.insert(c->state().term);
-        }
-        if (terms.size() == 1) {
-          solidarity::utils::logging::logger_fatal("raft error!!!");
-          cluster->print_cluster();
-          EXPECT_FALSE(true);
-          return;
-        }
-      }
+
       if (leaders.size() == 1) {
         auto cur_leader = leaders.front()->self_addr();
         auto followers = cluster->by_filter(
@@ -240,7 +229,7 @@ TEST_CASE("raft.replication", "[raft]") {
         sett, cluster.get(), memory_journal::make_new(), state_machine.get());
     cluster->add_new(sett.name(), cons);
   }
-  solidarity::command cmd(1);
+  solidarity::command_t cmd(1);
   cmd.data[0] = 0;
 
   auto data_eq = [&cmd](const std::shared_ptr<mock_state_machine> &c) -> bool {
@@ -323,7 +312,7 @@ TEST_CASE("raft.log_compaction", "[raft]") {
   cluster->wait_leader_eletion();
 
   solidarity::node_name last_leader;
-  solidarity::command cmd(1);
+  solidarity::command_t cmd(1);
   cmd.data[0] = 0;
 
   auto data_eq = [&cmd](const std::shared_ptr<mock_state_machine> &c) -> bool {
@@ -401,7 +390,7 @@ TEST_CASE("raft.apply_journal_on_start", "[raft]") {
   auto et = std::chrono::milliseconds(300);
   auto jrn = memory_journal::make_new();
 
-  solidarity::command cmd(1);
+  solidarity::command_t cmd(1);
   cmd.data[0] = 0;
 
   for (int i = 0; i < 10; ++i) {
@@ -435,7 +424,7 @@ TEST_CASE("raft.rollback", "[raft]") {
   consumers.reserve(exists_nodes_count);
 
   auto et = std::chrono::milliseconds(300);
-  solidarity::command cmd(1);
+  solidarity::command_t cmd(1);
 
   std::shared_ptr<solidarity::raft> n1, n2;
   std::shared_ptr<solidarity::logdb::memory_journal> jrn1, jrn2;
@@ -586,7 +575,7 @@ TEST_CASE("raft.can_apply", "[raft]") {
         sett, cluster.get(), memory_journal::make_new(), state_machine.get());
     cluster->add_new(sett.name(), cons);
   }
-  solidarity::command cmd(1);
+  solidarity::command_t cmd(1);
   cmd.data[0] = 0;
 
   auto data_eq = [&cmd](const std::shared_ptr<mock_state_machine> &c) -> bool {

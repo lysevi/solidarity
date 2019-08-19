@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
       std::cout << "write i:" << i << std::endl;
       solidarity::utils::elapsed_time el;
       if (strong) {
-        auto sst = c->send_strong(solidarity::command::from_value(i));
+        auto sst = c->send_strong(solidarity::command_t::from_value(i));
         if (!sst.is_ok()) {
           std::cerr << "command status - cmd=" << i
                     << " ecode=" << solidarity::to_string(sst.ecode)
@@ -82,7 +82,7 @@ int main(int argc, char **argv) {
         }
         is_network_error = sst.ecode == solidarity::ERROR_CODE::NETWORK_ERROR;
       } else {
-        auto ec = c->send_weak(solidarity::command::from_value(i));
+        auto ec = c->send_weak(solidarity::command_t::from_value(i));
         if (ec != solidarity::ERROR_CODE::OK) {
           is_network_error = ec == solidarity::ERROR_CODE::NETWORK_ERROR;
           continue;

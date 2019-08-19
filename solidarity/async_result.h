@@ -29,7 +29,7 @@ public:
     }
     std::unique_lock ul(_mutex);
     while (true) {
-      _condition.wait(ul, [this] { return answer_received; });
+      _condition.wait(ul, [this] { return answer_received.load(); });
       if (answer_received) {
         break;
       }
@@ -88,7 +88,7 @@ private:
   std::variant<std::vector<uint8_t>, cluster_state_event_t> _answer;
   std::string err;
   solidarity::ERROR_CODE _ec = solidarity::ERROR_CODE::UNDEFINED;
-  bool answer_received;
+  std::atomic_bool answer_received;
   std::function<void(ERROR_CODE)> _callback;
   std::string _owner;
 };
